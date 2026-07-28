@@ -49,7 +49,7 @@ class CashRegisterService
         ]);
     }
 
-    public function openSession(FinancialAccount $account, string $float, User $by): CashSession
+    public function openSession(FinancialAccount $account, string|int|float $float, User $by): CashSession
     {
         $existing = CashSession::query()
             ->where('financial_account_id', $account->id)
@@ -79,7 +79,7 @@ class CashRegisterService
         });
     }
 
-    public function closeSession(CashSession $session, string $counted, User $by): CashSession
+    public function closeSession(CashSession $session, string|int|float $counted, User $by): CashSession
     {
         if ($session->status !== CashSessionStatus::Open) {
             throw new RuntimeException('Session is not open.');

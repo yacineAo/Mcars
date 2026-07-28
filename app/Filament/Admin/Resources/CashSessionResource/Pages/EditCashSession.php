@@ -33,7 +33,7 @@ class EditCashSession extends EditRecord
                     \Filament\Forms\Components\Textarea::make('notes'),
                 ])
                 ->action(function (CashSession $record, array $data, CashRegisterService $service): void {
-                    $service->closeSession($record, $data['counted_amount'], auth()->user());
+                    $service->closeSession($record, (string) $data['counted_amount'], auth()->user());
 
                     Notification::make()
                         ->success()
