@@ -20,7 +20,7 @@ class CreateCashSession extends CreateRecord
         $account = \App\Models\FinancialAccount::findOrFail($data['financial_account_id']);
         $service = app(CashRegisterService::class);
 
-        return $service->openSession($account, $data['opening_float'] ?? '0', auth()->user());
+        return $service->openSession($account, (string) ($data['opening_float'] ?? '0'), auth()->user());
     }
 
     protected function getFormSchema(): array
