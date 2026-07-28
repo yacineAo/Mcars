@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Booking;
+
+final readonly class BookingQuote
+{
+    public function __construct(
+        public int $carId,
+        public int $customerId,
+        public string $dailyRate,
+        public int $daysCount,
+        public string $subtotal,
+        public string $extrasTotal,
+        public string $discountAmount,
+        public ?string $discountReason,
+        public string $taxRate,
+        public string $taxAmount,
+        public string $totalAmount,
+        public string $securityDepositAmount,
+        public array $extras = [],
+    ) {}
+}

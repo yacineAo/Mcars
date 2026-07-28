@@ -180,6 +180,8 @@ deliberate 500 DZD discrepancy, and show the variance posted and flagged.
 
 ## Phase 5 — Bookings, Calendar & Contracts *(was Phase 4)*
 
+**Status: Complete**
+
 **Goal.** Rentals can be booked without collision and contracts generated, signed and delivered.
 **Depends on.** Phases 2, 3, 4.
 **Closes.** REQ-05 · REQ-06 · ADV-01 · ADV-02 *(contract archive)* · ADV-05 *(contract delivery)*

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources\CashSessionResource\Pages;
 
+use App\Enums\CashSessionStatus;
 use App\Filament\Admin\Resources\CashSessionResource;
 use App\Models\CashSession;
 use App\Services\CashRegisterService;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -30,7 +33,7 @@ class EditCashSession extends EditRecord
                         ->numeric()
                         ->prefix('DZD')
                         ->required(),
-                    \Filament\Forms\Components\Textarea::make('notes'),
+                    Textarea::make('notes'),
                 ])
                 ->action(function (CashSession $record, array $data, CashRegisterService $service): void {
                     $service->closeSession($record, (string) $data['counted_amount'], auth()->user());
@@ -41,9 +44,9 @@ class EditCashSession extends EditRecord
                         ->body('Variance has been posted to the ledger.')
                         ->send();
                 })
-                ->visible(fn (CashSession $record): bool => $record->status === \App\Enums\CashSessionStatus::Open),
+                ->visible(fn (CashSession $record): bool => $record->status === CashSessionStatus::Open),
 
-            \Filament\Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 }

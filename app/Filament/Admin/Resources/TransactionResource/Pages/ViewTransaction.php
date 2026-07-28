@@ -11,7 +11,6 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
-use Illuminate\Support\Facades\Gate;
 
 class ViewTransaction extends ViewRecord
 {

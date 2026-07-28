@@ -126,12 +126,12 @@ return new class extends Migration
             $table->index(['source_type', 'source_id']);
         });
 
-        DB::statement("ALTER TABLE transactions ADD CONSTRAINT chk_amount_positive CHECK (amount > 0)");
-        DB::statement("ALTER TABLE transactions ADD CONSTRAINT chk_diff_accounts CHECK (debit_account_id <> credit_account_id)");
+        DB::statement('ALTER TABLE transactions ADD CONSTRAINT chk_amount_positive CHECK (amount > 0)');
+        DB::statement('ALTER TABLE transactions ADD CONSTRAINT chk_diff_accounts CHECK (debit_account_id <> credit_account_id)');
 
         // Add FK for reversal self-refs (table must exist first)
-        DB::statement("ALTER TABLE transactions ADD CONSTRAINT transactions_reverses_fk FOREIGN KEY (reverses_transaction_id) REFERENCES transactions(id)");
-        DB::statement("ALTER TABLE transactions ADD CONSTRAINT transactions_reversed_by_fk FOREIGN KEY (reversed_by_transaction_id) REFERENCES transactions(id)");
+        DB::statement('ALTER TABLE transactions ADD CONSTRAINT transactions_reverses_fk FOREIGN KEY (reverses_transaction_id) REFERENCES transactions(id)');
+        DB::statement('ALTER TABLE transactions ADD CONSTRAINT transactions_reversed_by_fk FOREIGN KEY (reversed_by_transaction_id) REFERENCES transactions(id)');
 
         // ----------------------------------------------------------------
         // 5. Cash sessions
@@ -163,7 +163,7 @@ return new class extends Migration
         ");
 
         // Now add the cash_session_id FK on transactions
-        DB::statement("ALTER TABLE transactions ADD CONSTRAINT transactions_cash_session_fk FOREIGN KEY (cash_session_id) REFERENCES cash_sessions(id)");
+        DB::statement('ALTER TABLE transactions ADD CONSTRAINT transactions_cash_session_fk FOREIGN KEY (cash_session_id) REFERENCES cash_sessions(id)');
 
         // ----------------------------------------------------------------
         // 6. Expenses
@@ -243,18 +243,18 @@ return new class extends Migration
             END;
             $$
         ");
-        DB::statement("
+        DB::statement('
             CREATE TRIGGER trg_block_transaction_mutation
             BEFORE UPDATE OR DELETE ON transactions
             FOR EACH ROW EXECUTE FUNCTION block_transaction_mutation()
-        ");
+        ');
     }
 
     public function down(): void
     {
-        DB::statement("DROP TRIGGER IF EXISTS trg_block_transaction_mutation ON transactions");
-        DB::statement("DROP FUNCTION IF EXISTS block_transaction_mutation()");
-        DB::statement("DROP VIEW IF EXISTS cash_register_entries");
+        DB::statement('DROP TRIGGER IF EXISTS trg_block_transaction_mutation ON transactions');
+        DB::statement('DROP FUNCTION IF EXISTS block_transaction_mutation()');
+        DB::statement('DROP VIEW IF EXISTS cash_register_entries');
         Schema::dropIfExists('expenses');
         Schema::dropIfExists('cash_sessions');
         Schema::dropIfExists('transactions');

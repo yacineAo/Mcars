@@ -97,4 +97,16 @@ class Customer extends Model
     {
         return $this->hasMany(CustomerDocument::class);
     }
+
+    /** @return HasMany<Booking> */
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    /** @return HasMany<Contract> */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
+    }
 }

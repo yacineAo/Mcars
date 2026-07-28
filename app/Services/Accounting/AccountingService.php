@@ -102,7 +102,7 @@ class AccountingService
             creditAccountId: $transaction->debit_account_id,
             amount: $transaction->amount,
             type: TransactionType::Reversal,
-            occurredOn: new DateTimeImmutable(),
+            occurredOn: new DateTimeImmutable,
             description: sprintf('Reversal of %s: %s', $transaction->reference, $reason),
             branchId: $transaction->branch_id,
             currency: $transaction->currency,

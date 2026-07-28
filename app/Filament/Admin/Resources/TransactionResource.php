@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\TransactionResource\Pages\ListTransactions;
 use App\Filament\Admin\Resources\TransactionResource\Pages\ViewTransaction;
 use App\Models\Transaction;
 use BackedEnum;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -61,7 +62,7 @@ class TransactionResource extends Resource
             ->poll('30s')
             ->filters([])
             ->actions([
-                \Filament\Actions\ViewAction::make(),
+                ViewAction::make(),
             ]);
     }
 

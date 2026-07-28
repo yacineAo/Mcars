@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use App\Enums\CashSessionStatus;
 use App\Enums\ExpenseStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use App\Models\Branch;
-use App\Models\CashSession;
 use App\Models\ChartOfAccount;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
@@ -14,11 +14,11 @@ use App\Models\FinancialAccount;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Accounting\AccountingService;
+use App\Services\Accounting\ExpensePoster;
 use App\Services\Accounting\TransactionDraft;
 use App\Services\CashRegisterService;
 use Database\Seeders\ChartOfAccountSeeder;
 use Database\Seeders\ExpenseCategorySeeder;
-use Database\Seeders\FinancialAccountSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +56,7 @@ it('posts a single balanced transaction', function () {
         creditAccountId: account('4010')->id,
         amount: '15000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         description: 'Rental revenue',
         createdById: $this->user->id,
     ));
@@ -76,7 +76,7 @@ it('posts multiple transactions atomically with postMany', function () {
             creditAccountId: account('4010')->id,
             amount: '15000.00',
             type: TransactionType::RentalRevenue,
-            occurredOn: new DateTimeImmutable(),
+            occurredOn: new DateTimeImmutable,
             createdById: $this->user->id,
         ),
         new TransactionDraft(
@@ -84,7 +84,7 @@ it('posts multiple transactions atomically with postMany', function () {
             creditAccountId: account('4010')->id,
             amount: '3000.00',
             type: TransactionType::ExtrasRevenue,
-            occurredOn: new DateTimeImmutable(),
+            occurredOn: new DateTimeImmutable,
             createdById: $this->user->id,
         ),
     );
@@ -101,7 +101,7 @@ it('rejects posting with amount zero or negative', function () {
         creditAccountId: account('4010')->id,
         amount: '0',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
     )))->toThrow(RuntimeException::class, 'must be positive');
 
     expect(fn () => $this->service->post(new TransactionDraft(
@@ -109,7 +109,7 @@ it('rejects posting with amount zero or negative', function () {
         creditAccountId: account('4010')->id,
         amount: '-100',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
     )))->toThrow(RuntimeException::class, 'must be positive');
 });
 
@@ -120,7 +120,7 @@ it('rejects posting with same debit and credit account', function () {
         creditAccountId: $id,
         amount: '1000',
         type: TransactionType::Adjustment,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
     )))->toThrow(RuntimeException::class, 'must be different');
 });
 
@@ -133,7 +133,7 @@ it('rejects posting to a non-postable account', function () {
         creditAccountId: account('4010')->id,
         amount: '1000',
         type: TransactionType::Adjustment,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
     )))->toThrow(RuntimeException::class, 'not postable');
 });
 
@@ -209,7 +209,7 @@ it('cannot reverse a reversal', function () {
         creditAccountId: account('4010')->id,
         amount: '10000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         createdById: $this->user->id,
     ));
 
@@ -229,7 +229,7 @@ it('blocks direct update on transactions at the database level', function () {
         creditAccountId: account('4010')->id,
         amount: '5000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         createdById: $this->user->id,
     ));
 
@@ -245,7 +245,7 @@ it('blocks direct delete on transactions at the database level', function () {
         creditAccountId: account('4010')->id,
         amount: '5000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         createdById: $this->user->id,
     ));
 
@@ -276,7 +276,7 @@ it('creates an expense through draft → approve → pay flow', function () {
         'incurred_on' => now(),
         'description' => 'Test expense',
         'status' => ExpenseStatus::Draft,
-        'payment_method' => \App\Enums\PaymentMethod::Cash,
+        'payment_method' => PaymentMethod::Cash,
     ]);
 
     expect($expense->status)->toBe(ExpenseStatus::Draft);
@@ -294,7 +294,7 @@ it('creates an expense through draft → approve → pay flow', function () {
     expect($expense->fresh()->status)->toBe(ExpenseStatus::Approved);
 
     // Pay — this posts to the ledger
-    $poster = app(\App\Services\Accounting\ExpensePoster::class);
+    $poster = app(ExpensePoster::class);
     $draft = $poster->postImmediateExpense($expense, $account, $this->user->id);
     $transaction = $this->service->post($draft);
 
@@ -337,7 +337,7 @@ it('opens and closes a cash session with a variance posting', function () {
         creditAccountId: account('4010')->id,
         amount: '30000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         description: 'Customer payment',
         createdById: $this->user->id,
         cashSessionId: $session->id,
@@ -393,7 +393,7 @@ it('computes cash balance from the ledger as sum of session movements plus float
         creditAccountId: account('4010')->id,
         amount: '15000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         createdById: $this->user->id,
         cashSessionId: $session->id,
         branchId: $session->branch_id,
@@ -415,7 +415,7 @@ it('posts an expense with immediate payment (E39)', function () {
         'is_active' => true,
     ]);
 
-    $poster = app(\App\Services\Accounting\ExpensePoster::class);
+    $poster = app(ExpensePoster::class);
     $expense = Expense::create([
         'branch_id' => $this->branch->id,
         'expense_category_id' => $category->id,
@@ -425,7 +425,7 @@ it('posts an expense with immediate payment (E39)', function () {
         'incurred_on' => now(),
         'description' => 'Oil change',
         'status' => ExpenseStatus::Approved,
-        'payment_method' => \App\Enums\PaymentMethod::Cash,
+        'payment_method' => PaymentMethod::Cash,
     ]);
 
     $draft = $poster->postImmediateExpense($expense, $account, $this->user->id);
@@ -442,7 +442,7 @@ it('posts an expense with immediate payment (E39)', function () {
 it('posts an accrued expense (E38)', function () {
     $category = ExpenseCategory::where('slug', 'office-rent')->firstOrFail();
 
-    $poster = app(\App\Services\Accounting\ExpensePoster::class);
+    $poster = app(ExpensePoster::class);
     $expense = Expense::create([
         'branch_id' => $this->branch->id,
         'expense_category_id' => $category->id,
@@ -471,7 +471,7 @@ it('generates consecutive transaction references', function () {
         creditAccountId: account('4010')->id,
         amount: '1000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         createdById: $this->user->id,
     ));
 
@@ -480,7 +480,7 @@ it('generates consecutive transaction references', function () {
         creditAccountId: account('4010')->id,
         amount: '2000.00',
         type: TransactionType::RentalRevenue,
-        occurredOn: new DateTimeImmutable(),
+        occurredOn: new DateTimeImmutable,
         createdById: $this->user->id,
     ));
 

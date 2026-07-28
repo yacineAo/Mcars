@@ -11,6 +11,7 @@ use App\Filament\Admin\Resources\ExpenseResource\Pages\EditExpense;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\ListExpenses;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\ViewExpense;
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -46,7 +47,7 @@ class ExpenseResource extends Resource
                     ->reactive()
                     ->afterStateUpdated(function (callable $set, $state): void {
                         if ($state) {
-                            $category = \App\Models\ExpenseCategory::find($state);
+                            $category = ExpenseCategory::find($state);
                             if ($category && $category->is_car_related) {
                                 $set('car_id_required', true);
                             }

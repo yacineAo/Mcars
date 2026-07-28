@@ -12,6 +12,7 @@ use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\ExpensePoster;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\DB;
@@ -67,8 +68,7 @@ class ViewExpense extends ViewRecord
                         ->title('Expense paid and posted to ledger')
                         ->send();
                 })
-                ->visible(fn (Expense $record): bool =>
-                    $record->status === ExpenseStatus::Approved && $record->payment_method !== null
+                ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Approved && $record->payment_method !== null,
                 ),
 
             Action::make('submit_for_approval')
@@ -87,7 +87,7 @@ class ViewExpense extends ViewRecord
                 ->color('danger')
                 ->requiresConfirmation()
                 ->form([
-                    \Filament\Forms\Components\Textarea::make('rejection_reason')
+                    Textarea::make('rejection_reason')
                         ->required()
                         ->maxLength(1000),
                 ])

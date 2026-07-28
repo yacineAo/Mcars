@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\CashSessionStatus;
+use App\Enums\TransactionType;
 use App\Models\CashSession;
 use App\Models\FinancialAccount;
 use App\Models\Transaction;
@@ -16,7 +17,6 @@ use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class CashRegisterService
@@ -137,13 +137,13 @@ class CashRegisterService
         FinancialAccount $to,
         string $amount,
         User $by,
-    ): \App\Models\Transaction {
+    ): Transaction {
         $draft = new TransactionDraft(
             debitAccountId: $to->ledger_account_id,
             creditAccountId: $from->ledger_account_id,
             amount: $amount,
-            type: \App\Enums\TransactionType::CashTransfer,
-            occurredOn: new \DateTimeImmutable(),
+            type: TransactionType::CashTransfer,
+            occurredOn: new \DateTimeImmutable,
             description: sprintf('Transfer from %s to %s', $from->name, $to->name),
             branchId: $from->branch_id ?? $to->branch_id,
             createdById: $by->id,

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources\CashSessionResource\Pages;
 
 use App\Filament\Admin\Resources\CashSessionResource;
+use App\Models\CashSession;
+use App\Models\FinancialAccount;
 use App\Services\CashRegisterService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -15,9 +17,9 @@ class CreateCashSession extends CreateRecord
 {
     protected static string $resource = CashSessionResource::class;
 
-    protected function handleRecordCreation(array $data): \App\Models\CashSession
+    protected function handleRecordCreation(array $data): CashSession
     {
-        $account = \App\Models\FinancialAccount::findOrFail($data['financial_account_id']);
+        $account = FinancialAccount::findOrFail($data['financial_account_id']);
         $service = app(CashRegisterService::class);
 
         return $service->openSession($account, $data['opening_float'] ?? '0', auth()->user());
@@ -28,7 +30,7 @@ class CreateCashSession extends CreateRecord
         return [
             Select::make('financial_account_id')
                 ->label('Cash Account')
-                ->options(\App\Models\FinancialAccount::query()->where('is_active', true)->pluck('name', 'id'))
+                ->options(FinancialAccount::query()->where('is_active', true)->pluck('name', 'id'))
                 ->searchable()
                 ->required(),
             TextInput::make('opening_float')
