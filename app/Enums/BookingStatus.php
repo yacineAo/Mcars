@@ -50,6 +50,20 @@ enum BookingStatus: string implements HasColor, HasIcon, HasLabel
         };
     }
 
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Draft => __('Draft'),
+            self::Pending => __('Pending'),
+            self::Confirmed => __('Confirmed'),
+            self::Active => __('Active'),
+            self::Completed => __('Completed'),
+            self::Cancelled => __('Cancelled'),
+            self::NoShow => __('No Show'),
+            self::Overdue => __('Overdue'),
+        };
+    }
+
     public function isActiveOrConfirmed(): bool
     {
         return $this->is(self::Confirmed, self::Active, self::Overdue);
