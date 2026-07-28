@@ -1,6 +1,6 @@
 # Phase 1 — Auth, Roles & Permissions, Panel Skeletons
 
-**Status: ⬜ Next** · Depends on: Phase 0 · Closes: **REQ-20**, **ADV-06** (schema only)
+**Status: ✅ Done** · Depends on: Phase 0 · Closes: **REQ-20**, **ADV-06** (schema only)
 
 Three panels exist, users land in the right one, permissions are enforced.
 
@@ -18,12 +18,12 @@ Three panels exist, users land in the right one, permissions are enforced.
 
 ## Deliverables
 
-- [ ] **Users table extension** — `branch_id` (nullable FK, **stays nullable forever**: null = global
+- [x] **Users table extension** — `branch_id` (nullable FK, **stays nullable forever**: null = global
       access), `phone`, `whatsapp`, `avatar`, `locale`, `is_active`, `last_login_at`, `last_login_ip`,
       `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`,
       `must_change_password`.
-- [ ] **`branch_user` pivot** — `user_id`, `branch_id`, `is_primary`, unique on the pair.
-- [ ] **`User::accessibleBranchIds()`** implementing exactly this resolution:
+- [x] **`branch_user` pivot** — `user_id`, `branch_id`, `is_primary`, unique on the pair.
+- [x] **`User::accessibleBranchIds()`** implementing exactly this resolution:
 
       | Condition | Access |
       |---|---|
@@ -33,32 +33,32 @@ Three panels exist, users land in the right one, permissions are enforced.
       | pivot empty, `branch_id` null, no global permission | **none — deny, and log it** |
 
       The last row is the point: an unconfigured staff account must see *nothing*, not *everything*.
-- [ ] **Spatie Permission + Filament Shield** installed, `shield:generate` wired into the seeder.
-- [ ] **Roles seeded** — `super_admin`, `manager`, `accountant`, `receptionist`,
+- [x] **Spatie Permission + Filament Shield** installed, `shield:generate` wired into the seeder.
+- [x] **Roles seeded** — `super_admin`, `manager`, `accountant`, `receptionist`,
       `maintenance_officer`, `supervisor`, `car_owner`, `client`. Permission sets per the matrix in
       [`../02-filament-panels.md`](../02-filament-panels.md).
-- [ ] **Three PanelProviders** — `admin` (`/admin`), `owner` (`/owner`), `client` (`/client`). Own
+- [x] **Three PanelProviders** — `admin` (`/admin`), `owner` (`/owner`), `client` (`/client`). Own
       branding, own middleware stack, empty navigation. One `users` table, **not three guards**
       (ADR-007).
-- [ ] **`User::canAccessPanel(Panel $panel)`** gating by role.
-- [ ] **`EnsureUserIsCarOwner` / `EnsureUserIsClient`** middleware on the portal panels.
-- [ ] **`UserResource`, `RoleResource`, `BranchResource`** in the admin panel; `BranchResource`
+- [x] **`User::canAccessPanel(Panel $panel)`** gating by role.
+- [x] **`EnsureUserIsCarOwner` / `EnsureUserIsClient`** middleware on the portal panels.
+- [x] **`UserResource`, `RoleResource`, `BranchResource`** in the admin panel; `BranchResource`
       restricted to `manager` / `super_admin`.
-- [ ] **Auth flows** — login, password reset, optional 2FA, rate limiting on login, reset and OTP.
-- [ ] **`branch_id` (nullable) on every table created from this phase onward.** Enforcement stays off
+- [x] **Auth flows** — login, password reset, optional 2FA, rate limiting on login, reset and OTP.
+- [x] **`branch_id` (nullable) on every table created from this phase onward.** Enforcement stays off
       (`config('mcars.branches.enabled')` is `false`) until Phase 10 (ADR-004).
-- [ ] Apply `BelongsToBranch` + `HasAuditColumns` to `User`, then **delete the `trait.unused` entry
+- [x] Apply `BelongsToBranch` + `HasAuditColumns` to `User`, then **delete the `trait.unused` entry
       from `phpstan.neon`** — it will fail the build once matched.
-- [ ] Role/permission labels added to `lang/{ar,fr,en}/enums.php`.
+- [x] Role/permission labels added to `lang/{ar,fr,en}/enums.php`.
 
 ## Tests
 
-- [ ] A `client` user cannot reach `/admin` → 403
-- [ ] A `receptionist` cannot reach `/owner` → 403
-- [ ] Each seeded role's permission set matches the matrix in `../02-filament-panels.md`
-- [ ] A user with no branch and no global permission resolves to **zero** accessible branches
-- [ ] A user with `branches.view_all` resolves to all branches regardless of pivot rows
-- [ ] Login is rate limited
+- [x] A `client` user cannot reach `/admin` → 403
+- [x] A `receptionist` cannot reach `/owner` → 403
+- [x] Each seeded role's permission set matches the matrix in `../02-filament-panels.md`
+- [x] A user with no branch and no global permission resolves to **zero** accessible branches
+- [x] A user with `branches.view_all` resolves to all branches regardless of pivot rows
+- [x] Login is rate limited
 
 ## Definition of done
 

@@ -133,8 +133,20 @@ car is available.
 
 ## Current state
 
-Phase 0 complete. Next: **Phase 1 — auth, roles/permissions, panel skeletons**.
+Phases 0–7 complete. Next: **Phase 8 — notifications and alerts**.
 
 The `branches` table, `Branch` model and `BranchSeeder` were built in Phase 0 rather than Phase 1,
 because `BelongsToBranch` and per-branch document numbering both need them to exist.
-Phase 1 still owns roles, permissions, panels and adding `branch_id` to its own tables.
+
+Two conventions established in Phase 7 that later phases must follow:
+
+- **Every ledger aggregation goes through `ReportService`.** Widgets, pages and (from Phase 9)
+  exports call it; none of them sum `transactions` themselves. Adding a figure means adding a method
+  there, not a query in a widget.
+- **`reports.view_financials` gates money.** Revenue, profit, cash flow and receivables are hidden
+  behind this permission (super_admin, manager, accountant). Check the permission — never a role list.
+  `branches.view_all` governs cross-branch visibility, and a user without it is pinned to their own
+  branch server-side regardless of any filter they submit.
+
+`utilisation_pct` and occupancy both divide by **calendar days**, not availability-adjusted days —
+see `docs/tasks/phase-07-dashboards.md`.

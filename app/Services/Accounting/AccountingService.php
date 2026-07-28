@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Accounting;
 
 use App\Enums\TransactionType;
+use App\Events\TransactionPosted;
+use App\Models\Branch;
 use App\Models\ChartOfAccount;
 use App\Models\Transaction;
 use App\Models\User;
@@ -41,7 +43,15 @@ class AccountingService
             return collect($drafts)->map(function (TransactionDraft $draft) use ($groupUuid): Transaction {
                 $this->validateDraft($draft);
 
-                $reference = $this->sequences->next(self::REFERENCE_KEY, $draft->branchId);
+                // The counter is scoped per (key, branch, year), so every branch starts
+                // at 1 — the branch code is what keeps the globally-unique reference
+                // unique. Omitting it makes branch B's first posting collide with
+                // branch A's TRX-2026-000001.
+                $reference = $this->sequences->next(
+                    self::REFERENCE_KEY,
+                    $draft->branchId,
+                    $this->branchCode($draft->branchId),
+                );
 
                 $meta = $draft->meta ?? [];
                 $meta['group_uuid'] = $groupUuid;
@@ -76,6 +86,13 @@ class AccountingService
                 ]);
 
                 $transaction->save();
+
+                // After commit only: firing inside the transaction lets a concurrent
+                // reader re-prime the report cache from pre-commit state, and a
+                // rollback would flush caches for rows that never existed.
+                $this->db->connection()->afterCommit(
+                    fn () => TransactionPosted::dispatch($transaction),
+                );
 
                 return $transaction;
             });
@@ -156,6 +173,23 @@ class AccountingService
             : $credits - $debits;
 
         return Money::of(max(0, $balance));
+    }
+
+    /**
+     * Branch codes are immutable identifiers, so memoising them for the life of the
+     * request avoids a lookup on every posting in a batch.
+     *
+     * @var array<int, string|null>
+     */
+    private array $branchCodes = [];
+
+    private function branchCode(?int $branchId): ?string
+    {
+        if ($branchId === null) {
+            return null;
+        }
+
+        return $this->branchCodes[$branchId] ??= Branch::query()->whereKey($branchId)->value('code');
     }
 
     private function validateDraft(TransactionDraft $draft): void

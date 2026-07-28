@@ -8,14 +8,14 @@ work the checklist, run its verification, tick the `REQ-*` IDs it closes.
 | # | Phase | Status | Closes |
 |---|---|---|---|
 | [00](phase-00-foundation.md) | Foundation — scaffold, Docker/Postgres, primitives | ✅ **Done** | — |
-| [01](phase-01-auth-roles-panels.md) | Auth, roles/permissions, panel skeletons | ⬜ Next | REQ-20, ADV-06 |
-| [02](phase-02-fleet.md) | Fleet — cars, owners, agreements, documents, maintenance | ⬜ | REQ-02, REQ-03, REQ-12, REQ-13 |
-| [03](phase-03-crm.md) | CRM — customers, documents | ⬜ | REQ-04 |
-| [04](phase-04-ledger-cash-register.md) | **Accounting ledger + cash register** | ⬜ | REQ-08, REQ-09, REQ-10 |
-| [05](phase-05-bookings-contracts.md) | Bookings, calendar, contracts, e-signature | ⬜ | REQ-05, REQ-06, ADV-01 |
-| [06](phase-06-payments-deposits.md) | Payments, deposits, instalments, fines, payroll | ⬜ | REQ-07, REQ-14, REQ-15, ADV-07 |
-| [07](phase-07-dashboards.md) | Dashboards, KPIs, per-car profitability | ⬜ | REQ-01, REQ-11, REQ-18 |
-| [08](phase-08-notifications.md) | Notifications and alerts | ⬜ | REQ-17, ADV-05 |
+| [01](phase-01-auth-roles-panels.md) | Auth, roles/permissions, panel skeletons | ✅ **Done** | REQ-20, ADV-06 |
+| [02](phase-02-fleet.md) | Fleet — cars, owners, agreements, documents, maintenance | ✅ **Done** | REQ-02, REQ-03, REQ-12, REQ-13 |
+| [03](phase-03-crm.md) | CRM — customers, documents | ✅ **Done** | REQ-04 |
+| [04](phase-04-ledger-cash-register.md) | **Accounting ledger + cash register** | ✅ **Done** | REQ-08, REQ-09, REQ-10 |
+| [05](phase-05-bookings-contracts.md) | Bookings, calendar, contracts, e-signature | ✅ **Done** | REQ-05, REQ-06, ADV-01 |
+| [06](phase-06-payments-deposits.md) | Payments, deposits, instalments, fines, payroll | ✅ **Done** | REQ-07, REQ-14, REQ-15, ADV-07 |
+| [07](phase-07-dashboards.md) | Dashboards, KPIs, per-car profitability | ✅ **Done** | REQ-01, REQ-11, REQ-18 |
+| [08](phase-08-notifications.md) | Notifications and alerts | ⬜ **Next** | REQ-17, ADV-05 |
 | [09](phase-09-reports.md) | Reports — PDF/Excel exports | ⬜ | REQ-16 |
 | [10](phase-10-portals-audit-backups.md) | Portals, audit, backups, multi-branch | ⬜ | REQ-19, ADV-03/04/06/08/09 |
 

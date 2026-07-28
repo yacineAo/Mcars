@@ -62,9 +62,11 @@ it('allows admin roles to access admin panel', function (UserRole $role) {
     $user = User::factory()->create();
     $user->assignRole($role->value);
 
+    // Since Phase 7 the panel has a dashboard, so /admin renders rather than
+    // bouncing to the first available resource.
     $this->actingAs($user)
         ->get('/admin')
-        ->assertRedirect();
+        ->assertSuccessful();
 })->with([
     UserRole::SuperAdmin,
     UserRole::Manager,

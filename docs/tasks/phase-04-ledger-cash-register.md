@@ -1,6 +1,6 @@
 # Phase 4 — Accounting Ledger & Cash Register
 
-**Status: ⬜** · Depends on: Phases 1–2 · Closes: **REQ-08**, **REQ-09**, **REQ-10** (engine)
+**Status: ✅ Done** · Depends on: Phases 1–2 · Closes: **REQ-08**, **REQ-09**, **REQ-10** (engine)
 
 > ## ⚠ Highest-risk phase in the build
 >
@@ -22,67 +22,67 @@ not be comparable in profitability reports.
 ## Deliverables
 
 ### Tables
-- [ ] `chart_of_accounts` — `code`, `type`, `parent_id`, `normal_balance`, `is_cash_equivalent`,
+- [x] `chart_of_accounts` — `code`, `type`, `parent_id`, `normal_balance`, `is_cash_equivalent`,
       `is_postable`, `is_system`, `branch_id`
-- [ ] **`transactions`** — `debit_account_id` + `credit_account_id` + positive `amount`, plus the
+- [x] **`transactions`** — `debit_account_id` + `credit_account_id` + positive `amount`, plus the
       dimensions (`branch_id`, `car_id`, `booking_id`, `contract_id`, `customer_id`, `car_owner_id`,
       `employee_id`, `expense_category_id`), provenance (`source_type`/`source_id`, `created_by_id`,
       `cash_session_id`) and reversal links
-- [ ] `financial_accounts`, `expense_categories`, `expenses`, `cash_sessions`
-- [ ] **`cash_register_entries` as a VIEW** over `transactions` filtered to cash-equivalent accounts
+- [x] `financial_accounts`, `expense_categories`, `expenses`, `cash_sessions`
+- [x] **`cash_register_entries` as a VIEW** over `transactions` filtered to cash-equivalent accounts
       (ADR-008), with a read-only Eloquent model. **Not a table** — that would be a second source of
       truth for cash.
 
 ### Constraints and invariants
-- [ ] `CHECK (amount > 0)`; `CHECK (debit_account_id <> credit_account_id)`
-- [ ] **PostgreSQL trigger blocking `UPDATE` and `DELETE` on `transactions`** (ADR-003)
-- [ ] Eloquent model guards refusing update/delete, and a call-context flag so only
+- [x] `CHECK (amount > 0)`; `CHECK (debit_account_id <> credit_account_id)`
+- [x] **PostgreSQL trigger blocking `UPDATE` and `DELETE` on `transactions`** (ADR-003)
+- [x] Eloquent model guards refusing update/delete, and a call-context flag so only
       `AccountingService` may create
-- [ ] Policy denying create/update/delete from every UI path
-- [ ] Partial unique index: one `open` cash session per financial account
-- [ ] Indexes from [`../01-database-schema.md`](../01-database-schema.md), including
+- [x] Policy denying create/update/delete from every UI path
+- [x] Partial unique index: one `open` cash session per financial account
+- [x] Indexes from [`../01-database-schema.md`](../01-database-schema.md), including
       `(branch_id, occurred_on)` and `(car_id, occurred_on)`
 
 ### Seeders
-- [ ] Full chart of accounts (1xxx–5xxx) from [`../05-accounting-model.md`](../05-accounting-model.md)
-- [ ] Expense categories mapped to COA accounts, covering every category in REQ-08
-- [ ] Default financial accounts per branch — **cash accounts are per branch**
+- [x] Full chart of accounts (1xxx–5xxx) from [`../05-accounting-model.md`](../05-accounting-model.md)
+- [x] Expense categories mapped to COA accounts, covering every category in REQ-08
+- [x] Default financial accounts per branch — **cash accounts are per branch**
       (`1010-MAIN`, `1010-ORAN`, …), or "cash on hand" is meaningless per location
 
 ### Services
-- [ ] **`AccountingService`** — `post()`, `postMany()` (atomic, for multi-leg entries sharing a
+- [x] **`AccountingService`** — `post()`, `postMany()` (atomic, for multi-leg entries sharing a
       `group_uuid`), `reverse()`, `balanceOf()`. Thin; the account knowledge lives in Posters.
-- [ ] Posters: `ExpensePoster`, `MaintenancePoster`, `CashSessionPoster`
-- [ ] **`CashRegisterService`** — balance from the ledger, open/close session, physical count,
+- [x] Posters: `ExpensePoster`, `MaintenancePoster`, `CashSessionPoster`
+- [x] **`CashRegisterService`** — balance from the ledger, open/close session, physical count,
       **variance posted as a real transaction** (E68/E69) so the ledger reconciles to the drawer
 
 ### Resources & pages
-- [ ] **`TransactionResource` — view-only.** No create/edit/delete action exists on it *at all*: not
+- [x] **`TransactionResource` — view-only.** No create/edit/delete action exists on it *at all*: not
       hidden, not permission-gated, absent. Row action: Reverse, with a mandatory reason.
-- [ ] `ExpenseResource` (draft → pending_approval → approved → paid), `ExpenseCategoryResource`,
+- [x] `ExpenseResource` (draft → pending_approval → approved → paid), `ExpenseCategoryResource`,
       `FinancialAccountResource`, `ChartOfAccountResource`, `CashSessionResource`
-- [ ] **`CashRegisterPage`** — live balance, today's movements with reason and operator (REQ-09),
+- [x] **`CashRegisterPage`** — live balance, today's movements with reason and operator (REQ-09),
       open/close/count, transfer between accounts
 
 ### Jobs
-- [ ] Recurring expense generator (office rent, internet, electricity) → `pending_approval` + alert
-- [ ] Nightly integrity checks from [`../05-accounting-model.md`](../05-accounting-model.md):
+- [x] Recurring expense generator (office rent, internet, electricity) → `pending_approval` + alert
+- [x] Nightly integrity checks from [`../05-accounting-model.md`](../05-accounting-model.md):
       trial balance, cash reconciliation, deposits, receivables, owner payables, immutability,
       **orphan dimensions** (a car-related expense with `car_id IS NULL` silently corrupts per-car P&L)
 
 ### Retro-wire Phase 2
-- [ ] Completed maintenance logs and renewed car documents now post expenses stamped with `car_id`.
+- [x] Completed maintenance logs and renewed car documents now post expenses stamped with `car_id`.
       Find them by the `// PHASE-4:` markers.
 
 ## Tests
 
-- [ ] Every posting-matrix row reachable in this phase (expenses, cash, transfers, variance)
-- [ ] `Transaction::create()` called outside `AccountingService` **throws**
-- [ ] `UPDATE` and `DELETE` on `transactions` raise **at the database level**
-- [ ] `reverse()` restores the prior balance exactly
-- [ ] Cash balance = opening float + movements, computed from the ledger
-- [ ] A closed session with a discrepancy posts the variance and raises an alert
-- [ ] An expense on a car-related category without `car_id` is rejected
+- [x] Every posting-matrix row reachable in this phase (expenses, cash, transfers, variance)
+- [x] `Transaction::create()` called outside `AccountingService` **throws**
+- [x] `UPDATE` and `DELETE` on `transactions` raise **at the database level**
+- [x] `reverse()` restores the prior balance exactly
+- [x] Cash balance = opening float + movements, computed from the ledger
+- [x] A closed session with a discrepancy posts the variance and raises an alert
+- [x] An expense on a car-related category without `car_id` is rejected
 
 ## Definition of done
 

@@ -5,14 +5,21 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources\CarResource\Pages;
 
 use App\Filament\Admin\Resources\CarResource;
+use App\Models\Car;
+use App\Services\ReportService;
+use Carbon\CarbonImmutable;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class ViewCar extends ViewRecord
 {
     protected static string $resource = CarResource::class;
+
+    /** @var array<string, mixed>|null */
+    protected ?array $profitability = null;
 
     public function infolist(Schema $schema): Schema
     {
@@ -76,6 +83,56 @@ class ViewCar extends ViewRecord
                             ->date(),
                     ])
                     ->columns(2),
+                Section::make('Profitability (This Month)')
+                    ->visible(fn (): bool => Auth::user()?->can('reports.view_financials') ?? false)
+                    ->schema([
+                        TextEntry::make('profitability_revenue')
+                            ->label('Revenue')
+                            ->state(fn ($record) => $this->money($this->profitability($record), 'revenue')),
+                        TextEntry::make('profitability_expenses')
+                            ->label('Expenses')
+                            ->state(fn ($record) => $this->money($this->profitability($record), 'expenses')),
+                        TextEntry::make('profitability_net_profit')
+                            ->label('Net Profit')
+                            ->state(fn ($record) => $this->money($this->profitability($record), 'net_profit')),
+                        TextEntry::make('profitability_rental_days')
+                            ->label('Rental Days')
+                            ->state(fn ($record) => ($this->profitability($record)['rental_days'] ?? 0).' days'),
+                        TextEntry::make('profitability_utilisation')
+                            ->label('Utilisation %')
+                            ->state(fn ($record) => ($this->profitability($record)['utilisation_pct'] ?? 0).'%')
+                            ->helperText('Share of calendar days in the month this car was on rent.'),
+                    ])
+                    ->columns(3),
             ]);
+    }
+
+    /**
+     * Resolved once per request — five entries rendering five separate report queries
+     * is five times the work for one row of numbers.
+     *
+     * @return array<string, mixed>
+     */
+    protected function profitability(Car $record): array
+    {
+        if ($this->profitability === null) {
+            $now = CarbonImmutable::today();
+
+            $this->profitability = app(ReportService::class)->singleCarProfitability(
+                $record->id,
+                $now->startOfMonth(),
+                $now->endOfMonth(),
+            ) ?? [];
+        }
+
+        return $this->profitability;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    protected function money(array $data, string $key): string
+    {
+        return number_format((float) ($data[$key] ?? 0), 2).' DZD';
     }
 }

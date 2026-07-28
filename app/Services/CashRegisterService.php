@@ -36,6 +36,32 @@ class CashRegisterService
         );
     }
 
+    /**
+     * Total cash held across every cash-equivalent ledger account (REQ-09).
+     *
+     * Derived from the chart of accounts rather than from `financial_accounts`, so
+     * cash posted to an account that has no operational till record still counts.
+     * A cash-to-cash transfer contributes to both sides of the sum and nets to zero.
+     */
+    public function cashOnHand(?int $branchId = null, ?Carbon $asOf = null): Money
+    {
+        $row = Transaction::query()
+            ->join('chart_of_accounts as a', function ($join) {
+                $join->on('a.id', '=', 'transactions.debit_account_id')
+                    ->orOn('a.id', '=', 'transactions.credit_account_id');
+            })
+            ->where('a.is_cash_equivalent', true)
+            ->when($asOf !== null, fn ($q) => $q->where('transactions.occurred_on', '<=', $asOf->format('Y-m-d')))
+            ->when($branchId !== null, fn ($q) => $q->where('transactions.branch_id', $branchId))
+            ->selectRaw('
+                COALESCE(SUM(CASE WHEN a.id = transactions.debit_account_id THEN transactions.amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN a.id = transactions.credit_account_id THEN transactions.amount ELSE 0 END), 0) AS balance
+            ')
+            ->first();
+
+        return Money::of((string) ($row->balance ?? '0'));
+    }
+
     public function balanceAll(?int $branchId = null): Collection
     {
         $query = FinancialAccount::query()->where('is_active', true);

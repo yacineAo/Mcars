@@ -16,20 +16,36 @@ class RolePermissionSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $perm = Permission::findOrCreate('branches.view_all', 'web');
-
         foreach (UserRole::cases() as $roleEnum) {
             Role::findOrCreate($roleEnum->value, 'web');
         }
 
-        $superAdmin = Role::findByName(UserRole::SuperAdmin->value);
-        $manager = Role::findByName(UserRole::Manager->value);
+        // Permission => the roles that hold it.
+        $grants = [
+            'branches.view_all' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
+            // Gates revenue, profit, cash-flow and receivables reporting. A
+            // receptionist runs the day's returns and the till without ever seeing
+            // what the business earns.
+            'reports.view_financials' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+            ],
+        ];
 
-        if (! $superAdmin->hasPermissionTo($perm)) {
-            $superAdmin->permissions()->attach($perm);
-        }
-        if (! $manager->hasPermissionTo($perm)) {
-            $manager->permissions()->attach($perm);
+        foreach ($grants as $permissionName => $roles) {
+            $permission = Permission::findOrCreate($permissionName, 'web');
+
+            foreach ($roles as $roleEnum) {
+                $role = Role::findByName($roleEnum->value);
+
+                if (! $role->hasPermissionTo($permission)) {
+                    $role->permissions()->attach($permission);
+                }
+            }
         }
     }
 }

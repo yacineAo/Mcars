@@ -376,9 +376,12 @@ ORDER BY net_profit DESC;
 ```
 
 Top row = "top-performing car by profit" (REQ-01).
-`utilisation_pct` should subtract days the car was blocked for maintenance from the denominator if the
-business wants *availability-adjusted* utilisation — decide once, in `ReportService`, and use the same
-definition in the widget, the car page and the fleet report.
+
+> **Decided in Phase 7: the denominator is calendar days — it does NOT subtract maintenance-blocked
+> days.** Downtime is lost earning capacity and the KPI is meant to show it; dividing by rentable days
+> only would report a car that spent two weeks off the road as 100% utilised. `ReportService` applies
+> this one definition to the widget, the car page, the fleet report *and* `occupancyRate()`. See
+> [`tasks/phase-07-dashboards.md`](tasks/phase-07-dashboards.md).
 
 ### Customer outstanding balance (REQ-04)
 
@@ -433,12 +436,17 @@ GROUP BY ec.name ORDER BY total DESC;
 
 ### Fleet occupancy (REQ-01, REQ-18)
 
-Not a ledger query — computed from `bookings` and `car_blocks`:
+Not a ledger query — computed from `bookings`:
 
 ```
-occupancy = Σ rented car-days ÷ Σ available car-days
-available car-days = Σ over cars of (days in period − days blocked − days out_of_service)
+occupancy = Σ rented car-days ÷ Σ calendar car-days
+calendar car-days = car count × days in period
 ```
+
+> **Superseded formula.** This section previously divided by *available* car-days
+> (`days in period − days blocked − days out_of_service`). Phase 7 settled on calendar days for the
+> reason given under §Per-car profitability above; `car_blocks` is not consulted. Both figures come
+> from `ReportService`, so occupancy and per-car utilisation always agree.
 
 ### Accrual vs cash
 
