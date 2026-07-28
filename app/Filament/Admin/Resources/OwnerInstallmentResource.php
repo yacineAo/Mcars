@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Filament\Admin\Resources;
+
+use App\Filament\Admin\Resources\OwnerInstallmentResource\Pages;
+use App\Models\OwnerInstallment;
+use BackedEnum;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use UnitEnum;
+
+class OwnerInstallmentResource extends Resource
+{
+    protected static ?string $model = OwnerInstallment::class;
+
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calendar-days';
+
+    protected static string|UnitEnum|null $navigationGroup = 'Payments';
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Select::make('car_owner_id')->relationship('carOwner', 'first_name')->searchable()->required(),
+                Select::make('car_id')->relationship('car', 'registration_number')->searchable()->required(),
+                DatePicker::make('period_month')->required(),
+                DatePicker::make('due_date')->required(),
+                TextInput::make('amount_due')->numeric()->required()->prefix('DZD'),
+                Select::make('status')->options(['pending' => 'Pending', 'paid' => 'Paid', 'overdue' => 'Overdue', 'waived' => 'Waived'])->required(),
+                Textarea::make('notes')->nullable(),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('carOwner.first_name')->label('Owner'),
+                TextColumn::make('car.registration_number'),
+                TextColumn::make('period_month')->date()->sortable(),
+                TextColumn::make('due_date')->date()->sortable(),
+                TextColumn::make('amount_due')->money('DZD')->sortable(),
+                TextColumn::make('status')->badge(),
+            ])
+            ->filters([
+                SelectFilter::make('status')->options(['pending' => 'Pending', 'paid' => 'Paid', 'overdue' => 'Overdue', 'waived' => 'Waived']),
+            ])
+            ->actions([
+                EditAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ])
+            ->defaultSort('due_date', 'asc');
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListOwnerInstallments::route('/'),
+            'create' => Pages\CreateOwnerInstallment::route('/create'),
+            'edit' => Pages\EditOwnerInstallment::route('/{record}/edit'),
+        ];
+    }
+}

@@ -25,7 +25,7 @@ class DepositPoster
             'ccp' => '1030', 'baridimob' => '1040',
             'card' => '1050', 'cheque' => '1050',
         ];
-        $cashCode = $accountMap[$deposit->method] ?? '1010';
+        $cashCode = $accountMap[$deposit->method->value] ?? '1010';
 
         return new TransactionDraft(
             debitAccountId: $this->resolveId($cashCode),

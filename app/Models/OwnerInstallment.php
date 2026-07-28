@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\InstallmentStatus;
 use App\Models\Concerns\BelongsToBranch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,16 @@ class OwnerInstallment extends Model
         'status', 'accrual_transaction_id',
         'waived_reason', 'notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => InstallmentStatus::class,
+            'period_month' => 'date:Y-m-d',
+            'due_date' => 'date:Y-m-d',
+            'amount_due' => 'decimal:2',
+        ];
+    }
 
     public function agreement(): BelongsTo
     {

@@ -18,6 +18,15 @@ class PayrollRun extends Model
         'approved_by_id', 'approved_at', 'paid_at', 'notes',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'period_month' => 'date:Y-m-d',
+            'approved_at' => 'datetime',
+            'paid_at' => 'datetime',
+        ];
+    }
+
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_id');

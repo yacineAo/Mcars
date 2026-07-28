@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\DepositStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,17 @@ class Deposit extends Model
         'held_at', 'payment_id', 'status',
         'settled_at', 'settled_by_id', 'notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => DepositStatus::class,
+            'method' => PaymentMethod::class,
+            'amount' => 'decimal:2',
+            'held_at' => 'datetime',
+            'settled_at' => 'datetime',
+        ];
+    }
 
     public function booking(): BelongsTo
     {

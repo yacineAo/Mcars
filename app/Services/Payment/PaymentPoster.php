@@ -24,7 +24,7 @@ class PaymentPoster
             'compensation' => '2500',
         ];
 
-        $cashAccountCode = $accountMap[$payment->method] ?? '1010';
+        $cashAccountCode = $accountMap[$payment->method->value] ?? '1010';
 
         $drafts = [];
         $occurredOn = new DateTimeImmutable($payment->paid_at->format('Y-m-d'));

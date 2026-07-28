@@ -223,32 +223,37 @@ generate and sign the contract, send it by WhatsApp, check it back in.
 
 ---
 
-## Phase 6 — Payments, Deposits, Owner Instalments, Fines & Payroll *(in progress)*
+## Phase 6 — Payments, Deposits, Owner Instalments, Fines & Payroll ✅
 
 **Goal.** Every remaining money flow is recorded, through the Phase 4 ledger.
 **Depends on.** Phases 4, 5.
 **Closes.** REQ-07 · REQ-14 · REQ-15 · REQ-03 *(payment side)* · ADV-07
 
-**Deliverables — completed**
+**Status: Complete**
+
+**Deliverables**
 - Tables: `payments`, `payment_schedules`, `deposits`, `deposit_deductions`, `owner_installments`,
   `fines`, `employees`, `payroll_runs`, `payroll_items`, `employee_advances`, `commissions`.
 - Enums: `PaymentStatus`, `DepositStatus`, `DeductionReason`, `InstallmentStatus`, `FineType`,
   `FineLiability`, `FineStatus`, `PayrollStatus`. (`PaymentMethod` existed from earlier.)
-- 11 models with all relations; reverse relations added to `Car`, `Customer`, `Booking`, `Contract`,
-  `CarOwner`.
-- Posters: `PaymentPoster`, `DepositPoster`, `OwnerInstallmentPoster`, `FinePoster`, `PayrollPoster` —
-  implementing E10–E14, E19–E21, E22–E31, E32–E36, E49–E55, E57–E62.
+- 11 models with all relations and proper casts; reverse relations added to `Car`, `Customer`,
+  `Booking`, `Contract`, `CarOwner`.
+- Posters: `PaymentPoster` (E10–E14, E19–E21), `DepositPoster` (E22–E31),
+  `OwnerInstallmentPoster` (E32–E36), `FinePoster` (E49–E55), `PayrollPoster` (E57–E62).
 - `PaymentService` — orchestrating all posters through the accounting ledger.
-- `TransactionType` updated with new cases for Phase 6 flows.
-
-**Remaining**
 - `DepositService` — hold / deduct / refund / forfeit, with the "deductions cannot exceed the deposit"
-  rule and overflow to receivable.
-- `OwnerStatementService` — monthly instalment generation from active agreements (scheduled), payment
-  recording, balance from account 2200.
-- `FineLiabilityService` — matches `violation_at` against active contracts and **proposes** liability.
-- Filament resources for all entities.
-- Tests for every posting-matrix row.
+  rule.
+- `OwnerStatementService` — monthly instalment generation from active agreements, balance from
+  account 2200.
+- `FineLiabilityService` — proposes liability by matching `violation_at` against active contracts.
+- `TransactionType` updated with new cases for Phase 6 flows.
+- Filament resources: `PaymentResource`, `DepositResource`, `FineResource`, `EmployeeResource`,
+  `PayrollRunResource`, `OwnerInstallmentResource`, `CommissionResource`,
+  `EmployeeAdvanceResource`, `PaymentScheduleResource` — each with List/Create/Edit pages.
+- **40 tests (138 assertions):** Poster-level tests for every posting-matrix row; service orchestration
+  tests; lifecycle tests for deposits (hold → deduct → refund / forfeit); owner statement generation
+  with skip-duplicates; fine liability proposal and confirmation; balance-derivation assertion
+  (no stored balances); payload-limit enforcement.
 
 ---
 
