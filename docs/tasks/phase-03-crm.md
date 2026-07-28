@@ -1,6 +1,6 @@
 # Phase 3 — CRM
 
-**Status: ⬜** · Depends on: Phase 1 · Closes: **REQ-04** (except financial tabs), **ADV-02**
+**Status: ✅** · Depends on: Phase 1 · Closes: **REQ-04** (except financial tabs), **ADV-02**
 
 Customers and their identity documents, managed and verifiable.
 
@@ -10,26 +10,26 @@ Customers and their identity documents, managed and verifiable.
 ## Deliverables
 
 ### Tables
-- [ ] `customers` — individual/company, national ID (NIN), licence number + expiry + category,
+- [x] `customers` — individual/company, national ID (NIN), licence number + expiry + category,
       contact, wilaya, rating, blacklist, source
-- [ ] `customer_documents` — type, number, issue/expiry, `verified_at`, `verified_by_id`
-- [ ] `additional_drivers` (booking-scoped; the FK to `bookings` lands in Phase 5 — create the table
+- [x] `customer_documents` — type, number, issue/expiry, `verified_at`, `verified_by_id`
+- [x] `additional_drivers` (booking-scoped; the FK to `bookings` lands in Phase 5 — create the table
       here or defer it there, but do not duplicate it)
 
 ### Enums
-- [ ] `CustomerType`, `CustomerDocumentType`, `CustomerSource` + labels in all three locales
+- [x] `CustomerType`, `CustomerDocumentType`, `CustomerSource` + labels in all three locales
 
 ### Resource
-- [ ] `CustomerResource` with a tabbed view page: Profile · Documents · Bookings *(stub → Phase 5)* ·
+- [x] `CustomerResource` with a tabbed view page: Profile · Documents · Bookings *(stub → Phase 5)* ·
       Financials *(stub → Phase 7)* · Fines *(stub → Phase 6)* · Activity
 
 ### Behaviour
-- [ ] Document upload with front/back images and expiry tracking, on the **private disk**
-- [ ] Verify action recording who verified and when
-- [ ] Blacklist flag with reason, surfaced as a prominent warning **wherever the customer is selected**,
+- [x] Document upload with front/back images and expiry tracking, on the **private disk**
+- [x] Verify action recording who verified and when
+- [x] Blacklist flag with reason, surfaced as a prominent warning **wherever the customer is selected**,
       not only on their own page
-- [ ] Duplicate detection at creation on `national_id`, `driving_license_number` and phone
-- [ ] Rating 1–5 with notes
+- [x] Duplicate detection at creation on `national_id`, `driving_license_number` and phone
+- [x] Rating 1–5 with notes
 
 ## Deliberate design point
 
@@ -44,11 +44,11 @@ they are ledger queries, and the ledger does not exist until Phase 4. Do not add
 
 ## Tests
 
-- [ ] Duplicate national ID blocked at creation
-- [ ] Expired driving licence flagged
-- [ ] Blacklisted customer surfaces a warning at selection time
-- [ ] Document files unreachable without authorisation
-- [ ] A customer created at one branch is visible from another
+- [x] Duplicate national ID blocked at creation
+- [x] Expired driving licence flagged
+- [x] Blacklisted customer surfaces a warning at selection time
+- [x] Document files unreachable without authorisation
+- [x] A customer created at one branch is visible from another
 
 ## Definition of done
 

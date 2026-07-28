@@ -104,4 +104,29 @@ return [
         'towing' => 'Dépannage',
         'other' => 'Autre',
     ],
+    'customer_type' => [
+        'individual' => 'Particulier',
+        'company' => 'Société',
+    ],
+    'customer_document_type' => [
+        'national_id' => 'Carte d\'Identité',
+        'driving_license' => 'Permis de Conduire',
+        'passport' => 'Passeport',
+        'residence_proof' => 'Justificatif de Domicile',
+        'company_register' => 'Registre de Commerce',
+        'other' => 'Autre',
+    ],
+    'customer_source' => [
+        'walk_in' => 'Passage',
+        'referral' => 'Parrainage',
+        'website' => 'Site Web',
+        'facebook' => 'Facebook',
+        'instagram' => 'Instagram',
+        'partner' => 'Partenaire',
+        'other' => 'Autre',
+    ],
+    'customer_gender' => [
+        'male' => 'Homme',
+        'female' => 'Femme',
+    ],
 ];

@@ -104,4 +104,29 @@ return [
         'towing' => 'Towing',
         'other' => 'Other',
     ],
+    'customer_type' => [
+        'individual' => 'Individual',
+        'company' => 'Company',
+    ],
+    'customer_document_type' => [
+        'national_id' => 'National ID',
+        'driving_license' => 'Driving License',
+        'passport' => 'Passport',
+        'residence_proof' => 'Residence Proof',
+        'company_register' => 'Company Register',
+        'other' => 'Other',
+    ],
+    'customer_source' => [
+        'walk_in' => 'Walk-in',
+        'referral' => 'Referral',
+        'website' => 'Website',
+        'facebook' => 'Facebook',
+        'instagram' => 'Instagram',
+        'partner' => 'Partner',
+        'other' => 'Other',
+    ],
+    'customer_gender' => [
+        'male' => 'Male',
+        'female' => 'Female',
+    ],
 ];

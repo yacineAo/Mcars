@@ -104,4 +104,29 @@ return [
         'towing' => 'سحب',
         'other' => 'أخرى',
     ],
+    'customer_type' => [
+        'individual' => 'فرد',
+        'company' => 'شركة',
+    ],
+    'customer_document_type' => [
+        'national_id' => 'بطاقة هوية',
+        'driving_license' => 'رخصة سياقة',
+        'passport' => 'جواز سفر',
+        'residence_proof' => 'إثبات سكن',
+        'company_register' => 'سجل تجاري',
+        'other' => 'أخرى',
+    ],
+    'customer_source' => [
+        'walk_in' => 'زيارة',
+        'referral' => 'إحالة',
+        'website' => 'موقع إلكتروني',
+        'facebook' => 'فيسبوك',
+        'instagram' => 'انستغرام',
+        'partner' => 'شريك',
+        'other' => 'أخرى',
+    ],
+    'customer_gender' => [
+        'male' => 'ذكر',
+        'female' => 'أنثى',
+    ],
 ];

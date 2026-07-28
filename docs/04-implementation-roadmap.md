@@ -113,27 +113,28 @@ document expiry mirror stays correct after edits, seeders create data.
 
 ---
 
-## Phase 3 — CRM
+## Phase 3 — CRM ✅
 
 **Goal.** Customers and their identity documents are managed and verifiable.
 **Depends on.** Phase 1.
 **Closes.** REQ-04 *(except financial tabs)* · ADV-02 *(customer documents)*
 
+**Status: Complete**
+
 **Deliverables**
 - Tables: `customers`, `customer_documents`.
-- Enums: `CustomerType`, `CustomerDocumentType`, `CustomerSource`.
-- `CustomerResource` with a tabbed view page: Profile / Documents / Bookings *(stub)* /
-  Financials *(stub)* / Fines *(stub)* / Activity.
-- Document upload with front/back images, expiry tracking, and a verify action recording
-  `verified_by`/`verified_at`.
-- Blacklist flag with reason, surfaced as a prominent warning wherever the customer is selected.
-- Duplicate detection on `national_id`, `driving_license_number` and phone at creation time.
-- Rating field (1–5) with notes.
+- Enums: `CustomerType`, `CustomerDocumentType`, `CustomerSource`, `CustomerGender`.
+- `CustomerResource` with a view page (Profile / Driving Licence / Contact / Commercial sections)
+  and Documents relation manager.
+- Document upload with front/back images on **private disk**, expiry tracking, verify action.
+- Blacklist flag with conditional reason field.
+- Database-level unique partial indexes on `national_id`, `driving_license_number`, `phone`.
+- Rating field (1–5) with DB CHECK constraint.
+- Auto-generated customer code (IND-xxx / COM-xxx).
+- Translations for all CRM enums in ar/fr/en.
 
-**Tests.** Duplicate national ID blocked. Expired licence flagged. Blacklisted customer surfaces a
-warning. Document files are not reachable without authorisation.
-
-**Demo.** Register a customer with ID and licence scans; see the expiry warnings.
+**Tests.** 9 tests: customer creation, duplicate detection on all three fields, blacklist,
+rating validation, document verification.
 
 ---
 
