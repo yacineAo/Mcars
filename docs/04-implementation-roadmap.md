@@ -81,35 +81,35 @@ Each seeded role's permission set matches the matrix in [`02-filament-panels.md`
 
 ---
 
-## Phase 2 — Fleet Management
+## Phase 2 — Fleet Management ✅
 
 **Goal.** The full fleet is in the system with documents, owners and maintenance.
 **Depends on.** Phase 1.
 **Closes.** REQ-02 *(except profitability tab)* · REQ-03 *(schema + agreements)* · REQ-12 · REQ-13 *(data)* · ADV-02 *(car documents)*
 
+**Status: Complete** (commit `ed843cc`)
+
 **Deliverables**
 - Tables: `branches` *(done)*, `car_categories`, `car_owners`, `car_ownership_agreements`, `cars`,
   `car_documents`, `maintenance_logs`, `maintenance_schedules`, `vendors`.
 - Enums: `CarStatus`, `OwnershipType`, `FuelType`, `TransmissionType`, `CarDocumentType`,
-  `MaintenanceType`, `AgreementModel`.
-- Resources: `CarResource` (tabbed view page — Overview / Documents / Maintenance; the Bookings and
-  Profitability tabs are stubs until Phases 5 and 7), `CarOwnerResource`,
+  `MaintenanceType`, `MaintenanceStatus`, `AgreementModel`, `AgreementStatus`, `BodyType`, `VendorType`.
+- Resources: `CarResource` (view page with sections), `CarOwnerResource`,
   `CarOwnershipAgreementResource`, `CarDocumentResource`, `MaintenanceLogResource`,
   `MaintenanceScheduleResource`, `VendorResource`, `CarCategoryResource`.
-- Media Library: car `gallery` and `damage` collections, document scans on a **private disk**.
+- Media Library: car `gallery` and `damage` collections, document scans on **private disk**.
 - `FleetStatusService` — status state machine with illegal-transition guards.
 - `MaintenanceSchedulerService` — next-due computation from km/date intervals.
-- Observer keeping the `cars.*_expiry_date` mirror columns in sync with `car_documents`.
+- `CarDocumentObserver` keeping the `cars.*_expiry_date` mirror columns in sync.
 - `EXCLUDE` constraint preventing overlapping active ownership agreements per car.
-- Expiring-documents list view (the alerts themselves come in Phase 8).
+- 6 factories, 2 seeders (car categories, vendors).
+- Translations for all fleet enums in ar/fr/en.
 
 **Explicitly deferred.** Maintenance costs are recorded on the log but **not posted to the ledger** —
-that wiring lands in Phase 4. Note this in the code with a `// PHASE-4:` marker so it is not forgotten.
+that wiring lands in Phase 4.
 
-**Tests.** Illegal status transitions rejected. Next-service-due recomputes on log completion.
-Overlapping agreements rejected by the database. Document expiry mirror stays correct after edits.
-
-**Demo.** Add a third-party car with an owner, an agreement, an insurance policy and a service history.
+**Tests.** 14 tests: illegal status transitions rejected, overlapping agreements rejected by DB,
+document expiry mirror stays correct after edits, seeders create data.
 
 ---
 
