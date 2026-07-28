@@ -15,7 +15,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             BranchSeeder::class,
-            // Phase 1: RoleSeeder, PermissionSeeder, AdminUserSeeder
+            RolePermissionSeeder::class,
+            AdminUserSeeder::class,
             // Phase 2: CarCategorySeeder, VendorSeeder
             // Phase 4: ChartOfAccountSeeder, ExpenseCategorySeeder, FinancialAccountSeeder
         ]);

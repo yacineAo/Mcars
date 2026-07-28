@@ -19,4 +19,14 @@ return [
         'expense' => 'Expense',
         'invoice' => 'Invoice',
     ],
+    'user_role' => [
+        'super_admin' => 'Super Admin',
+        'manager' => 'Manager',
+        'accountant' => 'Accountant',
+        'receptionist' => 'Receptionist',
+        'maintenance_officer' => 'Maintenance Officer',
+        'supervisor' => 'Supervisor',
+        'car_owner' => 'Car Owner',
+        'client' => 'Client',
+    ],
 ];

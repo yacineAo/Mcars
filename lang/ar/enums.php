@@ -11,4 +11,14 @@ return [
         'expense' => 'مصروف',
         'invoice' => 'فاتورة',
     ],
+    'user_role' => [
+        'super_admin' => 'مشرف عام',
+        'manager' => 'مدير',
+        'accountant' => 'محاسب',
+        'receptionist' => 'استقبال',
+        'maintenance_officer' => 'فني صيانة',
+        'supervisor' => 'مشرف',
+        'car_owner' => 'مالك سيارة',
+        'client' => 'عميل',
+    ],
 ];

@@ -40,14 +40,33 @@ Consequences that are not negotiable:
 
 ## Running it
 
-Commands run inside the `app` container:
+You can use either `docker compose` directly or the `./sail` wrapper (Laravel Sail):
 
 ```bash
+# Start everything
 docker compose up -d
+# or
+./sail up -d
+
+# Run artisan commands
 docker compose exec app php artisan migrate --seed
+# or
+./sail artisan migrate --seed
+
+# Run tests
 docker compose exec app ./vendor/bin/pest
+# or
+./sail pest
+
+# Static analysis
 docker compose exec app ./vendor/bin/phpstan analyse
+# or
+./sail phpstan analyse
+
+# Code style
 docker compose exec app ./vendor/bin/pint
+# or
+./sail pint
 ```
 
 | Service | URL |
@@ -57,7 +76,7 @@ docker compose exec app ./vendor/bin/pint
 | Postgres | localhost:5432 — `mcars` / `mcars` / `secret` |
 
 Tests use a separate `mcars_testing` database. Create it once:
-`docker compose exec postgres createdb -U mcars mcars_testing`.
+`docker compose exec pgsql createdb -U mcars mcars_testing`.
 
 > If the Docker daemon is reached through a mounted socket from another container, run
 > `docker compose` **on the host** — bind-mount paths in `docker-compose.yml` resolve against the

@@ -11,4 +11,14 @@ return [
         'expense' => 'Dépense',
         'invoice' => 'Facture',
     ],
+    'user_role' => [
+        'super_admin' => 'Super Admin',
+        'manager' => 'Gérant',
+        'accountant' => 'Comptable',
+        'receptionist' => 'Réceptionniste',
+        'maintenance_officer' => 'Agent de Maintenance',
+        'supervisor' => 'Superviseur',
+        'car_owner' => 'Propriétaire',
+        'client' => 'Client',
+    ],
 ];

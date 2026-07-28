@@ -36,7 +36,7 @@
             Uses a separate database on the same server as development.
         -->
         <env name="DB_CONNECTION" value="pgsql"/>
-        <env name="DB_HOST" value="postgres"/>
+        <env name="DB_HOST" value="pgsql"/>
         <env name="DB_PORT" value="5432"/>
         <env name="DB_DATABASE" value="mcars_testing"/>
         <env name="DB_USERNAME" value="mcars"/>

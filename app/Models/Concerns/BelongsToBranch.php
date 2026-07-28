@@ -32,12 +32,16 @@ trait BelongsToBranch
         });
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    /** @param Builder<static> $query */
+    /**
+     * @param Builder<static> $query
+     * @return Builder<static>
+     */
     public function scopeForBranch(Builder $query, Branch|int|null $branch): Builder
     {
         if ($branch === null) {
@@ -63,7 +67,7 @@ trait BelongsToBranch
     {
         $user = auth()->user();
 
-        if ($user !== null && isset($user->branch_id) && $user->branch_id !== null) {
+        if ($user !== null && isset($user->branch_id) && $user->branch_id !== null) { // @phpstan-ignore notIdentical.alwaysTrue
             return (int) $user->branch_id;
         }
 
