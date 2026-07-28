@@ -19,6 +19,22 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property int $id
+ * @property int|null $branch_id
+ * @property int|null $car_owner_id
+ * @property CarStatus $status
+ * @property OwnershipType $ownership_type
+ * @property string|null $brand
+ * @property string|null $model
+ * @property string|null $registration_number
+ * @property string $daily_rate
+ * @property string|null $extra_km_price
+ * @property string|null $late_hour_fee
+ * @property int|null $mileage_limit_per_day
+ * @property int|null $odometer
+ * @property string|null $security_deposit_amount
+ */
 class Car extends Model implements HasMedia
 {
     use BelongsToBranch, HasAuditColumns, HasFactory, InteractsWithMedia, SoftDeletes;

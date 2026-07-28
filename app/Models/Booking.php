@@ -25,6 +25,8 @@ use Illuminate\Support\Str;
  * @property string $total_amount
  * @property int|null $odometer_out
  * @property int|null $odometer_in
+ * @property FuelLevel|null $fuel_level_out
+ * @property FuelLevel|null $fuel_level_in
  */
 class Booking extends Model
 {
