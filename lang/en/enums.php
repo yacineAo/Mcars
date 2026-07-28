@@ -2,14 +2,6 @@
 
 declare(strict_types=1);
 
-/*
- * Enum labels, keyed by the enum's snake_case short name (see
- * App\Enums\Concerns\HasEnumMeta). Each phase adds its own enums here in the
- * same session that adds them to the code — docs/07-enums.md rule 5.
- *
- * Phase 0 ships only what exists so far.
- */
-
 return [
     'sequence_key' => [
         'contract' => 'Contract',
@@ -28,5 +20,88 @@ return [
         'supervisor' => 'Supervisor',
         'car_owner' => 'Car Owner',
         'client' => 'Client',
+    ],
+    'car_status' => [
+        'available' => 'Available',
+        'reserved' => 'Reserved',
+        'rented' => 'Rented',
+        'maintenance' => 'In Maintenance',
+        'out_of_service' => 'Out of Service',
+        'sold' => 'Sold',
+        'returned_to_owner' => 'Returned to Owner',
+    ],
+    'ownership_type' => [
+        'company_owned' => 'Company Owned',
+        'third_party' => 'Third Party',
+    ],
+    'agreement_model' => [
+        'fixed_monthly' => 'Fixed Monthly',
+        'revenue_share' => 'Revenue Share',
+        'hybrid' => 'Hybrid',
+    ],
+    'agreement_status' => [
+        'draft' => 'Draft',
+        'active' => 'Active',
+        'suspended' => 'Suspended',
+        'ended' => 'Ended',
+    ],
+    'fuel_type' => [
+        'petrol' => 'Petrol',
+        'diesel' => 'Diesel',
+        'gpl' => 'GPL',
+        'hybrid' => 'Hybrid',
+        'electric' => 'Electric',
+    ],
+    'transmission_type' => [
+        'manual' => 'Manual',
+        'automatic' => 'Automatic',
+    ],
+    'body_type' => [
+        'sedan' => 'Sedan',
+        'hatchback' => 'Hatchback',
+        'suv' => 'SUV',
+        'crossover' => 'Crossover',
+        'pickup' => 'Pickup',
+        'van' => 'Van',
+        'minibus' => 'Minibus',
+        'utility' => 'Utility',
+        'coupe' => 'Coupe',
+    ],
+    'car_document_type' => [
+        'insurance' => 'Insurance',
+        'registration_card' => 'Registration Card',
+        'technical_inspection' => 'Technical Inspection',
+        'road_tax_vignette' => 'Road Tax Vignette',
+        'ownership_title' => 'Ownership Title',
+        'purchase_invoice' => 'Purchase Invoice',
+        'gps_subscription' => 'GPS Subscription',
+        'other' => 'Other',
+    ],
+    'maintenance_type' => [
+        'oil_change' => 'Oil Change',
+        'tire_change' => 'Tire Change',
+        'brakes' => 'Brakes',
+        'filters' => 'Filters',
+        'general_service' => 'General Service',
+        'repair' => 'Repair',
+        'body_work' => 'Body Work',
+        'battery' => 'Battery',
+        'diagnostics' => 'Diagnostics',
+        'cleaning' => 'Cleaning',
+        'other' => 'Other',
+    ],
+    'maintenance_status' => [
+        'scheduled' => 'Scheduled',
+        'in_progress' => 'In Progress',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ],
+    'vendor_type' => [
+        'garage' => 'Garage',
+        'insurance' => 'Insurance',
+        'parts' => 'Parts Supplier',
+        'fuel_station' => 'Fuel Station',
+        'towing' => 'Towing',
+        'other' => 'Other',
     ],
 ];

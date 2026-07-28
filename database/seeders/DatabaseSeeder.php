@@ -17,7 +17,8 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             RolePermissionSeeder::class,
             AdminUserSeeder::class,
-            // Phase 2: CarCategorySeeder, VendorSeeder
+            CarCategorySeeder::class,
+            VendorSeeder::class,
             // Phase 4: ChartOfAccountSeeder, ExpenseCategorySeeder, FinancialAccountSeeder
         ]);
     }
