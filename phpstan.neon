@@ -1,0 +1,26 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+
+    paths:
+        - app
+        - database
+        - config
+        - routes
+
+    ignoreErrors:
+        # Foundation traits shipped in Phase 0 for the phases that consume them:
+        # BelongsToBranch and HasAuditColumns land on models from Phase 1 onward,
+        # HasEnumMeta on the first enums in Phase 2. PHPStan skips traits with no
+        # users, which it reports as an error.
+        #
+        # These entries are self-cleaning: once a model uses the trait the pattern
+        # stops matching, and reportUnmatchedIgnoredErrors (on by default) fails
+        # the build until the entry is deleted.
+        -
+            identifier: trait.unused
+            paths:
+                - app/Models/Concerns/*.php
+                - app/Enums/Concerns/*.php
