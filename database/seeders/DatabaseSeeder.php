@@ -19,7 +19,9 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             CarCategorySeeder::class,
             VendorSeeder::class,
-            // Phase 4: ChartOfAccountSeeder, ExpenseCategorySeeder, FinancialAccountSeeder
+            ChartOfAccountSeeder::class,
+            ExpenseCategorySeeder::class,
+            FinancialAccountSeeder::class,
         ]);
     }
 }

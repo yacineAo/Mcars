@@ -90,7 +90,11 @@ final class SequenceGenerator
             ->where('id', $row->id)
             ->update(['next_number' => $number + 1, 'updated_at' => now()]);
 
-        return $this->format($row->prefix, $branchCode, $year, $number, (int) $row->padding);
+        $result = $this->format($row->prefix, $branchCode, $year, $number, (int) $row->padding);
+
+        logger("SequenceGenerator::next({$key}, branch={$branchId}, year={$year}) → {$result} (was {$number})");
+
+        return $result;
     }
 
     /** Read the next number without consuming it. For previews only. */
