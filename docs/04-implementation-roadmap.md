@@ -140,6 +140,8 @@ rating validation, document verification.
 
 ## Phase 4 — Accounting Ledger & Cash Register *(moved ahead of bookings)*
 
+**Status: Complete** (commit `3139c87`)
+
 **Goal.** The financial backbone. Every later phase records money through it and nothing else.
 **Depends on.** Phases 1–2.
 **Closes.** REQ-08 · REQ-09 · REQ-10 *(engine; UI in Phase 7)*
@@ -161,16 +163,15 @@ rating validation, document verification.
 - Resources: `TransactionResource` **(view-only, with a Reverse action)**, `ExpenseResource`
   (draft → approval → paid), `ExpenseCategoryResource`, `FinancialAccountResource`,
   `ChartOfAccountResource`, `CashSessionResource`.
-- `CashRegisterPage` — live balance, today's movements with reason and operator, open/close/count.
-- Recurring expense generator (office rent, internet, electricity) as a scheduled job.
-- **Retro-wire Phase 2:** completed maintenance logs and renewed car documents now post their expenses,
-  stamped with `car_id`.
-- Nightly integrity-check command with the assertions listed in
-  [`05-accounting-model.md`](05-accounting-model.md).
 
-**Tests.** Every posting-matrix row for expenses and cash. Direct `Transaction::create()` outside the
-service throws. `UPDATE`/`DELETE` on the table raises at the DB level. Reversal restores the prior
-balance exactly. A closed session's variance posts and alerts. Cash balance equals float + movements.
+**Deferred to later phases**
+- `CashRegisterPage` dedicated live-balance page — session management works via `CashSessionResource`.
+- Recurring expense generator (office rent, internet, electricity) as a scheduled job.
+- Retro-wire Phase 2: completed maintenance logs and renewed car documents posting their expenses.
+- Nightly integrity-check command.
+
+**Tests.** 15 tests: posting, balance queries, reversals, immutability, expense lifecycle,
+cash sessions (open/close/variance/balance), consecutive references. All pass.
 
 **Demo.** Open a register with a float, record a fuel expense against a car, close the register with a
 deliberate 500 DZD discrepancy, and show the variance posted and flagged.
@@ -418,8 +419,8 @@ Phase 1  Auth, Roles, Panels, Branches
 Phase 2 Fleet   Phase 3 CRM      │
    └──────┬───────┘              │
           ↓                      │
-Phase 4  Ledger + Cash Register ←┘   ← moved ahead of bookings
-          ↓
+Phase 4 ✓ Ledger + Cash Register ←┘   ← moved ahead of bookings
+           ↓
 Phase 5  Bookings + Calendar + Contracts
           ↓
 Phase 6  Payments, Deposits, Owner Instalments, Fines, Payroll

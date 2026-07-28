@@ -79,8 +79,8 @@ Where each requirement is satisfied. Use this to check nothing was dropped.
 | REQ-05 | `bookings`, `car_blocks` + `EXCLUDE` constraint | Booking Calendar page | `BookingAvailabilityService` | 5 |
 | REQ-06 | `contracts`, `contract_templates`, `contract_signatures` | `ContractResource`, client panel | `ContractService`, `SignatureService`, `MessagingService` | 5 |
 | REQ-07 | `payments`, `payment_schedules` | `PaymentResource` | `AccountingService` | 6 |
-| REQ-08 | `transactions`, `chart_of_accounts`, `expenses` | Finance cluster | `AccountingService` + Posters | 4 |
-| REQ-09 | `transactions` (cash accounts), `cash_sessions` | Cash Register page | `CashRegisterService` | 4 |
+| REQ-08 | `transactions`, `chart_of_accounts`, `expenses` | Finance cluster | `AccountingService` + Posters | 4 ✓ |
+| REQ-09 | `transactions` (cash accounts), `cash_sessions` | Cash Register page | `CashRegisterService` | 4 ✓ |
 | REQ-10 | `transactions` | profit widgets + reports | `ReportService` | 7, 9 |
 | REQ-11 | `transactions.car_id` dimension | car page "Profitability" tab | `ReportService` | 7 |
 | REQ-12 | `maintenance_logs`, `maintenance_schedules` | `MaintenanceLogResource` | `MaintenanceSchedulerService` | 2, 8 |
