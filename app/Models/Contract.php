@@ -102,6 +102,18 @@ class Contract extends Model
         return $this->hasMany(Contract::class, 'parent_contract_id');
     }
 
+    /** @return HasMany<Deposit> */
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
+    }
+
+    /** @return HasMany<Fine> */
+    public function fines(): HasMany
+    {
+        return $this->hasMany(Fine::class);
+    }
+
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by_id');

@@ -152,6 +152,18 @@ class Car extends Model implements HasMedia
         return $this->hasMany(CarBlock::class);
     }
 
+    /** @return HasMany<Fine> */
+    public function fines(): HasMany
+    {
+        return $this->hasMany(Fine::class);
+    }
+
+    /** @return HasMany<OwnerInstallment> */
+    public function ownerInstallments(): HasMany
+    {
+        return $this->hasMany(OwnerInstallment::class);
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('gallery');

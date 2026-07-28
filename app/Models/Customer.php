@@ -104,6 +104,30 @@ class Customer extends Model
         return $this->hasMany(Booking::class);
     }
 
+    /** @return HasMany<Payment> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /** @return HasMany<Deposit> */
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
+    }
+
+    /** @return HasMany<Fine> */
+    public function fines(): HasMany
+    {
+        return $this->hasMany(Fine::class);
+    }
+
+    /** @return HasMany<PaymentSchedule> */
+    public function paymentSchedules(): HasMany
+    {
+        return $this->hasMany(PaymentSchedule::class);
+    }
+
     /** @return HasMany<Contract> */
     public function contracts(): HasMany
     {

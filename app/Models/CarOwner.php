@@ -63,4 +63,16 @@ class CarOwner extends Model
     {
         return $this->hasMany(CarOwnershipAgreement::class);
     }
+
+    /** @return HasMany<OwnerInstallment> */
+    public function ownerInstallments(): HasMany
+    {
+        return $this->hasMany(OwnerInstallment::class);
+    }
+
+    /** @return HasMany<Payment> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
 }

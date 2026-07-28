@@ -149,6 +149,18 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'driver_employee_id');
     }
 
+    /** @return HasMany<Deposit> */
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
+    }
+
+    /** @return HasMany<Fine> */
+    public function fines(): HasMany
+    {
+        return $this->hasMany(Fine::class);
+    }
+
     public function scopeActive($query): void
     {
         $query->whereIn('status', [BookingStatus::Confirmed, BookingStatus::Active, BookingStatus::Overdue]);
