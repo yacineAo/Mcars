@@ -13,7 +13,8 @@ design. Visibility inside the panel is governed by permissions, not by which pan
 
 ## The `admin` panel
 
-Organised with **Filament Clusters** so a receptionist is not scrolling past forty navigation items.
+Organised into navigation **groups** so a receptionist is not scrolling past forty items. (The design
+called for Filament Clusters; the build uses `navigationGroup`, which achieves the same grouping.)
 
 ### Cluster: Fleet — REQ-02, REQ-03, REQ-12, REQ-13
 | Resource | Notes |
@@ -41,7 +42,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 ### Cluster: Bookings — REQ-05, REQ-06, ADV-01, ADV-02
 | Resource / Page | Notes |
 |---|---|
-| **`BookingCalendarPage`** | Custom full-calendar page: resource-timeline, one row per car, drag to create, colour by status, maintenance blocks rendered inline. The primary daily work surface. |
+| ~~`BookingCalendarPage`~~ | **Not built.** Bookings are worked from the table view; `BookingAvailabilityService::calendarFeed()` exists for when it is. |
 | `BookingResource` | Table view for search/filtering; wizard form for creation |
 | `ContractResource` | Generate PDF, send, signature status, close-out |
 | `ContractTemplateResource` | Per-locale templates (ar/fr/en) |
@@ -53,7 +54,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 | Resource / Page | Notes |
 |---|---|
 | **`TransactionResource`** | **View-only.** No create, edit or delete action exists on this resource at all — not hidden, not permission-gated, *absent*. The ledger is written by `AccountingService` only. Filters: date range, account, type, car, customer, owner, branch. Row action: "Reverse" (creates a compensating entry with a mandatory reason). |
-| **`CashRegisterPage`** | Custom page: live balance per financial account, today's in/out with reason and operator (REQ-09), open/close shift, count and reconcile, transfer between accounts. |
+| ~~`CashRegisterPage`~~ | **Not built.** Shifts are opened and closed from `CashSessionResource`, which does post the variance. |
 | `PaymentResource` | Records receipts and disbursements; posts via `AccountingService` |
 | `PaymentScheduleResource` | Instalment plans, overdue filter |
 | `ExpenseResource` | Draft → approval → paid workflow, recurring templates |
@@ -73,13 +74,13 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 `AlertRuleResource`.
 
 ### Cluster: Reports — REQ-16
-`ReportsHubPage` — one page per report, each with a parameter form and PDF/Excel export buttons:
-profit, expenses, customers, fleet, tax, cash flow, owner statements, receivables ageing.
-Large exports queue and notify on completion.
+**Not built — Phase 9.** `ReportsHubPage` with per-report parameter forms and PDF/Excel export.
+Figures are currently available only as dashboard widgets.
 
 ### Cluster: Settings & Access — REQ-20, ADV-03, ADV-06
-`UserResource`, `RoleResource` (Shield), `BranchResource`, `SettingsPage`,
-`ActivityLogResource` (view-only), `BackupsPage`.
+Built: `UserResource`, `RoleResource` (Shield), `BranchResource`, `AlertRuleResource`,
+`NotificationLogResource`.
+Not built (Phase 10): `SettingsPage`, `ActivityLogResource`, `BackupsPage`.
 
 ### Role → visibility matrix (REQ-20)
 

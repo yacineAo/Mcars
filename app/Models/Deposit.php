@@ -8,13 +8,22 @@ use App\Enums\DepositStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\HasLedgerPostings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property DepositStatus $status
+ * @property string $amount
+ * @property int $booking_id
+ * @property int $customer_id
+ * @property int|null $branch_id
+ */
 class Deposit extends Model
 {
-    use BelongsToBranch, HasAuditColumns;
+    use BelongsToBranch, HasAuditColumns, HasLedgerPostings;
 
     protected $fillable = [
         'booking_id', 'contract_id', 'customer_id', 'branch_id',

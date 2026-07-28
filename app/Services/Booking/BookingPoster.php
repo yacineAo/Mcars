@@ -31,6 +31,8 @@ class BookingPoster
             carId: $booking->car_id,
             bookingId: $booking->id,
             customerId: $booking->customer_id,
+            sourceType: 'booking',
+            sourceId: $booking->id,
             meta: ['booking_reference' => $booking->reference],
         );
 
@@ -48,6 +50,8 @@ class BookingPoster
                 carId: $booking->car_id,
                 bookingId: $booking->id,
                 customerId: $booking->customer_id,
+                sourceType: 'booking',
+                sourceId: $booking->id,
                 meta: ['booking_reference' => $booking->reference],
             );
         }
@@ -75,6 +79,8 @@ class BookingPoster
                 carId: $booking->car_id,
                 bookingId: $booking->id,
                 customerId: $booking->customer_id,
+                sourceType: 'booking',
+                sourceId: $booking->id,
                 meta: ['booking_reference' => $booking->reference],
             );
         }
@@ -93,6 +99,8 @@ class BookingPoster
                 carId: $booking->car_id,
                 bookingId: $booking->id,
                 customerId: $booking->customer_id,
+                sourceType: 'booking',
+                sourceId: $booking->id,
                 meta: ['booking_reference' => $booking->reference],
             );
         }
@@ -111,6 +119,8 @@ class BookingPoster
                 carId: $booking->car_id,
                 bookingId: $booking->id,
                 customerId: $booking->customer_id,
+                sourceType: 'booking',
+                sourceId: $booking->id,
                 meta: ['booking_reference' => $booking->reference],
             );
         }
@@ -129,6 +139,8 @@ class BookingPoster
                 carId: $booking->car_id,
                 bookingId: $booking->id,
                 customerId: $booking->customer_id,
+                sourceType: 'booking',
+                sourceId: $booking->id,
                 meta: ['booking_reference' => $booking->reference],
             );
         }

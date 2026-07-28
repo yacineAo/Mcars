@@ -208,7 +208,7 @@ deliberate 500 DZD discrepancy, and show the variance posted and flagged.
 - Checkout/check-in flows with `condition_reports` (odometer, fuel, damage diagram, photos, signature).
 - `ContractService` — template render, `content_snapshot` freeze, PDF, `amend()`, `close()`.
 - `SignatureService` — OTP and drawn signature, per-signer SHA-256 document hash.
-- `MessagingService` v1 — email + WhatsApp delivery of the contract PDF, logged to `notification_logs`.
+- `MessagingService` v1 — email delivery of the contract PDF, logged to `notification_logs`.
 - **Ledger wiring (uses Phase 4):** `BookingPoster` posts E02–E08 at contract activation and closeout;
   deposits post via `DepositPoster` — the `deposits` table and full lifecycle land in Phase 6, so
   Phase 5 handles only the simple "take a deposit, refund it in full" path.
@@ -219,7 +219,7 @@ exactly one commits. Maintenance block prevents booking. Contract PDF regenerate
 revenue appears in the ledger on activation, not on confirmation.
 
 **Demo.** Book a car from the calendar, try to double-book it and be refused, check the car out,
-generate and sign the contract, send it by WhatsApp, check it back in.
+generate and sign the contract, send it by email, check it back in.
 
 ---
 
@@ -294,7 +294,7 @@ individual ledger rows.
 **Deliverables**
 - Tables: `alert_rules`, `notification_logs`; Laravel `notifications`.
 - `NotificationService` — hourly scheduled rule evaluation.
-- `MessagingService` full build: mail, WhatsApp Cloud API, SMS gateway; per-locale templates
+- `MessagingService` full build: mail, in-app bell, Discord webhooks; per-locale templates
   (ar/fr/en); queued with retry; delivery webhooks updating `notification_logs`.
 - Alert types: return due tomorrow · booking overdue · payment overdue · owner instalment due ·
   insurance / registration / inspection expiring · driving licence expiring · maintenance due (km or
@@ -306,10 +306,10 @@ individual ledger rows.
 - `AlertRuleResource` so lead times are managed by the manager, not by a developer.
 
 **Tests.** Each rule fires at the right lead time and not before. Deduplication verified. A failed
-WhatsApp send is retried and logged, and does not block the request. Recipients are correctly scoped —
+A failed send is retried and logged, and does not block the request. Recipients are correctly scoped —
 an owner alert never reaches another owner.
 
-**Demo.** Set an insurance policy to expire in 7 days; watch the alert arrive by email and WhatsApp and
+**Demo.** Set an insurance policy to expire in 7 days; watch the alert arrive by email and Discord and
 appear in the bell, once.
 
 ---
@@ -323,7 +323,7 @@ appear in the bell, once.
 **Deliverables**
 - `ReportsHubPage` with a parameter form per report.
 - Reports: profit & loss, expense report (by category, by car, by branch), customer report
-  (activity + balances), fleet report (utilisation + profitability per car), tax report, cash flow,
+  (activity + balances), fleet report (utilisation + profitability per car), cash flow,
   owner statements, receivables ageing, cash session audit.
 - PDF export: branded, per-locale, Arabic RTL correct.
 - Excel/CSV export with multiple sheets where useful.
@@ -342,7 +342,7 @@ role and branch scope.
 
 **Goal.** External users get their own doors, and the system becomes operationally safe to run.
 **Depends on.** All previous phases.
-**Closes.** REQ-19 · ADV-03 · ADV-04 · ADV-06 · ADV-08 · ADV-09
+**Closes.** ADV-03 · ADV-04 · ADV-06  *(REQ-19, ADV-08 and ADV-09 withdrawn — ADR-007)*
 
 **Deliverables**
 

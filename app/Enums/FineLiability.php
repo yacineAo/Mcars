@@ -13,6 +13,7 @@ enum FineLiability: string implements HasColor, HasIcon, HasLabel
 {
     use HasEnumMeta;
 
+    case PendingReview = 'pending_review';
     case Customer = 'customer';
     case Company = 'company';
     case Owner = 'owner';
@@ -20,6 +21,7 @@ enum FineLiability: string implements HasColor, HasIcon, HasLabel
     public function getColor(): string
     {
         return match ($this) {
+            self::PendingReview => 'gray',
             self::Customer => 'danger',
             self::Company => 'warning',
             self::Owner => 'info',
@@ -29,6 +31,7 @@ enum FineLiability: string implements HasColor, HasIcon, HasLabel
     public function getIcon(): string
     {
         return match ($this) {
+            self::PendingReview => 'heroicon-o-question-mark-circle',
             self::Customer => 'heroicon-o-user',
             self::Company => 'heroicon-o-building-office',
             self::Owner => 'heroicon-o-user-group',

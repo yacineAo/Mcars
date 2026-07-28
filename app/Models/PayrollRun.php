@@ -4,14 +4,21 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PayrollStatus;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasLedgerPostings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property PayrollStatus $status
+ * @property int|null $branch_id
+ */
 class PayrollRun extends Model
 {
-    use BelongsToBranch;
+    use BelongsToBranch, HasLedgerPostings;
 
     protected $fillable = [
         'branch_id', 'period_month', 'status',
@@ -21,6 +28,9 @@ class PayrollRun extends Model
     protected function casts(): array
     {
         return [
+            // Was missing, so status came back as a raw string and every
+            // `=== PayrollStatus::X` comparison silently evaluated false.
+            'status' => PayrollStatus::class,
             'period_month' => 'date:Y-m-d',
             'approved_at' => 'datetime',
             'paid_at' => 'datetime',

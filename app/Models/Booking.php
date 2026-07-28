@@ -8,15 +8,27 @@ use App\Enums\BookingStatus;
 use App\Enums\FuelLevel;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\HasLedgerPostings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property BookingStatus $status
+ * @property int|null $car_id
+ * @property int|null $customer_id
+ * @property int|null $branch_id
+ * @property string|null $reference
+ * @property string $total_amount
+ * @property int|null $odometer_out
+ * @property int|null $odometer_in
+ */
 class Booking extends Model
 {
-    use BelongsToBranch, HasAuditColumns;
+    use BelongsToBranch, HasAuditColumns, HasLedgerPostings;
 
     protected $fillable = [
         'uuid',

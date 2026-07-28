@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\BookingStatus;
+use App\Enums\FuelLevel;
 use App\Filament\Admin\Resources\BookingResource\Pages;
 use App\Models\Booking;
+use App\Services\Booking\BookingService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -14,8 +16,10 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -25,6 +29,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class BookingResource extends Resource
@@ -117,21 +122,125 @@ class BookingResource extends Resource
                 TextColumn::make('pickup_at')->dateTime(),
                 TextColumn::make('expected_return_at')->dateTime(),
                 TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (BookingStatus $s): string => $s->getColor()),
+                    ->badge(),
                 TextColumn::make('total_amount')->money('DZD'),
             ])
             ->filters([
                 SelectFilter::make('status')
                     ->options(BookingStatus::options()),
             ])
+            // Every lifecycle step goes through BookingService. These used to be
+            // bare status updates, which meant a car could be handed over without
+            // the rental ever reaching the ledger — no revenue, no receivable, and
+            // a dashboard that under-reported the day's takings.
             ->actions([
+                Action::make('confirm')
+                    ->label(__('bookings.actions.confirm'))
+                    ->icon('heroicon-o-check')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->action(function (Booking $record, BookingService $bookings): void {
+                        $bookings->confirm($record, Auth::user());
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('bookings.notifications.confirmed'))
+                            ->send();
+                    })
+                    ->visible(fn (Booking $record): bool => $record->status->is(
+                        BookingStatus::Draft,
+                        BookingStatus::Pending,
+                    )),
+
                 Action::make('checkout')
-                    ->action(fn (Booking $record) => $record->update(['status' => BookingStatus::Active]))
+                    ->label(__('bookings.actions.checkout'))
+                    ->icon('heroicon-o-key')
+                    ->color('success')
+                    ->modalHeading(__('bookings.actions.checkout_heading'))
+                    ->modalDescription(__('bookings.actions.checkout_description'))
+                    ->form([
+                        DateTimePicker::make('actual_pickup_at')
+                            ->label(__('bookings.fields.actual_pickup_at'))
+                            ->default(now())
+                            ->required(),
+                        TextInput::make('odometer_out')
+                            ->label(__('bookings.fields.odometer_out'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
+                        Select::make('fuel_level_out')
+                            ->label(__('bookings.fields.fuel_level_out'))
+                            ->options(FuelLevel::options())
+                            ->required(),
+                    ])
+                    ->action(function (Booking $record, array $data, BookingService $bookings): void {
+                        $bookings->checkOut($record, $data, Auth::user());
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('bookings.notifications.checked_out'))
+                            ->body(__('bookings.notifications.revenue_posted'))
+                            ->send();
+                    })
                     ->visible(fn (Booking $record): bool => $record->status === BookingStatus::Confirmed),
-                Action::make('complete')
-                    ->action(fn (Booking $record) => $record->update(['status' => BookingStatus::Completed]))
-                    ->visible(fn (Booking $record): bool => $record->status === BookingStatus::Active),
+
+                Action::make('checkin')
+                    ->label(__('bookings.actions.checkin'))
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->modalHeading(__('bookings.actions.checkin_heading'))
+                    ->modalDescription(__('bookings.actions.checkin_description'))
+                    ->form([
+                        DateTimePicker::make('actual_return_at')
+                            ->label(__('bookings.fields.actual_return_at'))
+                            ->default(now())
+                            ->required(),
+                        TextInput::make('odometer_in')
+                            ->label(__('bookings.fields.odometer_in'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
+                        Select::make('fuel_level_in')
+                            ->label(__('bookings.fields.fuel_level_in'))
+                            ->options(FuelLevel::options())
+                            ->required(),
+                    ])
+                    // checkInWithCharges also posts the closeout extras (late hours,
+                    // excess km, fuel shortfall) when a check-in condition report
+                    // exists; without one it closes the rental with no extra charges.
+                    ->action(function (Booking $record, array $data, BookingService $bookings): void {
+                        $bookings->checkInWithCharges($record, $data, Auth::user());
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('bookings.notifications.checked_in'))
+                            ->send();
+                    })
+                    ->visible(fn (Booking $record): bool => $record->status->is(
+                        BookingStatus::Active,
+                        BookingStatus::Overdue,
+                    )),
+
+                Action::make('cancel')
+                    ->label(__('bookings.actions.cancel'))
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->form([
+                        Textarea::make('reason')
+                            ->label(__('bookings.fields.cancellation_reason'))
+                            ->required()
+                            ->maxLength(500),
+                    ])
+                    ->action(function (Booking $record, array $data, BookingService $bookings): void {
+                        $bookings->cancel($record, $data['reason'], Auth::user());
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('bookings.notifications.cancelled'))
+                            ->send();
+                    })
+                    ->visible(fn (Booking $record): bool => ! $record->status->isTerminal()),
+
                 EditAction::make(),
                 DeleteAction::make(),
             ])

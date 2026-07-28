@@ -293,7 +293,7 @@ and casts only; Actions are single use cases; Services own orchestration and the
 Filament resources define forms and tables and call one Action or Service per button.
 
 **Consequences.**
-- The same operation behaves identically from the admin panel, the client portal, an artisan command
+- The same operation behaves identically from the admin panel, an artisan command
   and a future API — because there is one implementation.
 - Testable without booting Filament.
 - Cost: more classes, and more indirection than a small team may be used to. Justified by the number of
@@ -330,13 +330,15 @@ Collected here rather than silently defaulted. None block starting Phase 0.
 2. **Owner disclosure level** — how much does an owner on a `fixed_monthly` agreement see? The design
    currently shows their car's gross rental revenue and rental days, but not company margin. Confirm
    before Phase 10.
-3. **TVA / VAT treatment** — account 2400 and the tax report exist, but Algerian rental VAT rules need
+3. ~~**TVA / VAT treatment**~~ — **closed.** The business charges no tax. Account 2400, the tax
+   columns and posting E03 were removed. Formerly: Algerian rental VAT rules needed
    confirming before Phase 9.
 4. **Depreciation on company-owned cars (E48)** — include it, so company-owned and third-party cars are
    comparable in profitability reports? Recommended, but it is a business call.
 5. **Long-term leasing** — if monthly leases become a product, revenue recognition and the booking
    calendar both need rethinking. Worth knowing now.
-6. **WhatsApp provider** — WhatsApp Cloud API (official, template pre-approval required) or a
+6. ~~**WhatsApp provider**~~ — **closed.** Discord webhooks were chosen; the swappable driver
+   interface means adding WhatsApp later touches no calling code. Original context: a
    third-party gateway? Affects Phase 5 contract delivery.
 7. **Number of branches expected** — if it is genuinely one forever, Phase 10's multi-branch work can be
    dropped; the columns from ADR-004 cost nothing either way.

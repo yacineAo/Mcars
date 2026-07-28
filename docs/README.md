@@ -1,11 +1,14 @@
 # Mcars — Car Rental Management ERP
 
-Architecture and design documentation. **No implementation code yet** — this folder is the design that
-the phased build works from.
+Architecture and design documentation. **Phases 0–8 are built**; 9 and 10 are not. Where a document
+still describes something unbuilt, the phase file says so.
 
-A full operations + accounting + fleet + CRM system for a car rental business: three Filament panels
-(staff, car owners, customers), a double-entry accounting ledger, a booking calendar with
-database-enforced double-booking prevention, e-signed contracts, and per-car profitability.
+A full operations + accounting + fleet + CRM system for a car rental business: one staff Filament
+panel, a double-entry accounting ledger, database-enforced double-booking prevention, e-signed
+contracts, and per-car profitability. Staff-only — the owner and client portals were withdrawn
+(ADR-007), and the business charges no tax.
+
+**Using the system rather than building it?** Start at [09 — User Guide](09-user-guide.md).
 
 ---
 
@@ -18,9 +21,11 @@ database-enforced double-booking prevention, e-signed contracts, and per-car pro
 | **02** | [Filament Panels](02-filament-panels.md) | The admin panel, its resources and every dashboard widget. Staff-only — the owner and client portals were withdrawn (ADR-007). |
 | **03** | [Service Layer](03-service-layer.md) | 15 services with responsibilities and signatures, plus the layering convention that keeps models and Filament resources thin. |
 | **04** | [Implementation Roadmap](04-implementation-roadmap.md) | 11 phases, each a self-contained session, with deliverables, tests and definition of done. |
-| **05** | [Accounting Model](05-accounting-model.md) | Chart of accounts, the full posting matrix (71 business events → exact debit/credit pairs), and every derivation query. |
+| **05** | [Accounting Model](05-accounting-model.md) | Chart of accounts, the full posting matrix (70 business events → exact debit/credit pairs), and every derivation query. |
 | **06** | [Design Decisions](06-design-decisions.md) | 14 ADRs recording what was chosen, what was rejected, and why. Plus the open questions. |
 | **07** | [Enum Catalogue](07-enums.md) | Every enum and its cases, so phases do not invent divergent values. |
+| **09** | [User Guide](09-user-guide.md) | Step-by-step operating instructions for staff: setting up, adding cars, the rental lifecycle, taking money, deposits, expenses, the cash register, fines, owners, payroll, alerts. Describes only what is actually built. |
+| **09** | [User Guide](09-user-guide.md) | **How to actually use the system**, step by step, for office staff. Describes the as-built application. |
 | **08** | [Multi-Branch Retrofit](08-multi-branch-retrofit.md) | Adding `Branch` to an **already-running** single-location system: 5-deploy migration sequence, files to change, the branch switcher, and the modules that break if handled naively. Supersedes ADR-004 for the as-built system. |
 
 **Before an implementation session**, load `00`, `01`, the relevant part of `02`/`03`, and — if the
@@ -71,14 +76,14 @@ Payment methods include **CCP** and **BaridiMob**.
 
 ```
 0  Foundation ...................... scaffold, Docker/Postgres, Money, sequences, enums
-1  Auth, Roles, Panels ............. Shield, 3 panel skeletons, branch_id everywhere
+1  Auth, Roles, Panels ............. Shield, staff panel, branch_id everywhere
 2  Fleet ........................... cars, owners, agreements, documents, maintenance
 3  CRM ............................. customers, documents, verification
 4  Ledger + Cash Register .......... ← moved ahead: transactions, COA, expenses, register
 5  Bookings + Contracts ............ calendar, EXCLUDE constraint, PDF, e-signature
 6  Payments + Deposits + Owners .... instalments, fines, payroll
 7  Dashboards + KPIs ............... widgets, charts, per-car profitability
-8  Notifications ................... alert rules, WhatsApp/SMS/Email, deduplication
+8  Notifications ................... alert rules, email/in-app/Discord, deduplication
 9  Reports ......................... PDF/Excel exports
 10 Audit + Backups ................. activity log, backups, multi-branch enforcement
 ```
@@ -107,19 +112,18 @@ These need answers from the business, but none block starting Phase 0. Full cont
 
 1. **Revenue recognition** — the design books rental revenue at pickup for the full amount. Confirm
    with the accountant **before Phase 4**; changing it afterwards means restating history.
-2. **Owner disclosure** — how much does a fixed-rent owner see? Currently: their car's gross rental
-   revenue and rental days, but not company margin. Confirm before Phase 10.
-3. **TVA / VAT treatment** — account 2400 and the tax report exist; Algerian rental VAT rules need
-   confirming before Phase 9.
+2. ~~**Owner disclosure**~~ — **closed.** There is no owner portal; owners see nothing directly.
+3. ~~**TVA / VAT treatment**~~ — **closed.** The business charges no tax; account 2400 and the tax
+   columns were removed.
 4. **Depreciation on company-owned cars** — include it, so owned and third-party cars are comparable in
    profitability reports? Recommended, but a business call.
 5. **Long-term leasing** — if monthly leases become a product line, both revenue recognition and the
    booking calendar need rethinking.
-6. **WhatsApp provider** — official Cloud API (template pre-approval required) or a third-party
-   gateway? Affects Phase 5.
+6. ~~**WhatsApp provider**~~ — **closed.** Discord webhooks were chosen instead. Adding WhatsApp later
+   is one driver class behind the existing interface.
 7. **Branch count** — if it is genuinely one location forever, Phase 10's multi-branch work can be
    dropped. The columns cost nothing either way.
 
 ---
 
-*Design phase. Review and adjust these documents before Phase 0 begins.*
+*Phases 0–8 built. Next: Phase 9 — reports and exports.*

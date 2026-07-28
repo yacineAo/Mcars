@@ -59,8 +59,7 @@ class ContractResource extends Resource
                 TextColumn::make('customer.first_name')->label('Customer'),
                 TextColumn::make('car.registration_number'),
                 TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (ContractStatus $s): string => $s->getColor()),
+                    ->badge(),
                 IconColumn::make('has_damages')->boolean(),
                 TextColumn::make('generated_at')->dateTime(),
                 TextColumn::make('signed_at')->dateTime(),

@@ -45,6 +45,8 @@ class PaymentPoster
                 employeeId: $payment->employee_id,
                 cashSessionId: $payment->cash_session_id,
                 paymentMethod: $payment->method,
+                sourceType: 'payment',
+                sourceId: $payment->id,
                 meta: ['payment_reference' => $payment->reference],
             );
         } else {
@@ -63,6 +65,8 @@ class PaymentPoster
                 employeeId: $payment->employee_id,
                 cashSessionId: $payment->cash_session_id,
                 paymentMethod: $payment->method,
+                sourceType: 'payment',
+                sourceId: $payment->id,
                 meta: ['payment_reference' => $payment->reference],
             );
         }

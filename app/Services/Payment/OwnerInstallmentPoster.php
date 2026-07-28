@@ -31,6 +31,8 @@ class OwnerInstallmentPoster
             createdById: $userId,
             carId: $installment->car_id,
             carOwnerId: $installment->car_owner_id,
+            sourceType: 'owner_installment',
+            sourceId: $installment->id,
             meta: ['installment_id' => (string) $installment->id],
         );
     }
@@ -49,6 +51,8 @@ class OwnerInstallmentPoster
             createdById: $userId,
             carId: $installment->car_id,
             carOwnerId: $installment->car_owner_id,
+            sourceType: 'owner_installment',
+            sourceId: $installment->id,
             meta: ['installment_id' => (string) $installment->id, 'waived' => 'true'],
         );
     }

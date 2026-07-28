@@ -2,10 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Enums\DeductionReason;
 use App\Enums\DepositStatus;
+use App\Enums\FineLiability;
+use App\Enums\FineStatus;
+use App\Enums\FineType;
+use App\Enums\InstallmentStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\PayrollStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -63,13 +71,15 @@ return new class extends Migration
             $table->decimal('amount', 18, 2);
             $table->string('currency', 3)->default('DZD');
             $table->date('paid_at');
-            $table->foreignId('financial_account_id')->nullable()->constrained('chart_of_accounts')->nullOnDelete();
+            $table->foreignId('financial_account_id')->nullable()->constrained('financial_accounts')->nullOnDelete();
             $table->string('status', 24)->default('completed');
             $table->string('external_reference')->nullable();
             $table->date('cheque_due_date')->nullable();
             $table->foreignId('received_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('cash_session_id')->nullable()->constrained()->nullOnDelete();
             $table->text('notes')->nullable();
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->index('direction');
@@ -109,13 +119,15 @@ return new class extends Migration
             $table->foreignId('branch_id')->nullable()->constrained()->nullOnDelete();
             $table->decimal('amount', 18, 2);
             $table->string('method', 32);
-            $table->foreignId('financial_account_id')->nullable()->constrained('chart_of_accounts')->nullOnDelete();
+            $table->foreignId('financial_account_id')->nullable()->constrained('financial_accounts')->nullOnDelete();
             $table->timestampTz('held_at');
             $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
             $table->string('status', 24)->default(DepositStatus::Held->value);
             $table->timestampTz('settled_at')->nullable();
             $table->foreignId('settled_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->text('notes')->nullable();
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->index('customer_id');
@@ -171,6 +183,7 @@ return new class extends Migration
             $table->foreignId('condition_report_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('fine_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->index('deposit_id');
@@ -257,7 +270,7 @@ return new class extends Migration
             $table->decimal('amount', 18, 2);
             $table->date('advanced_on');
             $table->text('reason')->nullable();
-            $table->foreignId('financial_account_id')->nullable()->constrained('chart_of_accounts')->nullOnDelete();
+            $table->foreignId('financial_account_id')->nullable()->constrained('financial_accounts')->nullOnDelete();
             $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
             $table->string('status', 24)->default('outstanding');
             $table->foreignId('recovered_in_payroll_item_id')->nullable()->constrained('payroll_items')->nullOnDelete();
@@ -288,6 +301,31 @@ return new class extends Migration
             $table->index('employee_id');
             $table->index('status');
         });
+
+        // ----------------------------------------------------------------
+        // Enum CHECK constraints
+        // ----------------------------------------------------------------
+        // The convention is varchar + PHP backed enum + a check constraint; this
+        // migration originally shipped none, so any string could be written to a
+        // status column and would only surface later as an enum cast failure.
+        //
+        // Constrained here only where the enum actually exists. employees
+        // (contract_type, salary_type, status), payroll_items.status,
+        // employee_advances.status and commissions.status are documented in
+        // docs/07-enums.md but have no enum class yet — inventing a value set for
+        // them here would guess at a contract that has not been written.
+        DB::statement("ALTER TABLE payments ADD CHECK (method IN ('".implode("','", PaymentMethod::values())."'))");
+        DB::statement("ALTER TABLE payments ADD CHECK (status IN ('".implode("','", PaymentStatus::values())."'))");
+        DB::statement("ALTER TABLE payments ADD CHECK (direction IN ('inbound','outbound'))");
+        DB::statement("ALTER TABLE payment_schedules ADD CHECK (status IN ('".implode("','", InstallmentStatus::values())."'))");
+        DB::statement("ALTER TABLE deposits ADD CHECK (method IN ('".implode("','", PaymentMethod::values())."'))");
+        DB::statement("ALTER TABLE deposits ADD CHECK (status IN ('".implode("','", DepositStatus::values())."'))");
+        DB::statement("ALTER TABLE deposit_deductions ADD CHECK (reason IN ('".implode("','", DeductionReason::values())."'))");
+        DB::statement("ALTER TABLE fines ADD CHECK (type IN ('".implode("','", FineType::values())."'))");
+        DB::statement("ALTER TABLE fines ADD CHECK (liability IN ('".implode("','", FineLiability::values())."'))");
+        DB::statement("ALTER TABLE fines ADD CHECK (status IN ('".implode("','", FineStatus::values())."'))");
+        DB::statement("ALTER TABLE owner_installments ADD CHECK (status IN ('".implode("','", InstallmentStatus::values())."'))");
+        DB::statement("ALTER TABLE payroll_runs ADD CHECK (status IN ('".implode("','", PayrollStatus::values())."'))");
     }
 
     public function down(): void

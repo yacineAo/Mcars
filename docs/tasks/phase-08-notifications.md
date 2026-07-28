@@ -64,7 +64,7 @@ cries wolf daily gets muted — and then the one alert that mattered is missed t
 not degrade the feature gracefully, it destroys it.
 
 ### UI
-- [x] In-app bell on all three panels, filtered by `notifiable`
+- [x] In-app bell on the admin panel, filtered by `notifiable` (the other two panels were withdrawn)
 - [x] Per-user daily digest (`users.notification_digest` + `notification_digest_at`, `alerts:digest`)
 - [x] **`AlertRuleResource`** — gated on the `alerts.manage` permission
 - [x] `NotificationLogResource` — view-only, gated on `alerts.view_logs`, branch-pinned server-side

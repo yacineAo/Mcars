@@ -6,12 +6,13 @@ namespace App\Models;
 
 use App\Enums\InstallmentStatus;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\HasLedgerPostings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OwnerInstallment extends Model
 {
-    use BelongsToBranch;
+    use BelongsToBranch, HasLedgerPostings;
 
     protected $fillable = [
         'car_ownership_agreement_id', 'car_owner_id', 'car_id', 'branch_id',

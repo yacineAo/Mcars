@@ -426,7 +426,8 @@ Pick up at Branch A, return at Branch B — a real requirement for any multi-loc
 
 Requirement 3 says portals are unaffected. That is not automatic — it is the opposite of automatic.
 
-A global `BranchScope` on `Car` applies to **every** query, including the owner portal's. A car owner
+A global `BranchScope` on `Car` applies to **every** query. (The owner portal this originally warned
+about no longer exists — ADR-007 — but the hazard still applies to background jobs and reports.) A car owner
 has no branch context, so `BranchContext` resolves to nothing, and depending on the scope's fallback
 their cars either vanish or all of them appear.
 

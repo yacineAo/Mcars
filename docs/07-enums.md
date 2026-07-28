@@ -152,7 +152,9 @@ determine the accounting effect.
 `fine_received` · `fine_paid` · `fine_recovered` · `fine_written_off` ·
 `salary_accrued` · `salary_paid` · `commission` · `employee_advance` · `advance_recovered` ·
 `cash_transfer` · `cash_deposit_to_bank` · `opening_float` · `cash_over` · `cash_short` ·
-`capital` · `drawings` · `tax` · `bank_charge` · `reversal` · `adjustment`
+`capital` · `drawings` · `bank_charge` · `reversal` · `adjustment`
+
+*(`tax` was removed — the business charges no tax.)*
 
 ### `PaymentMethod` — REQ-07
 | Value | Label | Cash-equivalent account |
@@ -241,23 +243,38 @@ needing a switch statement in three places.
 `administrative` · `other`
 
 ### `FineLiability`
-`customer` · `company` · `owner` · `pending_review`
+`pending_review` · `customer` · `company` · `owner`
 
 Default is `pending_review`. `FineLiabilityService` proposes; a human confirms (ADR-011).
 
 ### `FineStatus`
 `new` · `pending_review` · `assigned_to_customer` · `disputed` · `paid_by_company` ·
-`recovered_from_customer` · `deducted_from_deposit` · `written_off` · `closed`
+`recovered_from_customer` · `deducted_from_deposit` · `closed` · `written_off` ·
+plus the earlier `pending` · `paid` · `waived`, kept because they are persisted in history
+(naming rule 3 below). ·
+plus the legacy `pending` · `paid` · `waived`
+
+The enum originally shipped with only the four legacy values while the service and the column default
+wrote the nine above, so `fines.status` could not be cast at all. The missing cases were **added**
+rather than the legacy ones removed — rule 3 below forbids removing a value that is persisted.
 
 ### `NotificationChannel`
-`mail` · `whatsapp` · `sms` · `database` · `push`
+`database` · `mail` · `discord`
+
+A case exists only once a driver backs it — `notification_logs.channel` carries a CHECK constraint, so
+an unbacked case would allow a row no driver can deliver. WhatsApp and SMS were dropped in favour of
+Discord webhooks; adding one later is a driver class, a case here, and a migration widening the
+constraint.
 
 ### `NotificationStatus`
-`queued` · `sending` · `sent` · `delivered` · `read` · `failed` · `cancelled`
+`queued` · `sending` · `sent` · `delivered` · `failed` · `cancelled`
+
+`Queued`, `Sending`, `Sent` and `Delivered` all occupy the deduplication window — an alert already on
+the queue is one the recipient is about to get.
 
 ### `AlertType` — REQ-17
-`booking_return_due` · `booking_overdue` · `payment_overdue` · `installment_due` ·
-`document_expiring` · `license_expiring` · `maintenance_due` · `recurring_expense_due` ·
+`booking_return_due` · `booking_overdue` · `customer_payment_overdue` · `owner_installment_due` ·
+`car_document_expiring` · `driving_licence_expiring` · `maintenance_due` · `recurring_expense_due` ·
 `cash_variance` · `backup_failed`
 
 ---
@@ -265,16 +282,11 @@ Default is `pending_review`. `FineLiabilityService` proposes; a human confirms (
 ## Access & System
 
 ### `UserRole` *(seeded Spatie roles, mirrored as an enum for type-safe checks)*
-| Value | Panel |
-|---|---|
-| `super_admin` | admin |
-| `manager` | admin |
-| `accountant` | admin |
-| `receptionist` | admin |
-| `maintenance_officer` | admin |
-| `supervisor` | admin |
-| `car_owner` | owner |
-| `client` | client |
+
+Every case is a staff role; there is one panel. `car_owner` and `client` were removed with the portals
+(ADR-007).
+
+`super_admin` · `manager` · `accountant` · `receptionist` · `maintenance_officer` · `supervisor`
 
 ### `SequenceKey`
 `contract` · `booking` · `transaction` · `payment` · `expense` · `invoice`

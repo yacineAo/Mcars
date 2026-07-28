@@ -47,7 +47,7 @@ ALTER TABLE bookings ADD CONSTRAINT bookings_no_overlap
       PDF, `amend()`, `close()`
 - [x] **`SignatureService`** — OTP issue/verify, drawn signature capture, **SHA-256 of the PDF as it
       stood when each party signed**
-- [x] **`MessagingService` v1** — email + WhatsApp delivery of the contract PDF, every attempt logged
+- [x] **`MessagingService` v1** — email delivery of the contract PDF, every attempt logged
       to `notification_logs`
 
 ### UI
@@ -80,4 +80,4 @@ ALTER TABLE bookings ADD CONSTRAINT bookings_no_overlap
 ## Definition of done
 
 Book a car from the calendar, be refused when double-booking it, check it out, generate and sign the
-contract, send it by WhatsApp, check it back in. Gates green.
+contract, send it by email, check it back in. Gates green.

@@ -59,7 +59,7 @@ erDiagram
 `id`, `name` (Economy / Compact / SUV / Luxury / Utility / Van), `slug`, `description`, `sort_order`, `is_active`.
 **1-M** → cars. Used for default pricing tiers and fleet reporting.
 
-### `car_owners` — REQ-03, REQ-19
+### `car_owners` — REQ-03
 `id`, `branch_id`, `user_id` (nullable → owner-panel login), `type` (`individual|company`),
 `first_name`, `last_name`, `company_name`, `trade_register`, `national_id`,
 `phone`, `whatsapp`, `email`, `address`, `wilaya`,
@@ -324,7 +324,7 @@ price list changes or the template is edited. See ADR-005.
 `parent_contract_id` (nullable self-FK — extensions and amendments chain).
 
 - **1-1** → `bookings`; **1-M** → `contract_signatures`
-- Deliveries (email/WhatsApp attempts) are logged in `notification_logs`, not here.
+- Delivery attempts are logged in `notification_logs`, not here.
 
 ### `contract_signatures` — REQ-06
 `id`, `contract_id`,
@@ -395,7 +395,7 @@ One row = one balanced double-entry posting.
 | `car_id` | → per-car profitability, REQ-11 |
 | `booking_id`, `contract_id` | |
 | `customer_id` | → receivable ageing, REQ-04 |
-| `car_owner_id` | → owner statement, REQ-19 |
+| `car_owner_id` | → owner statement, REQ-03 |
 | `employee_id` | → payroll, advances, commissions, REQ-15 |
 | `expense_category_id` | reporting convenience alongside the account |
 | **Provenance** | |
@@ -511,7 +511,7 @@ Shift-based register control. Without this, "the cash is short" has no boundary 
 itself posted as a transaction (cash over/short) so the ledger stays reconciled to the physical count.
 Only one `open` session per `financial_account_id` — partial unique index.
 
-### `owner_installments` — REQ-03, REQ-19
+### `owner_installments` — REQ-03
 `id`, `car_ownership_agreement_id`, `car_owner_id`, `car_id`, `branch_id`,
 `sequence_number`, `total_installments`,
 `period_month` (`date`, first of month), `due_date`, `amount_due`,
@@ -625,33 +625,45 @@ Fines are revenue when recharged to a customer and expense when absorbed — bot
 [`05-accounting-model.md`](05-accounting-model.md).
 
 ### `notifications` (Laravel standard)
-`id` (uuid), `type`, `notifiable_type`, `notifiable_id`, `data` (json), `read_at`.
-Powers the in-app bell in each panel.
+`id` (uuid), `type`, `notifiable_type`, `notifiable_id`, **`data` (jsonb)**, `read_at`.
+Powers the in-app bell.
+
+> **`data` must be `jsonb`, not Laravel's stock `text`.** Filament's bell filters on
+> `data->>'format'`, and Postgres has no `->>` operator for `text` — a `text` column 500s the topbar
+> on every page.
 
 ### `notification_logs` — REQ-17, ADV-05
-Per-channel outbound delivery record. Separate from `notifications` because a single alert can fan out
-to email + WhatsApp + SMS with independent outcomes.
+Per-channel outbound delivery record. Separate from `notifications` because one alert fans out to
+several channels with independent outcomes.
 
 `id`, `branch_id`, `alert_rule_id` (nullable),
-`channel` (`mail | whatsapp | sms | database | push`),
-`recipient_type`, `recipient_id`, `recipient_address`,
-`template_key`, `subject`, `body`, `payload` (jsonb),
+`channel` (`database | mail | discord`),
+`user_id`, `recipient`, `locale`,
+`template_key`, `payload` (jsonb),
 `related_type`, `related_id` (the car / booking / contract / instalment it is about),
-`status` (`queued | sending | sent | delivered | read | failed | cancelled`),
-`provider`, `provider_message_id`, `error_message`, `attempts`,
-`queued_at`, `sent_at`, `delivered_at`, `cost`.
-Index on `(template_key, related_type, related_id, sent_at)` — this is what makes deduplication
-possible so an expiring insurance policy does not alert every single day.
+`status` (`queued | sending | sent | delivered | failed | cancelled`),
+`provider`, `provider_message_id`, `error`, `attempts`, `cost`,
+`queued_at`, `sent_at`, `delivered_at`, `failed_at`.
+
+Covering index on `(template_key, related_type, related_id, channel, created_at DESC)` — this is what
+makes deduplication cheap, so an expiring insurance policy does not alert every single day. Note it
+keys on **`created_at`, not `sent_at`**: a queued-but-unsent alert must already suppress a duplicate,
+or every hourly sweep re-queues the same thing.
 
 ### `alert_rules` — REQ-17
 Lead times configurable by the manager rather than hardcoded.
 
 `id`, `branch_id` (nullable = global),
-`type` (`booking_return_due | booking_overdue | payment_overdue | installment_due |
-document_expiring | maintenance_due | license_expiring | recurring_expense_due | cash_variance`),
+`type` (`booking_return_due | booking_overdue | customer_payment_overdue | owner_installment_due |
+car_document_expiring | driving_licence_expiring | maintenance_due | recurring_expense_due |
+cash_variance | backup_failed`),
 `days_before`, `repeat_every_days`, `max_repeats`,
-`channels` (jsonb), `recipient_roles` (jsonb), `extra_recipients` (jsonb),
-`template_key`, `is_active`.
+`channels` (jsonb), `recipient_roles` (jsonb),
+`template_key`, `is_active`, audit columns, soft deletes.
+
+Partial unique indexes keep one active rule per `(type, branch)` and one active global rule per type.
+`AlertRule` deliberately opts out of branch auto-fill: a null `branch_id` here means "all branches",
+not "fill this in".
 
 ### `activity_log` (Spatie Activitylog) — REQ-15, ADV-03
 `id`, `log_name`, `description`, `subject_type`, `subject_id`, `event`,
@@ -670,7 +682,7 @@ attempted-but-rejected ledger mutations.
 `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`,
 `must_change_password`.
 
-One `users` table serves all three panels; the role decides which panel a user may enter
+One `users` table serves the single staff panel; every role is a staff role (ADR-007)
 (`canAccessPanel()`), and `car_owners.user_id` / `customers.user_id` link the portal identity to its
 business record. See ADR-007 for why not three guards.
 
@@ -683,7 +695,7 @@ Seeded roles: `super_admin`, `manager`, `accountant`, `receptionist`, `maintenan
 
 ### `settings` (spatie/laravel-settings)
 Company identity, logo, currency, default alert lead times, contract terms text,
-numbering formats, WhatsApp/SMS provider credentials, backup schedule.
+numbering formats, messaging provider credentials, backup schedule.
 
 ---
 

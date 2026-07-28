@@ -70,12 +70,11 @@ Codes are stable; do not renumber after go-live.
 | Code | Account | Notes |
 |---|---|---|
 | **2100** | Security Deposits Held | ADV-07. **Never revenue.** |
-| 2200 | Accounts Payable – Car Owners | REQ-03, REQ-19 |
+| 2200 | Accounts Payable – Car Owners | REQ-03 |
 | 2210 | Accounts Payable – Suppliers | |
 | 2220 | Fines Payable – Authorities | REQ-14 |
 | 2300 | Salaries Payable | REQ-15 |
 | 2310 | Social Contributions Payable | |
-| 2400 | Taxes Payable (TVA) | REQ-16 tax report |
 | 2500 | Customer Credit Balances | overpayments held on account |
 
 ### 3xxx — Equity
@@ -184,11 +183,11 @@ untagged fuel expense silently disappears from every car's P&L.
 | E30 | Deduction exceeds deposit | *deposit fully applied per E24–E28, remainder:* 1110 AR–Customers / Cr revenue account | | customer, booking |
 | E31 | Partial refund of remainder | 2100 Security Deposits Held | 1010 Cash | customer |
 
-The balance of 2100 filtered to a customer is exactly what the client portal's "Deposit held" shows,
+The balance of 2100 filtered to a customer is exactly what the customer page's "Deposit held" shows,
 and its total is money the company is holding but does not own — visible on the balance sheet, absent
 from profit.
 
-### Car owners (REQ-03, REQ-19)
+### Car owners (REQ-03)
 
 | # | Event | Dr | Cr | Dimensions |
 |---|---|---|---|---|
@@ -201,7 +200,8 @@ from profit.
 
 E32 is why per-car profitability works. The rent is stamped with `car_id`, so a third-party car's P&L
 naturally reads *rental revenue − owner rent − fuel − maintenance*. **Owner remaining balance (REQ-03)
-is the balance of 2200 filtered by `car_owner_id`** — never a stored column.
+is the balance of 2200 filtered by `car_owner_id`** — never a stored column. In the UI this is the
+"Record as owed" action on an owner instalment.
 
 ### Expenses (REQ-08)
 
@@ -395,7 +395,7 @@ WHERE t.customer_id = :customer;
 Positive = the customer owes the company. Negative = credit balance. Deposits are **not** included —
 they sit in 2100 and are shown separately.
 
-### Owner remaining balance (REQ-03, REQ-19)
+### Owner remaining balance (REQ-03)
 
 ```sql
 SELECT

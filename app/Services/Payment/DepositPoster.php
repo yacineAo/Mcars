@@ -39,6 +39,8 @@ class DepositPoster
             customerId: $deposit->customer_id,
             bookingId: $deposit->booking_id,
             contractId: $deposit->contract_id,
+            sourceType: 'deposit',
+            sourceId: $deposit->id,
             meta: ['deposit_id' => (string) $deposit->id],
         );
     }
@@ -58,6 +60,8 @@ class DepositPoster
             customerId: $deposit->customer_id,
             bookingId: $deposit->booking_id,
             contractId: $deposit->contract_id,
+            sourceType: 'deposit',
+            sourceId: $deposit->id,
             meta: ['deposit_id' => (string) $deposit->id],
         );
     }
@@ -93,6 +97,8 @@ class DepositPoster
             createdById: $userId,
             customerId: $customerId,
             bookingId: $bookingId,
+            sourceType: 'deposit',
+            sourceId: $depositId,
             meta: ['deposit_id' => (string) $depositId, 'deduction_reason' => $reason],
         );
     }
@@ -112,6 +118,8 @@ class DepositPoster
             customerId: $deposit->customer_id,
             bookingId: $deposit->booking_id,
             contractId: $deposit->contract_id,
+            sourceType: 'deposit',
+            sourceId: $deposit->id,
             meta: ['deposit_id' => (string) $deposit->id],
         );
     }

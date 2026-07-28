@@ -29,6 +29,8 @@ return new class extends Migration
             $table->foreignId('branch_id')->nullable()->constrained('branches');
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
 
@@ -54,6 +56,8 @@ return new class extends Migration
             $table->jsonb('allowed_payment_methods')->nullable();
             $table->boolean('is_default_for_cash')->default(false);
             $table->boolean('is_active')->default(true);
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
 

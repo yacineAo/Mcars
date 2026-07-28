@@ -23,6 +23,8 @@ class CashSessionPoster
             branchId: $session->branch_id,
             createdById: $userId,
             cashSessionId: $session->id,
+            sourceType: 'cash_session',
+            sourceId: $session->id,
         );
     }
 
@@ -38,6 +40,8 @@ class CashSessionPoster
             branchId: $session->branch_id,
             createdById: $userId,
             cashSessionId: $session->id,
+            sourceType: 'cash_session',
+            sourceId: $session->id,
             meta: ['alert' => true, 'variance_type' => 'over'],
         );
     }
@@ -54,6 +58,8 @@ class CashSessionPoster
             branchId: $session->branch_id,
             createdById: $userId,
             cashSessionId: $session->id,
+            sourceType: 'cash_session',
+            sourceId: $session->id,
             meta: ['alert' => true, 'variance_type' => 'short'],
         );
     }

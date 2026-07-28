@@ -33,6 +33,8 @@ class FinePoster
             customerId: $fine->customer_id,
             bookingId: $fine->booking_id,
             contractId: $fine->contract_id,
+            sourceType: 'fine',
+            sourceId: $fine->id,
             meta: ['fine_id' => (string) $fine->id],
         );
     }
@@ -50,6 +52,8 @@ class FinePoster
             branchId: $fine->branch_id,
             createdById: $userId,
             carId: $fine->car_id,
+            sourceType: 'fine',
+            sourceId: $fine->id,
             meta: ['fine_id' => (string) $fine->id],
         );
     }
@@ -66,6 +70,8 @@ class FinePoster
             description: 'Fine paid to authority — '.$fine->notice_number,
             branchId: $fine->branch_id,
             createdById: $userId,
+            sourceType: 'fine',
+            sourceId: $fine->id,
             meta: ['fine_id' => (string) $fine->id],
         );
     }
@@ -83,6 +89,8 @@ class FinePoster
             branchId: $fine->branch_id,
             createdById: $userId,
             customerId: $fine->customer_id,
+            sourceType: 'fine',
+            sourceId: $fine->id,
             meta: ['fine_id' => (string) $fine->id],
         );
     }
@@ -100,6 +108,8 @@ class FinePoster
             branchId: $fine->branch_id,
             createdById: $userId,
             customerId: $fine->customer_id,
+            sourceType: 'fine',
+            sourceId: $fine->id,
             meta: ['fine_id' => (string) $fine->id],
         );
     }
@@ -116,6 +126,8 @@ class FinePoster
             description: 'Fine written off — '.$fine->notice_number,
             branchId: $fine->branch_id,
             createdById: $userId,
+            sourceType: 'fine',
+            sourceId: $fine->id,
             meta: ['fine_id' => (string) $fine->id],
         );
     }

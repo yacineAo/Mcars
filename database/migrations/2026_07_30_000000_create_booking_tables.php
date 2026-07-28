@@ -42,6 +42,7 @@ return new class extends Migration
             $table->foreignId('maintenance_log_id')->nullable()->constrained()->nullOnDelete();
             $table->text('notes')->nullable();
             $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->index('car_id');
@@ -72,6 +73,7 @@ return new class extends Migration
             $table->foreignId('car_id')->constrained();
             $table->foreignId('customer_id')->constrained();
             $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('sales_agent_id')->nullable()->constrained('users')->nullOnDelete();
 
             $table->string('status', 20)->default(BookingStatus::Draft->value);
@@ -153,6 +155,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
 
             $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->index('booking_id');

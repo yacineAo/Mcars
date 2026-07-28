@@ -15,9 +15,9 @@ work the checklist, run its verification, tick the `REQ-*` IDs it closes.
 | [05](phase-05-bookings-contracts.md) | Bookings, calendar, contracts, e-signature | ✅ **Done** | REQ-05, REQ-06, ADV-01 |
 | [06](phase-06-payments-deposits.md) | Payments, deposits, instalments, fines, payroll | ✅ **Done** | REQ-07, REQ-14, REQ-15, ADV-07 |
 | [07](phase-07-dashboards.md) | Dashboards, KPIs, per-car profitability | ✅ **Done** | REQ-01, REQ-11, REQ-18 |
-| [08](phase-08-notifications.md) | Notifications and alerts | ⬜ **Next** | REQ-17, ADV-05 |
-| [09](phase-09-reports.md) | Reports — PDF/Excel exports | ⬜ | REQ-16 |
-| [10](phase-10-portals-audit-backups.md) | Portals, audit, backups, multi-branch | ⬜ | REQ-19, ADV-03/04/06/08/09 |
+| [08](phase-08-notifications.md) | Notifications and alerts | ✅ **Done** | REQ-17, ADV-05 |
+| [09](phase-09-reports.md) | Reports — PDF/Excel exports | ⬜ **Next** | REQ-16 |
+| [10](phase-10-portals-audit-backups.md) | Audit, backups, multi-branch | ⬜ | ADV-03/04/06 |
 
 ## Dependency order
 
@@ -31,7 +31,7 @@ work the checklist, run its verification, tick the `REQ-*` IDs it closes.
                                  └── 06 Payments, Deposits, Fines, Payroll
                                       └── 07 Dashboards ──┬── 09 Reports
                                            └── 08 Notifications
-                                                          └── 10 Portals, Audit, Backups
+                                                          └── 10 Audit, Backups, Multi-branch
 ```
 
 **Why 04 comes before 05:** bookings take deposits and issue invoices, so they need a ledger that
@@ -65,7 +65,7 @@ docker compose exec app ./vendor/bin/pest
 | Revenue recognition — at pickup, full amount? | Phase 04 | **before 04 starts** — changing it later means restating history |
 | TVA / VAT treatment | Phase 09 tax report | before 09 |
 | Owner disclosure level for fixed-rent agreements | Phase 10 statement | before 10 |
-| WhatsApp provider — Cloud API or gateway | Phase 08 | before 08 |
+| ~~WhatsApp provider~~ — **closed**: Discord webhooks chosen | Phase 08 | settled |
 | Depreciation on company-owned cars (E48) | Phase 04 posting matrix | before 04 |
 
 Full context in [`../README.md`](../README.md) § Open questions.

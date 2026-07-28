@@ -21,7 +21,7 @@ The requirements below are the source list, renumbered as **stable IDs**. Every 
 | **REQ-03** | Third-party cars | For cars rented from external owners: owner name, monthly rent amount, payment due date, payment status, remaining balance, number of instalments. Alerts before payment due dates. |
 | **REQ-04** | CRM | Personal info, driving licence, ID card, address, phone, email, document photos. Shows contract history, amounts owed, deposits, fines/violations, customer rating. |
 | **REQ-05** | Bookings | Full calendar view showing car, period, customer, booking status. **The system must prevent double-booking.** |
-| **REQ-06** | Contracts | Auto-generated contract with customer info, car info, price, number of days, insurance, terms. Exported as PDF, supports e-signature, sent via email or WhatsApp. |
+| **REQ-06** | Contracts | Auto-generated contract with customer info, car info, price, number of days, insurance, terms. Exported as PDF, supports e-signature, sent via email. *(WhatsApp delivery was dropped — see ADV-05.)* |
 | **REQ-07** | Payments | Cash, bank transfer, CCP, card, BaridiMob. Full payment, partial payment, and instalment plans. |
 | **REQ-08** | Accounting | Every financial movement recorded automatically. **Revenue:** car rentals, fines, additional services. **Expenses:** owner car rent, fuel, car wash, maintenance, insurance, taxes, office rent, salaries, internet, electricity, marketing. |
 | **REQ-09** | Cash register | Real-time current balance, money in, money out, reason for each transaction, who performed it. |
@@ -45,7 +45,7 @@ The requirements below are the source list, renumbered as **stable IDs**. Every 
 | **ADV-02** | Digital archive for all contracts and documents |
 | **ADV-03** | Audit log for every edit/delete action |
 | **ADV-04** | Automatic data backups |
-| **ADV-05** | WhatsApp / SMS / Email integration for sending contracts and reminders |
+| **ADV-05** | Messaging integration for sending contracts and reminders. **Built as email + in-app + Discord**; WhatsApp/SMS were dropped in favour of Discord webhooks, and remain one driver class away behind the same interface. |
 | **ADV-06** | Multi-branch support for future expansion |
 | **ADV-07** | Security deposit management with tracking of refund or deduction |
 | ~~**ADV-08**~~ | ~~Owner portal~~ — **withdrawn** with REQ-19 |

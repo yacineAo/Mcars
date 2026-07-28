@@ -35,6 +35,8 @@ class PayrollPoster
                     branchId: $run->branch_id,
                     createdById: $userId,
                     employeeId: $item->employee_id,
+                    sourceType: 'payroll_run',
+                    sourceId: $run->id,
                     meta: ['payroll_run_id' => (string) $run->id, 'payroll_item_id' => (string) $item->id],
                 );
             }
@@ -51,6 +53,8 @@ class PayrollPoster
                     branchId: $run->branch_id,
                     createdById: $userId,
                     employeeId: $item->employee_id,
+                    sourceType: 'payroll_run',
+                    sourceId: $run->id,
                     meta: ['payroll_run_id' => (string) $run->id],
                 );
             }
@@ -67,6 +71,8 @@ class PayrollPoster
                     branchId: $run->branch_id,
                     createdById: $userId,
                     employeeId: $item->employee_id,
+                    sourceType: 'payroll_run',
+                    sourceId: $run->id,
                     meta: ['payroll_run_id' => (string) $run->id],
                 );
             }
@@ -83,6 +89,8 @@ class PayrollPoster
                     branchId: $run->branch_id,
                     createdById: $userId,
                     employeeId: $item->employee_id,
+                    sourceType: 'payroll_run',
+                    sourceId: $run->id,
                     meta: ['payroll_run_id' => (string) $run->id],
                 );
             }
@@ -110,6 +118,8 @@ class PayrollPoster
                     createdById: $userId,
                     employeeId: $item->employee_id,
                     cashSessionId: null,
+                    sourceType: 'payroll_run',
+                    sourceId: $run->id,
                     meta: ['payroll_run_id' => (string) $run->id],
                 );
             }

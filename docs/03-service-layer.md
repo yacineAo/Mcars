@@ -40,7 +40,12 @@ business event hits lives in **Posters**, one per document type, each producing 
 from the posting matrix in [`05-accounting-model.md`](05-accounting-model.md):
 
 `BookingPoster` · `PaymentPoster` · `ExpensePoster` · `DepositPoster` · `FinePoster` ·
-`OwnerInstallmentPoster` · `PayrollPoster` · `CashSessionPoster` · `MaintenancePoster`
+`OwnerInstallmentPoster` · `PayrollPoster` · `CashSessionPoster`
+
+*(`MaintenancePoster` was never built — completed maintenance posts through `ExpensePoster`.)*
+
+Every poster stamps `source_type` / `source_id` on its drafts, which is how a document knows whether
+it has already been posted and what makes the Filament actions safely idempotent.
 
 Adding a new financial event = adding a Poster and a matrix row. `AccountingService` never changes.
 
@@ -95,7 +100,7 @@ double-book eventually.
 ## 4. `PricingService`
 
 Turns a car + period + extras + discount into a priced quote: applies the daily/weekly/monthly tier,
-prices extras by their unit, applies discount and tax, and returns the deposit required.
+prices extras by their unit, applies the discount, and returns the deposit required. No tax is charged.
 
 ```
 quote(Car $c, CarbonPeriod $p, array $extras, ?Money $discount): BookingQuote
@@ -163,10 +168,10 @@ receivable instead.
 
 ---
 
-## 8. `OwnerStatementService` — REQ-03, REQ-19
+## 8. `OwnerStatementService` — REQ-03
 
-Generates instalments from ownership agreements, and builds the monthly statement an owner sees in
-their portal.
+Generates instalments from ownership agreements, and builds the monthly statement **staff** produce for
+an owner. There is no owner portal (ADR-007).
 
 ```
 generateInstallments(Carbon $month): Collection          // scheduled monthly
@@ -234,10 +239,14 @@ Evaluates `alert_rules` on a schedule, decides who should be told what and when,
 dispatches through `MessagingService`.
 
 ```
-runDueChecks(): void                    // hourly scheduled entry point
-notify(AlertType $t, Model $subject, array $recipients, array $channels): void
-digestFor(User $u, Period $p): Collection
+evaluateAll(?CarbonImmutable $now): int          // hourly entry point, returns notifications queued
+evaluate(AlertRule $rule, ?CarbonImmutable $now): int
+raise(AlertRule $r, AlertSubject $s, ...): int   // queue for one subject, subject to dedup
+alertOnce(AlertType $t, AlertSubject $s, ?int $branchId): int   // event-driven, no detector
 ```
+
+Detection is delegated to one `AlertDetector` per `AlertType`, resolved through `DetectorRegistry`.
+Recipients resolve from staff roles only — customers and owners have no logins.
 
 Covers: return due tomorrow · booking overdue · customer payment overdue · owner instalment due ·
 insurance / registration / inspection expiring · driving licence expiring · maintenance due ·
@@ -250,8 +259,9 @@ worthless, so this is not an optimisation.
 
 ## 13. `MessagingService` — ADV-05
 
-One interface over Mail, WhatsApp Cloud API and the SMS gateway. Handles templating, per-locale
-rendering, attachments, retries, and writes a `notification_logs` row per attempt.
+One interface over Mail, the in-app bell and Discord webhooks, resolved from
+`config/notifications.php`. Handles templating, per-locale rendering, retries, and writes a
+`notification_logs` row per attempt.
 
 ```
 send(Channel $c, Recipient $r, string $templateKey, array $data, array $attachments = []): NotificationLog
@@ -259,8 +269,8 @@ sendMany(array $channels, ...): Collection
 handleWebhook(string $provider, array $payload): void   // delivery receipts, read status
 ```
 
-Channel drivers are swappable via config — the WhatsApp provider will change, and the calling code
-must not. All sends are queued; a WhatsApp timeout must never block a receptionist mid-checkout.
+Channel drivers are swappable via config — the provider will change, and the calling code must not.
+All sends are queued; a provider timeout must never block a receptionist mid-checkout.
 
 ---
 
@@ -280,7 +290,6 @@ cashFlow(Period $p): CashFlow
 occupancyRate(Period $p, ?Branch $b): float
 expenseBreakdown(Period $p): Collection
 receivablesAgeing(?Carbon $asOf): Collection
-taxReport(Period $p): TaxReport
 export(ReportDefinition $d, ExportFormat $f): PendingExport   // PDF | XLSX | CSV, queued
 ```
 

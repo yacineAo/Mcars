@@ -9,7 +9,10 @@ use App\Enums\FineStatus;
 use App\Enums\FineType;
 use App\Filament\Admin\Resources\FineResource\Pages;
 use App\Models\Fine;
+use App\Services\Payment\FineLiabilityService;
+use App\Services\Payment\PaymentService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,11 +21,13 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class FineResource extends Resource
@@ -70,6 +75,51 @@ class FineResource extends Resource
                 SelectFilter::make('status')->options(FineStatus::options()),
             ])
             ->actions([
+                // The service proposes who is liable by matching the violation time
+                // against the contracts active for that car; a human confirms it
+                // (ADR-011). Confirming "customer" posts the receivable.
+                Action::make('propose_liability')
+                    ->label(__('fines.actions.propose'))
+                    ->icon('heroicon-o-light-bulb')
+                    ->color('gray')
+                    ->action(function (Fine $record, FineLiabilityService $fines): void {
+                        $fines->proposeLiability($record);
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('fines.notifications.proposed'))
+                            ->send();
+                    })
+                    ->visible(fn (Fine $record): bool => ! $record->isPostedToLedger()),
+
+                Action::make('assign_liability')
+                    ->label(__('fines.actions.assign'))
+                    ->icon('heroicon-o-user-plus')
+                    ->color('warning')
+                    ->modalDescription(__('fines.actions.assign_description'))
+                    ->form([
+                        Select::make('liability')
+                            ->label(__('fines.fields.liability'))
+                            ->options(FineLiability::options())
+                            ->required(),
+                    ])
+                    ->action(function (Fine $record, array $data, FineLiabilityService $fines, PaymentService $payments): void {
+                        $fines->confirmLiability($record, $data['liability'], (int) Auth::id());
+
+                        // Only a customer-liable fine creates a receivable; a
+                        // company-liable one is an absorbed expense and is posted
+                        // when the authority is paid.
+                        if ($data['liability'] === FineLiability::Customer->value) {
+                            $payments->assignFine($record->fresh(), (int) Auth::id());
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('fines.notifications.assigned'))
+                            ->send();
+                    })
+                    ->visible(fn (Fine $record): bool => ! $record->isPostedToLedger()),
+
                 ViewAction::make(),
                 EditAction::make(),
             ])

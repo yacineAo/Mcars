@@ -7,7 +7,9 @@ namespace App\Filament\Admin\Resources;
 use App\Enums\PaymentMethod;
 use App\Filament\Admin\Resources\PaymentResource\Pages;
 use App\Models\Payment;
+use App\Services\Payment\PaymentService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -16,11 +18,13 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class PaymentResource extends Resource
@@ -65,6 +69,23 @@ class PaymentResource extends Resource
                 SelectFilter::make('status')->options(['completed' => 'Completed', 'pending' => 'Pending', 'failed' => 'Failed', 'refunded' => 'Refunded']),
             ])
             ->actions([
+                // Payments post automatically on create. This is the retry path for
+                // a row whose posting failed, and the reason a payment can never be
+                // silently absent from the ledger.
+                Action::make('post_to_ledger')
+                    ->label(__('payments.actions.post'))
+                    ->icon('heroicon-o-book-open')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->action(function (Payment $record, PaymentService $payments): void {
+                        $payments->recordPayment($record, (int) Auth::id());
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('payments.notifications.posted'))
+                            ->send();
+                    })
+                    ->visible(fn (Payment $record): bool => ! $record->isPostedToLedger()),
                 ViewAction::make(),
                 EditAction::make(),
             ])

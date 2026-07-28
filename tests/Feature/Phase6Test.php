@@ -6,6 +6,7 @@ use App\Enums\CarStatus;
 use App\Enums\ContractStatus;
 use App\Enums\DeductionReason;
 use App\Enums\DepositStatus;
+use App\Enums\FineLiability;
 use App\Enums\FineStatus;
 use App\Enums\FineType;
 use App\Enums\InstallmentStatus;
@@ -743,10 +744,10 @@ it('proposes customer liability when a booking covers the violation time', funct
 
     $result = $this->fineLiability->proposeLiability($fine);
 
-    expect($result->liability)->toBe('customer')
+    expect($result->liability)->toBe(FineLiability::Customer)
         ->and($result->customer_id)->toBe($this->customer->id)
         ->and($result->contract_id)->toBe($this->contract->id)
-        ->and($result->status)->toBe('pending_review');
+        ->and($result->status)->toBe(FineStatus::PendingReview);
 });
 
 it('proposes company liability when no booking covers the violation time', function () {
@@ -765,7 +766,7 @@ it('proposes company liability when no booking covers the violation time', funct
 
     $result = $this->fineLiability->proposeLiability($fine);
 
-    expect($result->liability)->toBe('company')
+    expect($result->liability)->toBe(FineLiability::Company)
         ->and($result->customer_id)->toBeNull();
 });
 
@@ -787,13 +788,13 @@ it('confirms liability and persists the fine', function () {
 
     $result = $this->fineLiability->confirmLiability($fine, 'company', $this->user->id);
 
-    expect($result->liability)->toBe('company')
-        ->and($result->status)->toBe('paid_by_company')
+    expect($result->liability)->toBe(FineLiability::Company)
+        ->and($result->status)->toBe(FineStatus::PaidByCompany)
         ->and($result->liability_determined_by_id)->toBe($this->user->id)
         ->and($result->liability_determined_at)->not->toBeNull();
 
     $fresh = $fine->fresh();
-    expect($fresh->liability)->toBe('company');
+    expect($fresh->liability)->toBe(FineLiability::Company);
 });
 
 // ---------------------------------------------------------------------------
