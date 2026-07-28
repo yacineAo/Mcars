@@ -30,6 +30,10 @@ class ClientPanelProvider extends PanelProvider
             ->passwordReset()
             ->brandName('Mcars — Client Portal')
             ->colors(['primary' => Color::Green])
+            // Phase 8: the in-app bell. Filtered by notifiable, so a user only
+            // ever sees notifications addressed to them.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Client/Resources'), for: 'App\\Filament\\Client\\Resources')
             ->discoverPages(in: app_path('Filament/Client/Pages'), for: 'App\\Filament\\Client\\Pages')
             ->discoverWidgets(in: app_path('Filament/Client/Widgets'), for: 'App\\Filament\\Client\\Widgets')

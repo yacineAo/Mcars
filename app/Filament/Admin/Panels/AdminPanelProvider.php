@@ -35,6 +35,10 @@ class AdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->brandName('Mcars')
             ->colors(['primary' => Color::Blue])
+            // Phase 8: the in-app bell. Filtered by notifiable, so a user only
+            // ever sees notifications addressed to them.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')

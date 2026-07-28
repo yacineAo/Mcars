@@ -133,7 +133,7 @@ car is available.
 
 ## Current state
 
-Phases 0–7 complete. Next: **Phase 8 — notifications and alerts**.
+Phases 0–8 complete. Next: **Phase 9 — reports and exports**.
 
 The `branches` table, `Branch` model and `BranchSeeder` were built in Phase 0 rather than Phase 1,
 because `BelongsToBranch` and per-branch document numbering both need them to exist.
@@ -150,3 +150,22 @@ Two conventions established in Phase 7 that later phases must follow:
 
 `utilisation_pct` and occupancy both divide by **calendar days**, not availability-adjusted days —
 see `docs/tasks/phase-07-dashboards.md`.
+
+Three conventions established in Phase 8:
+
+- **Alerts leave through `MessagingService` only.** Channels are backed by `MessageDriver`
+  implementations registered in `config/notifications.php` (mail, in-app, Discord). Nothing else
+  talks to a provider, and nothing talks to one from a request — every send is queued, because a
+  provider timeout must never stall a receptionist mid-checkout. Adding WhatsApp or SMS is a driver
+  class, an enum case, a migration widening the `channel` CHECK constraint, and a config line.
+- **Deduplication is correctness, not optimisation (ADR-012).** The window counts `Queued` and
+  `Sending` alongside `Sent` — an alert on the queue is one the recipient is about to get. A channel
+  whose driver is off is not queued at all, since a cancelled row deliberately does not hold the
+  window shut. Never key dedup on `sent_at`.
+- **`car_owner` and `client` are subject-bound roles.** A rule naming one resolves only to the users
+  the subject points at, never to every holder of the role. Staff roles fan out across the branch;
+  portal roles never do.
+
+`AlertRule` deliberately overrides `BelongsToBranch::resolveBranchId()` to return null — a null
+`branch_id` there means "all branches", not "fill this in". Phase 10's branch scope must leave
+`alert_rules` alone for the same reason.

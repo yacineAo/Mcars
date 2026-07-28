@@ -30,6 +30,10 @@ class OwnerPanelProvider extends PanelProvider
             ->passwordReset()
             ->brandName('Mcars — Owner Portal')
             ->colors(['primary' => Color::Purple])
+            // Phase 8: the in-app bell. Filtered by notifiable, so a user only
+            // ever sees notifications addressed to them.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Owner/Resources'), for: 'App\\Filament\\Owner\\Resources')
             ->discoverPages(in: app_path('Filament/Owner/Pages'), for: 'App\\Filament\\Owner\\Pages')
             ->discoverWidgets(in: app_path('Filament/Owner/Widgets'), for: 'App\\Filament\\Owner\\Widgets')

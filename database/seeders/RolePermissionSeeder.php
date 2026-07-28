@@ -34,6 +34,20 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Manager,
                 UserRole::Accountant,
             ],
+            // Phase 8. Lead times, channels and recipients are an operational
+            // decision, so a manager owns them without a deploy — but changing a
+            // rule changes who gets told what, which is not a receptionist's call.
+            'alerts.manage' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
+            // The delivery audit trail exposes recipient addresses and message
+            // payloads, so it is read-only and deliberately narrower than the
+            // ability to receive alerts.
+            'alerts.view_logs' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
         ];
 
         foreach ($grants as $permissionName => $roles) {
