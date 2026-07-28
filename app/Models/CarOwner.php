@@ -24,7 +24,6 @@ class CarOwner extends Model
         'last_name',
         'company_name',
         'trade_register',
-        'tax_id',
         'national_id',
         'phone',
         'whatsapp',

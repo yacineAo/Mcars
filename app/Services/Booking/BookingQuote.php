@@ -15,8 +15,6 @@ final readonly class BookingQuote
         public string $extrasTotal,
         public string $discountAmount,
         public ?string $discountReason,
-        public string $taxRate,
-        public string $taxAmount,
         public string $totalAmount,
         public string $securityDepositAmount,
         public array $extras = [],

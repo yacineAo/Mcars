@@ -31,7 +31,6 @@ return new class extends Migration
 
             $table->string('company_name')->nullable();
             $table->string('trade_register')->nullable();
-            $table->string('tax_id')->nullable();
             $table->string('article_number')->nullable();
 
             $table->string('driving_license_number')->nullable();

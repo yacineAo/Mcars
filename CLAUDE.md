@@ -10,7 +10,7 @@ business in Algeria (DZD, CCP, BaridiMob, wilaya; ar/fr/en with Arabic RTL contr
 | [`docs/README.md`](docs/README.md) | Index, stack, open questions |
 | [`docs/00-functional-requirements.md`](docs/00-functional-requirements.md) | `REQ-*` / `ADV-*` IDs + coverage map |
 | [`docs/01-database-schema.md`](docs/01-database-schema.md) | Every table. **Read before any migration.** |
-| [`docs/02-filament-panels.md`](docs/02-filament-panels.md) | 3 panels, isolation layers, widgets |
+| [`docs/02-filament-panels.md`](docs/02-filament-panels.md) | The admin panel (staff-only), resources, widgets |
 | [`docs/03-service-layer.md`](docs/03-service-layer.md) | Services and the layering convention |
 | [`docs/04-implementation-roadmap.md`](docs/04-implementation-roadmap.md) | The 11 phases |
 | [`docs/05-accounting-model.md`](docs/05-accounting-model.md) | **Read in full before touching money.** |
@@ -134,6 +134,21 @@ car is available.
 ## Current state
 
 Phases 0–8 complete. Next: **Phase 9 — reports and exports**.
+
+**The system is staff-only and charges no tax.** Two scope decisions taken after Phase 8, both of
+which delete rather than add:
+
+- **No customer or car-owner logins.** One Filament panel (`admin`); every `UserRole` case is a staff
+  role. The owner and client portals, their middleware and the four-layer isolation model are gone —
+  ADR-007 records what was removed and how to restore it. `car_owners.user_id` and
+  `customers.user_id` are kept but unused. Anything a customer or owner needs to know goes to the
+  office, which tells them; alert recipients therefore resolve from staff roles only.
+- **No tax anywhere in the money path.** `bookings.tax_rate`/`tax_amount`, `expenses.tax_amount`,
+  posting E03, `TransactionType::Tax` and account 2400 (TVA) do not exist. A booking total is
+  `subtotal + extras − discount`, full stop. `tax_id` (NIF) was dropped from customers, owners and
+  vendors too. Two things that merely *sound* like tax are deliberately kept: `cars.road_tax_expiry_date`
+  (the vignette, a document-expiry alert) and account 5060 Taxes & Registration (an expense category
+  for registration costs the business does pay).
 
 The `branches` table, `Branch` model and `BranchSeeder` were built in Phase 0 rather than Phase 1,
 because `BelongsToBranch` and per-branch document numbering both need them to exist.

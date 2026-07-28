@@ -177,7 +177,6 @@ return new class extends Migration
             $table->foreignId('vendor_id')->nullable()->constrained('vendors');
             $table->unsignedBigInteger('employee_id')->nullable()->index();
             $table->decimal('amount', 18, 2);
-            $table->decimal('tax_amount', 18, 2)->default(0);
             $table->decimal('total_amount', 18, 2);
             $table->date('incurred_on');
             $table->text('description')->nullable();

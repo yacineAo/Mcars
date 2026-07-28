@@ -249,26 +249,27 @@ it('allows a fresh alert after a failed delivery', function () {
 // Recipient scoping
 // ---------------------------------------------------------------------------
 
-it('never delivers an owner alert to another owner', function () {
-    $ownerUserA = User::factory()->create(['branch_id' => $this->branch->id, 'email' => 'owner-a@test.dz']);
-    $ownerUserA->assignRole(UserRole::CarOwner->value);
+it('sends an owner-instalment alert to the office, never to an owner', function () {
+    // Car owners are records, not accounts — there is no car_owner role to target.
+    // The alert reaches accounting, and the owner's name rides in the payload so
+    // whoever picks it up knows who to call.
+    $accountant = User::factory()->create([
+        'branch_id' => $this->branch->id,
+        'email' => 'accounting@mcars.test',
+    ]);
+    $accountant->assignRole(UserRole::Accountant->value);
 
-    $ownerUserB = User::factory()->create(['branch_id' => $this->branch->id, 'email' => 'owner-b@test.dz']);
-    $ownerUserB->assignRole(UserRole::CarOwner->value);
-
-    $ownerA = CarOwner::factory()->create(['branch_id' => $this->branch->id, 'user_id' => $ownerUserA->id]);
-    $ownerB = CarOwner::factory()->create(['branch_id' => $this->branch->id, 'user_id' => $ownerUserB->id]);
-
-    $car = Car::factory()->create(['branch_id' => $this->branch->id, 'car_owner_id' => $ownerA->id]);
+    $owner = CarOwner::factory()->create(['branch_id' => $this->branch->id]);
+    $car = Car::factory()->create(['branch_id' => $this->branch->id, 'car_owner_id' => $owner->id]);
     $agreement = CarOwnershipAgreement::factory()->create([
         'car_id' => $car->id,
-        'car_owner_id' => $ownerA->id,
+        'car_owner_id' => $owner->id,
         'branch_id' => $this->branch->id,
     ]);
 
     OwnerInstallment::create([
         'car_ownership_agreement_id' => $agreement->id,
-        'car_owner_id' => $ownerA->id,
+        'car_owner_id' => $owner->id,
         'car_id' => $car->id,
         'branch_id' => $this->branch->id,
         'sequence_number' => 1,
@@ -281,15 +282,25 @@ it('never delivers an owner alert to another owner', function () {
 
     $rule = AlertRule::factory()
         ->ofType(AlertType::OwnerInstallmentDue)
-        ->forRoles([UserRole::CarOwner])
+        ->forRoles([UserRole::Accountant])
         ->create(['days_before' => 3]);
 
     $this->notifications->evaluate($rule, CarbonImmutable::parse('2026-08-02 09:00:00'));
 
-    $recipients = NotificationLog::query()->pluck('user_id')->all();
+    $logs = NotificationLog::query()->get();
 
-    expect($recipients)->toContain($ownerUserA->id)
-        ->and($recipients)->not->toContain($ownerUserB->id);
+    expect($logs)->not->toBeEmpty()
+        ->and($logs->pluck('user_id')->unique()->all())->toBe([$accountant->id]);
+
+    // Every recipient holds a staff role — nothing is addressed outside the office.
+    $recipients = User::query()->whereIn('id', $logs->pluck('user_id'))->get();
+
+    foreach ($recipients as $recipient) {
+        expect($recipient->hasAnyRole(UserRole::values()))->toBeTrue();
+    }
+
+    // The owner is still identified in the payload.
+    expect($logs->first()->payload['owner'] ?? null)->not->toBeNull();
 });
 
 it('scopes a branch rule to that branch only', function () {

@@ -24,7 +24,6 @@ class Vendor extends Model
         'phone',
         'email',
         'address',
-        'tax_id',
         'notes',
         'is_active',
     ];

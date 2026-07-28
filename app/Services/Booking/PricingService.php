@@ -13,7 +13,6 @@ use Carbon\CarbonPeriod;
 class PricingService
 {
     public function __construct(
-        private readonly string $taxRate = '19.00',
         private readonly string $depositRate = '0.30',
     ) {}
 
@@ -55,9 +54,9 @@ class PricingService
         }
 
         $discountAmount ??= '0.00';
-        $afterDiscount = number_format((float) $subtotal + (float) $extrasTotal - (float) $discountAmount, 2, '.', '');
-        $taxAmount = number_format((float) $afterDiscount * (float) $this->taxRate / 100, 2, '.', '');
-        $totalAmount = number_format((float) $afterDiscount + (float) $taxAmount, 2, '.', '');
+        // No tax is charged, so the total is simply what is left after the
+        // discount. The deposit follows the total, as before.
+        $totalAmount = number_format((float) $subtotal + (float) $extrasTotal - (float) $discountAmount, 2, '.', '');
         $depositAmount = number_format((float) $totalAmount * (float) $this->depositRate, 2, '.', '');
 
         return new BookingQuote(
@@ -69,8 +68,6 @@ class PricingService
             extrasTotal: $extrasTotal,
             discountAmount: $discountAmount,
             discountReason: $discountReason,
-            taxRate: $this->taxRate,
-            taxAmount: $taxAmount,
             totalAmount: $totalAmount,
             securityDepositAmount: $depositAmount,
             extras: $extras,

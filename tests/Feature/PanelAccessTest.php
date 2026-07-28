@@ -13,49 +13,32 @@ beforeEach(function () {
     app()[PermissionRegistrar::class]->forgetCachedPermissions();
 });
 
-it('prevents client from accessing admin panel', function () {
-    $client = User::factory()->create();
-    $client->assignRole(UserRole::Client->value);
+it('refuses a user with no role', function () {
+    // The panel admits any staff role, so the meaningful boundary is now
+    // "has a role at all" rather than "which panel".
+    $stranger = User::factory()->create();
 
-    $this->actingAs($client)
+    $this->actingAs($stranger)
         ->get('/admin')
         ->assertForbidden();
 });
 
-it('prevents receptionist from accessing owner portal', function () {
-    $receptionist = User::factory()->create();
-    $receptionist->assignRole(UserRole::Receptionist->value);
+it('no longer exposes the retired owner and client portals', function () {
+    $manager = User::factory()->create();
+    $manager->assignRole(UserRole::Manager->value);
 
-    $this->actingAs($receptionist)
-        ->get('/owner')
-        ->assertForbidden();
+    // The system is staff-only: customers and car owners are records the office
+    // manages, never accounts that log in. Both portals were removed, so these
+    // routes must not exist for anyone — including a privileged user.
+    $this->actingAs($manager)->get('/owner')->assertNotFound();
+    $this->actingAs($manager)->get('/client')->assertNotFound();
 });
 
-it('prevents receptionist from accessing client portal', function () {
-    $receptionist = User::factory()->create();
-    $receptionist->assignRole(UserRole::Receptionist->value);
-
-    $this->actingAs($receptionist)
-        ->get('/client')
-        ->assertForbidden();
-});
-
-it('allows car_owner to access owner portal', function () {
-    $owner = User::factory()->create();
-    $owner->assignRole(UserRole::CarOwner->value);
-
-    $this->actingAs($owner)
-        ->get('/owner')
-        ->assertRedirect();
-});
-
-it('allows client to access client portal', function () {
-    $client = User::factory()->create();
-    $client->assignRole(UserRole::Client->value);
-
-    $this->actingAs($client)
-        ->get('/client')
-        ->assertRedirect();
+it('offers only staff roles', function () {
+    expect(UserRole::values())
+        ->not->toContain('car_owner')
+        ->and(UserRole::values())->not->toContain('client')
+        ->and(UserRole::cases())->toHaveCount(6);
 });
 
 it('allows admin roles to access admin panel', function (UserRole $role) {

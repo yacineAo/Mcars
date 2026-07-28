@@ -62,8 +62,6 @@ class CarOwnerResource extends Resource
                     ->maxLength(50),
                 TextInput::make('trade_register')
                     ->maxLength(50),
-                TextInput::make('tax_id')
-                    ->maxLength(50),
                 Textarea::make('address')
                     ->maxLength(65535),
                 TextInput::make('wilaya')

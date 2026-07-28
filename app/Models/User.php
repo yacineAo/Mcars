@@ -67,29 +67,19 @@ class User extends Authenticatable implements FilamentUser
         return [];
     }
 
+    /**
+     * There is one panel and it is staff-only.
+     *
+     * Every role in UserRole is a staff role, so this is a membership check rather
+     * than a list — a role added later is admitted by default, and the finer
+     * question of what it may then do is a permission, not a panel.
+     */
     public function canAccessPanel(Panel $panel): bool
     {
-        $panelId = $panel->getId();
-
-        if ($panelId === 'admin') {
-            return $this->hasAnyRole([
-                UserRole::SuperAdmin->value,
-                UserRole::Manager->value,
-                UserRole::Accountant->value,
-                UserRole::Receptionist->value,
-                UserRole::MaintenanceOfficer->value,
-                UserRole::Supervisor->value,
-            ]);
+        if ($panel->getId() !== 'admin') {
+            return false;
         }
 
-        if ($panelId === 'owner') {
-            return $this->hasRole(UserRole::CarOwner->value);
-        }
-
-        if ($panelId === 'client') {
-            return $this->hasRole(UserRole::Client->value);
-        }
-
-        return false;
+        return $this->hasAnyRole(UserRole::values());
     }
 }

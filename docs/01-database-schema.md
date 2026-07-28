@@ -61,7 +61,7 @@ erDiagram
 
 ### `car_owners` — REQ-03, REQ-19
 `id`, `branch_id`, `user_id` (nullable → owner-panel login), `type` (`individual|company`),
-`first_name`, `last_name`, `company_name`, `trade_register`, `tax_id` (NIF), `national_id`,
+`first_name`, `last_name`, `company_name`, `trade_register`, `national_id`,
 `phone`, `whatsapp`, `email`, `address`, `wilaya`,
 `bank_name`, `bank_rib`, `ccp_account`, `baridimob_number`,
 `notes`, `is_active`.
@@ -162,7 +162,7 @@ Turns "next service due" from a manually-typed date into something the system co
 
 ### `vendors`
 `id`, `branch_id`, `name`, `type` (`garage | insurance | parts | fuel_station | towing | other`),
-`contact_name`, `phone`, `email`, `address`, `tax_id`, `notes`, `is_active`.
+`contact_name`, `phone`, `email`, `address`, `notes`, `is_active`.
 **1-M** → `maintenance_logs`, `expenses`.
 
 ### `car_gps_logs` — REQ-02 (optional)
@@ -190,7 +190,7 @@ erDiagram
 *Individual* — `first_name`, `last_name`, `date_of_birth`, `place_of_birth`, `nationality`, `gender`,
 `national_id` (NIN),
 
-*Company* — `company_name`, `trade_register`, `tax_id` (NIF), `article_number` (NIS),
+*Company* — `company_name`, `trade_register`, `article_number` (NIS),
 
 *Licence* — `driving_license_number`, `license_category`, `license_issue_date`,
 `license_expiry_date`, `license_issued_at`,
@@ -247,7 +247,7 @@ erDiagram
 `pickup_branch_id`, `return_branch_id`, `pickup_location`, `return_location`,
 
 *Pricing snapshot* — `daily_rate`, `days_count`, `subtotal`, `extras_total`,
-`discount_amount`, `discount_reason`, `tax_rate`, `tax_amount`, `total_amount`,
+`discount_amount`, `discount_reason`, `total_amount`,
 `security_deposit_amount`,
 
 *Handover* — `odometer_out`, `odometer_in`, `fuel_level_out`, `fuel_level_in`,
@@ -489,7 +489,7 @@ marketing & advertising — plus bank charges, fines absorbed, commissions, supp
 `id`, `reference`, `branch_id`, `expense_category_id`,
 `car_id` (nullable, required when the category `is_car_related`),
 `vendor_id`, `employee_id` (nullable),
-`amount`, `tax_amount`, `total_amount`, `incurred_on`, `description`, `invoice_number`,
+`amount`, `total_amount`, `incurred_on`, `description`, `invoice_number`,
 `status` (`draft | pending_approval | approved | paid | rejected`),
 `approved_by_id`, `approved_at`, `rejection_reason`,
 `payment_method`, `financial_account_id`, `paid_at`,
@@ -682,7 +682,7 @@ Seeded roles: `super_admin`, `manager`, `accountant`, `receptionist`, `maintenan
 `supervisor`, `car_owner`, `client`.
 
 ### `settings` (spatie/laravel-settings)
-Company identity, logo, tax rate, currency, default alert lead times, contract terms text,
+Company identity, logo, currency, default alert lead times, contract terms text,
 numbering formats, WhatsApp/SMS provider credentials, backup schedule.
 
 ---

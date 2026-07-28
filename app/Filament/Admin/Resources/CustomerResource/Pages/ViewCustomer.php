@@ -39,7 +39,6 @@ class ViewCustomer extends ViewRecord
                             ->label('NIN'),
                         TextEntry::make('company_name'),
                         TextEntry::make('trade_register'),
-                        TextEntry::make('tax_id'),
                         TextEntry::make('article_number'),
                     ])
                     ->columns(3),

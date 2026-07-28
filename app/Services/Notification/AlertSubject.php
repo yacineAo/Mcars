@@ -9,22 +9,17 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * One thing worth alerting about, found by a detector.
  *
- * `targetedUserIds` is the safety mechanism behind "an owner alert never reaches
- * another owner": for portal roles the recipient set is intersected with this
- * list, so a rule naming the car_owner role resolves to *this car's* owner rather
- * than every owner in the system.
+ * Carries no recipient information. Every alert goes to staff, resolved from the
+ * rule's roles and the subject's branch — the system has no customer or owner
+ * logins for an alert to be addressed to.
  */
 final readonly class AlertSubject
 {
-    /**
-     * @param array<string, mixed> $payload template variables
-     * @param list<int> $targetedUserIds users tied to this subject specifically
-     */
+    /** @param array<string, mixed> $payload template variables */
     public function __construct(
         public Model $subject,
         public ?int $branchId = null,
         public array $payload = [],
-        public array $targetedUserIds = [],
     ) {}
 
     /** Stable identity of the subject, used for deduplication. */

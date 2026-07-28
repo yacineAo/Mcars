@@ -63,7 +63,6 @@ final class BookingReturnDueDetector implements AlertDetector
                     'car' => SubjectLabel::car($car),
                     'due_at' => $dueAt?->translatedFormat('d/m/Y H:i') ?? '—',
                 ],
-                targetedUserIds: array_filter([$customer?->user_id]),
             );
         }
     }

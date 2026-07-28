@@ -165,7 +165,6 @@ class ContractService
                 'subtotal' => $booking->subtotal,
                 'extras_total' => $booking->extras_total,
                 'discount_amount' => $booking->discount_amount,
-                'tax_amount' => $booking->tax_amount,
                 'total_amount' => $booking->total_amount,
                 'security_deposit_amount' => $booking->security_deposit_amount,
             ],

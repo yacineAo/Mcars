@@ -41,7 +41,6 @@ return new class extends Migration
             $table->string('last_name')->nullable();
             $table->string('company_name')->nullable();
             $table->string('trade_register')->nullable();
-            $table->string('tax_id')->nullable();
             $table->string('national_id')->nullable();
             $table->string('phone');
             $table->string('whatsapp')->nullable();
@@ -67,7 +66,6 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->text('address')->nullable();
-            $table->string('tax_id')->nullable();
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();

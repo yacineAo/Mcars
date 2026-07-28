@@ -34,7 +34,6 @@ class Customer extends Model
         'national_id',
         'company_name',
         'trade_register',
-        'tax_id',
         'article_number',
         'driving_license_number',
         'license_category',

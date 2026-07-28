@@ -59,7 +59,6 @@ final class BookingOverdueDetector implements AlertDetector
                     'due_at' => $dueAt?->translatedFormat('d/m/Y H:i') ?? '—',
                     'hours_late' => $dueAt !== null ? (int) $dueAt->diffInHours($now) : 0,
                 ],
-                targetedUserIds: array_filter([$customer?->user_id]),
             );
         }
     }

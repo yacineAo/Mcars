@@ -15,7 +15,7 @@ database-enforced double-booking prevention, e-signed contracts, and per-car pro
 |---|---|---|
 | **00** | [Functional Requirements](00-functional-requirements.md) | The 20 requirements + 9 advanced features, as stable IDs (`REQ-01`…, `ADV-01`…), plus a coverage map showing where each is satisfied. |
 | **01** | [Database Schema](01-database-schema.md) | Textual ERD, ~50 tables across six modules, with per-module diagrams and the list of columns that deliberately do not exist. |
-| **02** | [Filament Panels](02-filament-panels.md) | The three panels, their resources, the four-layer data isolation model, and every dashboard widget. |
+| **02** | [Filament Panels](02-filament-panels.md) | The admin panel, its resources and every dashboard widget. Staff-only — the owner and client portals were withdrawn (ADR-007). |
 | **03** | [Service Layer](03-service-layer.md) | 15 services with responsibilities and signatures, plus the layering convention that keeps models and Filament resources thin. |
 | **04** | [Implementation Roadmap](04-implementation-roadmap.md) | 11 phases, each a self-contained session, with deliverables, tests and definition of done. |
 | **05** | [Accounting Model](05-accounting-model.md) | Chart of accounts, the full posting matrix (71 business events → exact debit/credit pairs), and every derivation query. |
@@ -56,7 +56,7 @@ exist anywhere in the schema. The full banned-columns list is in
 
 - **Laravel** — current stable release. **Verify the version at scaffold time**; Filament v4 requires
   Laravel ≥ 11.28 and PHP ≥ 8.2. Confirm with `composer why-not` rather than assuming.
-- **Filament v4** — three panels, clusters, resources, widgets
+- **Filament v4** — one staff panel, clusters, resources, widgets
 - **PostgreSQL 16+** (`btree_gist`, `pg_trgm`), **Redis** (cache, queue)
 - **Spatie** — Permission, Media Library, Activitylog, Backup, Settings
 - **Filament Shield** — per-resource permission generation
@@ -80,7 +80,7 @@ Payment methods include **CCP** and **BaridiMob**.
 7  Dashboards + KPIs ............... widgets, charts, per-car profitability
 8  Notifications ................... alert rules, WhatsApp/SMS/Email, deduplication
 9  Reports ......................... PDF/Excel exports
-10 Portals + Audit + Backups ....... owner portal, client portal, activity log, multi-branch
+10 Audit + Backups ................. activity log, backups, multi-branch enforcement
 ```
 
 Details, dependencies and per-phase tests: [`04-implementation-roadmap.md`](04-implementation-roadmap.md).

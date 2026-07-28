@@ -152,27 +152,35 @@ agreements for a car.
 
 ---
 
-## ADR-007 — One `users` table and role-based panel access, not three auth guards
+## ADR-007 — One panel, staff only. No customer or owner logins.
 
-**Status.** Accepted.
+**Status.** Accepted. **Superseded the original three-panel decision** — see the revision note below.
 
-**Context.** Three panels serve three audiences: staff, car owners, customers.
+**Context.** The business is run from the office. Customers and car owners are people the staff deal
+with by phone and in person; they are records in the system, not users of it.
 
-**Decision.** A single `users` table. Roles decide panel access via `User::canAccessPanel()`.
-`car_owners.user_id` and `customers.user_id` link a portal login to its business record.
+**Decision.** One `users` table, one Filament panel (`admin`), and every `UserRole` case is a staff
+role. `User::canAccessPanel()` admits any user holding any role. There is no customer or car-owner
+login, no owner portal and no client portal.
 
 **Consequences.**
-- One password reset flow, one 2FA implementation, one Shield permission model, one impersonation
-  mechanism.
-- A person who is both a customer and an owner is one account with two roles.
-- Isolation does **not** rely on the guard — it relies on the four layers in
-  [`02-filament-panels.md`](02-filament-panels.md), the strongest of which is that internal resources
-  are never registered on portal panels.
-- Cost: an authorisation bug is theoretically wider in blast radius than with separate guards, which is
-  precisely why isolation is four layers deep and why the portal isolation tests are permanent.
+- The entire portal isolation problem disappears. There is no second audience to leak data to, so
+  there are no portal panels to keep internal resources off, and no portal isolation tests to
+  maintain. Authorisation reduces to permissions inside one panel.
+- `car_owners.user_id` and `customers.user_id` are **retained but unused.** They are the seam if a
+  portal is ever wanted; keeping the columns costs nothing and dropping them would make re-adding one
+  a data migration rather than a feature.
+- Anything a customer or owner needs to be told goes **to the office, which tells them.** Phase 8
+  alerts therefore resolve recipients from staff roles only.
+- Owner statements, ownership agreements and instalments are unaffected: those are things staff
+  produce *about* an owner, not things an owner logs in to see.
 
-**Rejected: separate guards and tables per portal.** Triples the auth surface, and separate guards give
-no protection against the actual risk, which is an unscoped query — not a mis-authenticated user.
+**Revision.** This ADR originally accepted three panels (staff, owner, client) with four layers of
+isolation. That was built in Phase 1 and removed once the business confirmed the system is
+office-only. The four-layer isolation model in [`02-filament-panels.md`](02-filament-panels.md) went
+with it. If a portal is ever reintroduced, that removed design is the starting point, not a fresh
+one — and the argument in the original rejection still holds: the real risk is an unscoped query,
+not a mis-authenticated user.
 
 ---
 

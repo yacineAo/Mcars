@@ -42,7 +42,6 @@ class ChartOfAccountSeeder extends Seeder
             ['code' => '2220', 'name' => 'Fines Payable – Authorities', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
             ['code' => '2300', 'name' => 'Salaries Payable', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
             ['code' => '2310', 'name' => 'Social Contributions Payable', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
-            ['code' => '2400', 'name' => 'Taxes Payable (TVA)', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
             ['code' => '2500', 'name' => 'Customer Credit Balances', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
 
             // 3xxx — Equity

@@ -138,7 +138,7 @@ untagged fuel expense silently disappears from every car's P&L.
 |---|---|---|---|---|---|
 | E01 | Booking **confirmed** | — | — | — | **No posting.** A confirmed booking is a commitment, not a financial event. Posting here would book revenue for rentals that never start. |
 | E02 | Contract activated / car picked up — rental invoiced | 1110 AR–Customers | 4010 Rental Revenue | booking net total | car, booking, contract, customer, branch |
-| E03 | …tax portion (if applicable) | 1110 AR–Customers | 2400 Taxes Payable | tax | same, same `group_uuid` as E02 |
+| ~~E03~~ | ~~…tax portion~~ | — | — | — | **Removed.** No tax is charged. `bookings.tax_rate`/`tax_amount` and account 2400 no longer exist; a rental posts its full total through E02. |
 | E04 | Extras invoiced | 1110 AR–Customers | 4020 Additional Services | extras total | car, booking, customer |
 | E05 | Late return fee at closeout | 1110 AR–Customers | 4030 Late Return Fees | fee | car, booking, customer |
 | E06 | Excess mileage at closeout | 1110 AR–Customers | 4040 Excess Mileage | km × rate | car, booking, customer |
@@ -486,5 +486,7 @@ Recorded so they are choices, not oversights.
   if the business actually transacts in EUR.
 - **Formal period close** — no locked accounting periods in v1. Add a `closed_at` guard on
   `occurred_on` before the first tax filing.
-- **VAT/TVA regime** — 2400 exists and E03 posts to it, but Algerian rental VAT treatment must be
-  confirmed with the accountant before the tax report is built in Phase 9.
+- ~~**VAT/TVA regime**~~ — **closed.** The business does not charge tax. Account 2400 (Taxes
+  Payable), the E03 posting, `TransactionType::Tax` and the tax columns on `bookings` and `expenses`
+  were all removed. Account 5060 (Taxes & Registration) stays: it is an *expense* category for
+  vehicle registration and vignette costs, which the business does pay.

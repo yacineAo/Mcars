@@ -48,7 +48,6 @@ final class DrivingLicenceExpiringDetector implements AlertDetector
                     'expiry_date' => $expiry->translatedFormat('d/m/Y'),
                     'days_remaining' => (int) $now->startOfDay()->diffInDays($expiry, false),
                 ],
-                targetedUserIds: array_filter([$customer->user_id]),
             );
         }
     }

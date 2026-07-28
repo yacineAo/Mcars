@@ -134,7 +134,8 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
             self::RecurringExpenseDue,
             self::CashVariance => [UserRole::Manager, UserRole::Accountant],
 
-            self::OwnerInstallmentDue => [UserRole::Manager, UserRole::Accountant, UserRole::CarOwner],
+            // The owner is not a system user — the office is told, and tells them.
+            self::OwnerInstallmentDue => [UserRole::Manager, UserRole::Accountant],
 
             self::CarDocumentExpiring,
             self::MaintenanceDue => [UserRole::Manager, UserRole::MaintenanceOfficer],

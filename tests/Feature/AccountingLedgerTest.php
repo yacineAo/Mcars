@@ -271,8 +271,7 @@ it('creates an expense through draft → approve → pay flow', function () {
         'branch_id' => $this->branch->id,
         'expense_category_id' => $category->id,
         'amount' => 5000,
-        'tax_amount' => 500,
-        'total_amount' => 5500,
+        'total_amount' => 5000,
         'incurred_on' => now(),
         'description' => 'Test expense',
         'status' => ExpenseStatus::Draft,
@@ -310,7 +309,7 @@ it('creates an expense through draft → approve → pay flow', function () {
 
     // Debit balance on the expense account matches the expense
     $expenseBalance = $this->service->balanceOf($category->ledger_account_id);
-    expect($expenseBalance->toDecimal())->toBe('5500.00');
+    expect($expenseBalance->toDecimal())->toBe('5000.00');
 });
 
 // ---------------------------------------------------------------------------
@@ -420,7 +419,6 @@ it('posts an expense with immediate payment (E39)', function () {
         'branch_id' => $this->branch->id,
         'expense_category_id' => $category->id,
         'amount' => 12000,
-        'tax_amount' => 0,
         'total_amount' => 12000,
         'incurred_on' => now(),
         'description' => 'Oil change',
@@ -447,7 +445,6 @@ it('posts an accrued expense (E38)', function () {
         'branch_id' => $this->branch->id,
         'expense_category_id' => $category->id,
         'amount' => 50000,
-        'tax_amount' => 0,
         'total_amount' => 50000,
         'incurred_on' => now(),
         'description' => 'Office rent July',

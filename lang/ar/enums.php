@@ -18,8 +18,6 @@ return [
         'receptionist' => 'استقبال',
         'maintenance_officer' => 'فني صيانة',
         'supervisor' => 'مشرف',
-        'car_owner' => 'مالك سيارة',
-        'client' => 'عميل',
     ],
     'car_status' => [
         'available' => 'متاحة',

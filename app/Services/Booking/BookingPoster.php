@@ -34,24 +34,6 @@ class BookingPoster
             meta: ['booking_reference' => $booking->reference],
         );
 
-        // E03: Tax portion (if applicable)
-        if ((float) $booking->tax_amount > 0) {
-            $drafts[] = new TransactionDraft(
-                debitAccountId: $this->resolveId('1110'),
-                creditAccountId: $this->resolveId('2400'),
-                amount: $booking->tax_amount,
-                type: TransactionType::Tax,
-                occurredOn: $occurredOn,
-                description: 'Tax on rental — '.$booking->reference,
-                branchId: $branchId,
-                createdById: $userId,
-                carId: $booking->car_id,
-                bookingId: $booking->id,
-                customerId: $booking->customer_id,
-                meta: ['booking_reference' => $booking->reference],
-            );
-        }
-
         // E04: Extras invoiced
         if ((float) $booking->extras_total > 0) {
             $drafts[] = new TransactionDraft(

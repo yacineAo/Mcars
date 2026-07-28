@@ -75,7 +75,6 @@ class BookingResource extends Resource
                                 TextInput::make('subtotal')->numeric()->required()->prefix('DZD'),
                                 TextInput::make('extras_total')->numeric()->default(0)->prefix('DZD'),
                                 TextInput::make('discount_amount')->numeric()->default(0)->prefix('DZD'),
-                                TextInput::make('tax_amount')->numeric()->default(0)->prefix('DZD'),
                                 TextInput::make('total_amount')->numeric()->required()->prefix('DZD'),
                                 TextInput::make('security_deposit_amount')->numeric()->default(0)->prefix('DZD'),
                             ]),

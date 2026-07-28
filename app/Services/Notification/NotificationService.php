@@ -31,18 +31,6 @@ use Throwable;
  */
 class NotificationService
 {
-    /**
-     * Roles whose users are portal accounts tied to one customer or owner.
-     *
-     * A rule naming one of these must never fan out across every holder of the
-     * role — it resolves only to the users the subject itself points at. This is
-     * the guard behind "an owner alert never reaches another owner".
-     */
-    private const array SUBJECT_BOUND_ROLES = [
-        UserRole::CarOwner->value,
-        UserRole::Client->value,
-    ];
-
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly DetectorRegistry $detectors,
@@ -234,57 +222,36 @@ class NotificationService
     /**
      * Who should hear about this.
      *
-     * Staff roles resolve to all active users holding the role in the relevant
-     * branch. Portal roles resolve only to users the subject points at.
+     * Every recipient is staff. Customers and car owners are records, not accounts,
+     * so an alert about an owner's instalment goes to the office — which then talks
+     * to the owner — rather than to the owner directly.
      *
      * @return Collection<int, User>
      */
     private function resolveRecipients(AlertRule $rule, AlertSubject $subject): Collection
     {
-        $roles = $rule->recipientRoleEnums();
+        $roles = array_map(
+            static fn (UserRole $role): string => $role->value,
+            $rule->recipientRoleEnums(),
+        );
 
         if ($roles === []) {
             return collect();
         }
 
-        $staffRoles = [];
-        $portalRoles = [];
+        $query = User::query()
+            ->where('is_active', true)
+            ->whereHas('roles', fn ($q) => $q->whereIn('name', $roles));
 
-        foreach ($roles as $role) {
-            in_array($role->value, self::SUBJECT_BOUND_ROLES, strict: true)
-                ? $portalRoles[] = $role->value
-                : $staffRoles[] = $role->value;
+        // A branch-scoped rule reaches that branch's staff only. Users with no
+        // branch (head office) are included, since they oversee all of them.
+        $branchId = $rule->branch_id ?? $subject->branchId;
+
+        if ($branchId !== null) {
+            $query->where(fn ($q) => $q->where('branch_id', $branchId)->orWhereNull('branch_id'));
         }
 
-        $recipients = collect();
-
-        if ($staffRoles !== []) {
-            $query = User::query()
-                ->where('is_active', true)
-                ->whereHas('roles', fn ($q) => $q->whereIn('name', $staffRoles));
-
-            // A branch-scoped rule reaches that branch's staff only. Users with no
-            // branch (head office) are included, since they oversee all of them.
-            $branchId = $rule->branch_id ?? $subject->branchId;
-
-            if ($branchId !== null) {
-                $query->where(fn ($q) => $q->where('branch_id', $branchId)->orWhereNull('branch_id'));
-            }
-
-            $recipients = $recipients->merge($query->get());
-        }
-
-        if ($portalRoles !== [] && $subject->targetedUserIds !== []) {
-            $recipients = $recipients->merge(
-                User::query()
-                    ->where('is_active', true)
-                    ->whereIn('id', $subject->targetedUserIds)
-                    ->whereHas('roles', fn ($q) => $q->whereIn('name', $portalRoles))
-                    ->get(),
-            );
-        }
-
-        return $recipients->unique('id')->values();
+        return $query->get()->unique('id')->values();
     }
 
     /**

@@ -1,48 +1,28 @@
-# Phase 10 — Portals, Audit, Backups, Multi-Branch
+# Phase 10 — Audit, Backups, Multi-Branch
 
-**Status: ⬜** · Depends on: all previous · Closes: **REQ-19**, **ADV-03**, **ADV-04**, **ADV-06**,
-**ADV-08**, **ADV-09**
+**Status: ⬜** · Depends on: all previous · Closes: **ADV-03**, **ADV-04**, **ADV-06**
 
-External users get their own doors; the system becomes operationally safe to run.
+The system becomes operationally safe to run.
+
+> **Scope reduced.** This phase was originally *Portals, Audit, Backups, Multi-Branch* and carried
+> roughly half its weight in the owner and client portals. The business confirmed the system is
+> office-only, so both portals — and the four-layer isolation model, its permanent regression suite,
+> and the owner-disclosure question that blocked it — were cut. REQ-19, ADV-08 and ADV-09 are
+> withdrawn; see [ADR-007](../06-design-decisions.md).
 
 ## Read first
-[`../02-filament-panels.md`](../02-filament-panels.md) §Isolation — all four layers ·
 [`../08-multi-branch-retrofit.md`](../08-multi-branch-retrofit.md) §3–4 — the switcher design and the
 hazards, which apply when *switching enforcement on* just as much as when retrofitting
 
-## Blocked on a business answer
-
-**Owner disclosure level** — how much does an owner on a `fixed_monthly` agreement see? The design
-shows their car's gross rental revenue and rental days, but not company margin. Confirm before
-building `OwnerStatementService`'s presentation.
-
 ## Deliverables
 
-### Owner portal (REQ-19, ADV-08)
-- [ ] `MyCarsResource`, `MyInstallmentsResource`, `MyPaymentsResource`, `MyDocumentsResource`,
-      `MyStatementsPage`, `MyProfilePage` — **purpose-built, read-only, explicit column allowlists**
-- [ ] Owner widgets: fleet status, next instalment due, received YTD, monthly receipts chart
-- [ ] Monthly statement PDF via `OwnerStatementService`
-- [ ] Owner invitation flow linking a `car_owner` user to `car_owners.user_id`
+### ~~Owner portal~~ / ~~Client portal~~ / ~~isolation layers~~ — **withdrawn**
 
-### Client portal (ADV-09)
-- [ ] `MyBookingsResource`, `MyContractsResource` (including the **signature landing page**),
-      `MyInvoicesResource`, `MyFinesResource`, `MyProfilePage`
-- [ ] Client widgets: active rental with return countdown, outstanding balance, deposit status,
-      next payment due
+Removed with the portals. Owner statements are still produced, but by staff inside the admin panel
+via `OwnerStatementService` — a report the office runs, not a page an owner logs in to.
 
-### ⚠ All four isolation layers — any one alone is a single point of failure
-1. [ ] **Resource not registered on the panel.** No route exists. Strongest control.
-2. [ ] **Purpose-built read-only resources**, never the admin resource re-registered with a filter —
-       otherwise a column added to `cars` in a later phase leaks by default.
-3. [ ] **`getEloquentQuery()` scoped** + a model global scope, so relation managers, widgets and
-       exports inherit it. Scoping the table and forgetting the widgets is the classic leak.
-4. [ ] **Policies re-check ownership** independently, so `/owner/installments/9999` returns 403, not
-       404-by-luck.
-
-Plus: private-disk files via policy-checked signed URLs; global search **disabled** on portals
-(a known way to enumerate hidden records); rate limiting on portal login, OTP and PDF download;
-impersonation `super_admin`-only, logged and banner-visible.
+`car_owners.user_id` and `customers.user_id` remain in the schema, unused, as the seam if a portal is
+ever wanted. Reintroducing one means restoring the whole isolation model, not just adding a panel.
 
 ### Audit (ADV-03)
 - [ ] Activitylog on every model that matters, with old/new values
@@ -69,9 +49,7 @@ impersonation `super_admin`-only, logged and banner-visible.
 - [ ] **Inter-branch clearing account 2600** — a transfer posts two rows sharing a `group_uuid`, one
       per branch, or both branches' cash balances are wrong. Company-wide reports exclude 2600.
 
-### ⚠ Three things that break silently
-- **`BranchScope` must be disabled on the owner and client panels.** Portal users have no branch
-  context; depending on the fallback their records vanish or all appear.
+### ⚠ Two things that break silently
 - **The scope must not apply to queued jobs or console commands** — no session exists, so it resolves
   to nothing and produces wrong data with no error. Fail toward *unscoped* in background contexts and
   *denied* in HTTP contexts.
@@ -81,14 +59,7 @@ impersonation `super_admin`-only, logged and banner-visible.
 ## Tests — permanent regression suite
 
 ```
-owner A cannot list owner B's installments
-owner A cannot GET /owner/installments/{B's id}            → 403
-owner A cannot download B's agreement PDF                   → 403
-owner panel exposes no route matching /expenses|/transactions|/customers
-owner with cars at two branches sees both                   ← the portal-scope trap
-client A cannot view client B's contract                    → 403
-client sees no expense, cost or margin field in any response
-portal widget queries are scoped (assert the predicate in generated SQL)
+/owner and /client resolve to 404 — the portals are gone and must stay gone
 dashboard cache primed as Branch A returns different figures for Branch B
 inter-branch transfer leaves both branches balanced; 2600 nets to zero
 company-wide revenue excludes inter-branch clearing

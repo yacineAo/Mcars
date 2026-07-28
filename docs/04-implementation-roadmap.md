@@ -57,7 +57,7 @@ and the backfill is a real risk. The swap is strongly recommended.
 
 ## Phase 1 — Auth, Roles & Permissions, Panel Skeletons
 
-**Goal.** Three panels exist, users log into the correct one, permissions are enforced.
+**Goal.** The staff panel exists, users log in, permissions are enforced. (Originally three panels; the owner and client portals were withdrawn — ADR-007.)
 **Depends on.** Phase 0.
 **Closes.** REQ-20 · ADV-06 *(schema only)*
 
@@ -302,7 +302,7 @@ individual ledger rows.
 - **Deduplication** against `notification_logs` within `repeat_every_days` — an insurance policy
   expiring in 30 days must produce a handful of alerts, not thirty. Without this the feature is worse
   than useless: staff learn to ignore it, and then miss the one that mattered.
-- In-app notification bell on all three panels; per-user daily digest option.
+- In-app notification bell on the admin panel; per-user daily digest option.
 - `AlertRuleResource` so lead times are managed by the manager, not by a developer.
 
 **Tests.** Each rule fires at the right lead time and not before. Deduplication verified. A failed
@@ -338,7 +338,7 @@ role and branch scope.
 
 ---
 
-## Phase 10 — Portals, Audit, Backups, Multi-branch
+## Phase 10 — Audit, Backups, Multi-branch
 
 **Goal.** External users get their own doors, and the system becomes operationally safe to run.
 **Depends on.** All previous phases.
@@ -346,17 +346,10 @@ role and branch scope.
 
 **Deliverables**
 
-*Owner portal (REQ-19, ADV-08)*
-- Portal-specific read-only resources: `MyCarsResource`, `MyInstallmentsResource`,
-  `MyPaymentsResource`, `MyDocumentsResource`, `MyStatementsPage`, `MyProfilePage`.
-- All four isolation layers from [`02-filament-panels.md`](02-filament-panels.md).
-- Owner widgets; monthly statement PDF via `OwnerStatementService`.
-- Owner invitation flow: create a `car_owner` user linked to `car_owners.user_id`.
-- **Confirm the disclosure level** flagged in `02` before building the statement.
-
-*Client portal (ADV-09)*
-- `MyBookingsResource`, `MyContractsResource` (including the signature landing page),
-  `MyInvoicesResource`, `MyFinesResource`, `MyProfilePage`; client widgets.
+*~~Owner portal~~ / ~~Client portal~~ — withdrawn*
+- Both portals were cut when the business confirmed the system is office-only (ADR-007). Owner
+  statements are produced by staff in the admin panel; the four-layer isolation model and its
+  permanent regression suite went with them.
 
 *Audit (ADV-03)*
 - Spatie Activitylog on every model that matters, with old/new values; `ActivityLogResource`
@@ -374,10 +367,9 @@ role and branch scope.
   per-branch cash boxes, sequences and reports; cross-branch booking (pick up at A, return at B);
   consolidated vs per-branch dashboards.
 
-**Tests.** The full portal isolation suite from [`02-filament-panels.md`](02-filament-panels.md) —
-these become permanent regression tests. Audit log captures create/update/delete with old and new
-values. A restore from backup produces a working database. Branch scoping holds on every resource,
-widget and export.
+**Tests.** `/owner` and `/client` resolve to 404 — the portals are gone and must stay gone. Audit log
+captures create/update/delete with old and new values. A restore from backup produces a working
+database. Branch scoping holds on every resource, widget and export.
 
 **Demo.** Log in as a car owner and see only their cars and money; log in as a customer and sign a
 contract; show an audit trail entry; restore a backup.
@@ -429,5 +421,5 @@ Phase 7  Dashboards + KPIs ──→ Phase 9  Reports
           ↓
 Phase 8  Notifications
           ↓
-Phase 10 Portals, Audit, Backups, Multi-branch
+Phase 10 Audit, Backups, Multi-branch
 ```

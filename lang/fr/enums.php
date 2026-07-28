@@ -18,8 +18,6 @@ return [
         'receptionist' => 'Réceptionniste',
         'maintenance_officer' => 'Agent de Maintenance',
         'supervisor' => 'Superviseur',
-        'car_owner' => 'Propriétaire',
-        'client' => 'Client',
     ],
     'car_status' => [
         'available' => 'Disponible',

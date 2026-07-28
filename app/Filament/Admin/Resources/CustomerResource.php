@@ -65,8 +65,6 @@ class CustomerResource extends Resource
                     ->visible(fn (callable $get) => $get('type') === 'company'),
                 TextInput::make('trade_register')
                     ->maxLength(50),
-                TextInput::make('tax_id')
-                    ->maxLength(50),
                 TextInput::make('article_number')
                     ->maxLength(50),
                 TextInput::make('driving_license_number')

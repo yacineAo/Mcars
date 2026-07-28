@@ -66,18 +66,11 @@ class ExpenseResource extends Resource
                     ->prefix('DZD')
                     ->required()
                     ->reactive()
-                    ->afterStateUpdated(function (callable $set, $state, $get): void {
-                        $tax = (float) $get('tax_amount');
-                        $set('total_amount', number_format((float) $state + $tax, 2, '.', ''));
-                    }),
-                TextInput::make('tax_amount')
-                    ->numeric()
-                    ->prefix('DZD')
-                    ->default(0)
-                    ->reactive()
-                    ->afterStateUpdated(function (callable $set, $state, $get): void {
-                        $amount = (float) $get('amount');
-                        $set('total_amount', number_format($amount + (float) $state, 2, '.', ''));
+                    // No tax is charged, so the total simply mirrors the amount.
+                    // It stays a stored column because an expense may later be
+                    // split or adjusted independently of the entered amount.
+                    ->afterStateUpdated(function (callable $set, $state): void {
+                        $set('total_amount', number_format((float) $state, 2, '.', ''));
                     }),
                 TextInput::make('total_amount')
                     ->numeric()
@@ -120,9 +113,6 @@ class ExpenseResource extends Resource
                     ->label('Category')
                     ->sortable(),
                 TextColumn::make('amount')
-                    ->money('DZD')
-                    ->sortable(),
-                TextColumn::make('tax_amount')
                     ->money('DZD')
                     ->sortable(),
                 TextColumn::make('total_amount')

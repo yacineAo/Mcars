@@ -18,9 +18,9 @@ use Carbon\CarbonImmutable;
 /**
  * Owner instalments falling due inside the lead-time window.
  *
- * targetedUserIds carries only this instalment's owner. Combined with the portal
- * intersection in NotificationService, that is what stops an owner alert reaching
- * another owner.
+ * The alert goes to the office, not to the owner: car owners are records here, not
+ * accounts. The owner's name rides in the payload so whoever picks it up knows who
+ * to call.
  */
 final class OwnerInstallmentDueDetector implements AlertDetector
 {
@@ -61,7 +61,6 @@ final class OwnerInstallmentDueDetector implements AlertDetector
                     'due_date' => $dueDate->translatedFormat('d/m/Y'),
                     'sequence' => $installment->sequence_number,
                 ],
-                targetedUserIds: array_filter([$owner?->user_id]),
             );
         }
     }

@@ -54,7 +54,6 @@ final class CustomerPaymentOverdueDetector implements AlertDetector
                     'due_date' => $dueDate->translatedFormat('d/m/Y'),
                     'days_late' => (int) $dueDate->diffInDays($now),
                 ],
-                targetedUserIds: array_filter([$customer?->user_id]),
             );
         }
     }

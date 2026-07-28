@@ -93,8 +93,6 @@ return new class extends Migration
             $table->decimal('extras_total', 18, 2)->default(0);
             $table->decimal('discount_amount', 18, 2)->default(0);
             $table->string('discount_reason')->nullable();
-            $table->decimal('tax_rate', 5, 2)->default(0);
-            $table->decimal('tax_amount', 18, 2)->default(0);
             $table->decimal('total_amount', 18, 2);
             $table->decimal('security_deposit_amount', 18, 2)->default(0);
 

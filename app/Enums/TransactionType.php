@@ -51,7 +51,6 @@ enum TransactionType: string implements HasColor, HasIcon, HasLabel
     case CashShort = 'cash_short';
     case Capital = 'capital';
     case Drawings = 'drawings';
-    case Tax = 'tax';
     case BankCharge = 'bank_charge';
     case Reversal = 'reversal';
     case Adjustment = 'adjustment';

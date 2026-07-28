@@ -52,8 +52,6 @@ class VendorResource extends Resource
                     ->maxLength(255),
                 Textarea::make('address')
                     ->maxLength(65535),
-                TextInput::make('tax_id')
-                    ->maxLength(50),
                 Textarea::make('notes')
                     ->maxLength(65535),
                 Toggle::make('is_active')
