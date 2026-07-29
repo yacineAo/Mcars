@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\ExtraPricingUnit;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Models\Extra;
 use BackedEnum;
 use Filament\Forms\Components\Select;
@@ -19,6 +20,8 @@ use UnitEnum;
 
 class ExtraResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Extra::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';

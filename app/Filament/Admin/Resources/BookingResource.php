@@ -8,6 +8,7 @@ use App\Enums\BookingStatus;
 use App\Enums\FuelLevel;
 use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethod;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\BookingResource\Pages;
 use App\Models\Booking;
 use App\Models\Customer;
@@ -39,6 +40,8 @@ use UnitEnum;
 
 class BookingResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Booking::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calendar-days';

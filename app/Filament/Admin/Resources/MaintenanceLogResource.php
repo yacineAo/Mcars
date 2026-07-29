@@ -7,6 +7,7 @@ namespace App\Filament\Admin\Resources;
 use App\Enums\CarStatus;
 use App\Enums\MaintenanceStatus;
 use App\Enums\MaintenanceType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\MaintenanceLogResource\Pages\CreateMaintenanceLog;
 use App\Filament\Admin\Resources\MaintenanceLogResource\Pages\EditMaintenanceLog;
 use App\Filament\Admin\Resources\MaintenanceLogResource\Pages\ListMaintenanceLogs;
@@ -30,6 +31,8 @@ use UnitEnum;
 
 class MaintenanceLogResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = MaintenanceLog::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-wrench';

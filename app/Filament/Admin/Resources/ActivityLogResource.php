@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ActivityLogResource\Pages;
 use App\Models\Activity;
 use BackedEnum;
@@ -25,6 +26,8 @@ use UnitEnum;
 
 class ActivityLogResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Activity::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';

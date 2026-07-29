@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\ExportFormat;
 use App\Enums\ReportType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ReportDefinitionResource\Pages;
 use App\Models\Branch;
 use App\Models\Car;
@@ -32,6 +33,8 @@ use UnitEnum;
 
 class ReportDefinitionResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = ReportDefinition::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clock';

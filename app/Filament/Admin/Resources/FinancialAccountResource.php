@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\FinancialAccountType;
 use App\Enums\PaymentMethod;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\FinancialAccountResource\Pages\CreateFinancialAccount;
 use App\Filament\Admin\Resources\FinancialAccountResource\Pages\EditFinancialAccount;
 use App\Filament\Admin\Resources\FinancialAccountResource\Pages\ListFinancialAccounts;
@@ -27,6 +28,8 @@ use UnitEnum;
 
 class FinancialAccountResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = FinancialAccount::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-library';

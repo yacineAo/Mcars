@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\PaymentScheduleResource\Pages;
 use App\Models\PaymentSchedule;
 use BackedEnum;
@@ -22,6 +23,8 @@ use UnitEnum;
 
 class PaymentScheduleResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = PaymentSchedule::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-table-cells';

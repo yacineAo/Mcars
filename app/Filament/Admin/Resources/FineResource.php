@@ -7,6 +7,7 @@ namespace App\Filament\Admin\Resources;
 use App\Enums\FineLiability;
 use App\Enums\FineStatus;
 use App\Enums\FineType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\FineResource\Pages;
 use App\Models\Fine;
 use App\Services\Payment\FineLiabilityService;
@@ -32,6 +33,8 @@ use UnitEnum;
 
 class FineResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Fine::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-exclamation-triangle';

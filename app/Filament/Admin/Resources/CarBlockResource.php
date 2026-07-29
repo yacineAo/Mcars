@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\BlockReason;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Models\CarBlock;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class CarBlockResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = CarBlock::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-no-symbol';

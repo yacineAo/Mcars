@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Locale;
 use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
@@ -19,6 +20,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * `locale` is declared here because static analysis reads column types from the schema,
+ * not from casts() — without it `$user->locale` looks like a string and every
+ * `instanceof Locale` check reads as dead code.
+ *
+ * @property Locale $locale
+ */
 #[Fillable(['name', 'email', 'password', 'branch_id', 'phone', 'whatsapp', 'avatar', 'locale', 'is_active'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements FilamentUser
@@ -31,6 +39,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'locale' => Locale::class,
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',

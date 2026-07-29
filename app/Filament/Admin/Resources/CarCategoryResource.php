@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CarCategoryResource\Pages\CreateCarCategory;
 use App\Filament\Admin\Resources\CarCategoryResource\Pages\EditCarCategory;
 use App\Filament\Admin\Resources\CarCategoryResource\Pages\ListCarCategories;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class CarCategoryResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = CarCategory::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-tag';

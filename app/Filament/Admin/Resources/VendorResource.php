@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\VendorType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\VendorResource\Pages\CreateVendor;
 use App\Filament\Admin\Resources\VendorResource\Pages\EditVendor;
 use App\Filament\Admin\Resources\VendorResource\Pages\ListVendors;
@@ -26,6 +27,8 @@ use UnitEnum;
 
 class VendorResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Vendor::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-storefront';

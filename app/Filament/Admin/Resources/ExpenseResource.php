@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\ExpenseStatus;
 use App\Enums\PaymentMethod;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\CreateExpense;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\EditExpense;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\ListExpenses;
@@ -37,6 +38,8 @@ use UnitEnum;
 
 class ExpenseResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Expense::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shopping-cart';

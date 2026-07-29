@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\CashSessionStatus;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\CreateCashSession;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\EditCashSession;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\ListCashSessions;
@@ -26,6 +27,8 @@ use UnitEnum;
 
 class CashSessionResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = CashSession::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calculator';

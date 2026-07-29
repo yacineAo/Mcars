@@ -7,6 +7,7 @@ namespace App\Filament\Admin\Resources;
 use App\Enums\DeductionReason;
 use App\Enums\DepositStatus;
 use App\Enums\PaymentMethod;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\DepositResource\Pages;
 use App\Models\Deposit;
 use App\Models\DepositDeduction;
@@ -32,6 +33,8 @@ use UnitEnum;
 
 class DepositResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Deposit::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-lock-closed';

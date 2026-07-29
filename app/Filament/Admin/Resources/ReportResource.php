@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\ExportFormat;
 use App\Enums\ReportType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ReportResource\Pages\CreateReport;
 use App\Filament\Admin\Resources\ReportResource\Pages\ListReports;
 use App\Filament\Admin\Resources\ReportResource\Pages\ViewReport;
@@ -47,6 +48,8 @@ use UnitEnum;
  */
 class ReportResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = PendingExport::class;
 
     protected static ?string $slug = 'reports';

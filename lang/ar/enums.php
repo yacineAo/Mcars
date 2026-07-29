@@ -167,4 +167,9 @@ return [
         'xlsx' => 'إكسيل',
         'csv' => 'CSV',
     ],
+    'locale' => [
+        'ar' => 'العربية',
+        'fr' => 'Français',
+        'en' => 'English',
+    ],
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\EmployeeAdvanceResource\Pages;
 use App\Models\EmployeeAdvance;
 use BackedEnum;
@@ -23,6 +24,8 @@ use UnitEnum;
 
 class EmployeeAdvanceResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = EmployeeAdvance::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';

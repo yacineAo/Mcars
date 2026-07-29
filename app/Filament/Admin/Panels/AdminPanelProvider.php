@@ -4,20 +4,31 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Panels;
 
+use App\Enums\Locale;
 use App\Filament\Admin\Pages\Dashboard;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\RoleResource;
 use App\Filament\Admin\Resources\UserResource;
 use App\Http\Middleware\ResolveBranchContext;
+use App\Http\Middleware\SetLocaleFromUser;
 use App\Livewire\BranchSwitcher;
+use App\Livewire\LocaleSwitcher;
+use App\Support\Label;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\Forms\Components\Field;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Infolists\Components\Entry;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
+use Filament\Tables\Columns\Column;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -29,6 +40,54 @@ use Livewire\Livewire;
 
 class AdminPanelProvider extends PanelProvider
 {
+    /**
+     * The navigation groups, in sidebar order, with translated labels.
+     *
+     * Resources declare their group as a plain string; naming the groups here is what
+     * lets those strings render in the user's language without editing 38 resources.
+     */
+    private const NAVIGATION_GROUPS = [
+        'Bookings', 'Fleet', 'CRM', 'Payments', 'Accounting', 'HR', 'Operations', 'Reports', 'Settings',
+    ];
+
+    /**
+     * Panel-wide presentation defaults.
+     *
+     * `translateLabel()` is the whole i18n strategy for this panel. Filament generates a
+     * field/column/entry label from the attribute name and, when this flag is on, passes
+     * it through `__()`. Turning it on globally means one shared dictionary
+     * (lang/{ar,fr}.json) translates every resource, instead of 38 resources each
+     * carrying their own translation keys. A missing entry falls back to the English
+     * key, so this can never blank a label.
+     */
+    public function boot(): void
+    {
+        Field::configureUsing(fn (Field $field): Field => $field->translateLabel());
+        Column::configureUsing(fn (Column $column): Column => $column->translateLabel());
+        Entry::configureUsing(fn (Entry $entry): Entry => $entry->translateLabel());
+
+        // Section headings are literal strings rather than derived from an attribute, so
+        // they need translating explicitly. make() sets the heading before configure()
+        // runs, so it is readable here. Closures are left alone — they are evaluated
+        // later and may not be strings at all.
+        Section::configureUsing(function (Section $section): void {
+            $heading = $section->getHeading();
+
+            if (is_string($heading)) {
+                $section->heading(Label::translate($heading));
+            }
+        });
+
+        // Arabic UI with Latin digits, which is what Algerian users expect for money.
+        Table::configureUsing(fn (Table $table): Table => $table->defaultNumberLocale($this->numberLocale()));
+        Schema::configureUsing(fn (Schema $schema): Schema => $schema->defaultNumberLocale($this->numberLocale()));
+    }
+
+    private function numberLocale(): ?string
+    {
+        return app()->getLocale() === Locale::Arabic->value ? 'ar_SA@numbers=latn' : null;
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -46,6 +105,16 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
+            // Keyed by the untranslated string the resources declare — NavigationManager
+            // matches the array key first, so the label is free to be translated without
+            // breaking which group a resource lands in.
+            ->navigationGroups(array_combine(
+                self::NAVIGATION_GROUPS,
+                array_map(
+                    fn (string $group): NavigationGroup => NavigationGroup::make()->label(fn (): string => Label::translate($group)),
+                    self::NAVIGATION_GROUPS,
+                ),
+            ))
             ->pages([
                 Dashboard::class,
             ])
@@ -64,20 +133,24 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SetLocaleFromUser::class,
                 ResolveBranchContext::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
             ])
-            // The topbar branch switcher. Only when multi-branch is on: with the flag
-            // off, BranchScope and BranchContext do nothing, so a switcher would offer
-            // a choice that changes nothing (config/branches.php).
-            ->when(
-                config('branches.enabled', false),
-                fn (Panel $panel): Panel => $panel->renderHook(
-                    PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-                    fn (): string => Livewire::mount(BranchSwitcher::class),
-                ),
+            // Topbar switchers. Locale is always visible; branch only when multi-branch is on.
+            ->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                function (): string {
+                    $html = Livewire::mount(LocaleSwitcher::class);
+
+                    if (config('branches.enabled', false)) {
+                        $html .= Livewire::mount(BranchSwitcher::class);
+                    }
+
+                    return $html;
+                },
             )
             ->plugins([
                 FilamentShieldPlugin::make(),

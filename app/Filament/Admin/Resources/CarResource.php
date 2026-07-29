@@ -10,6 +10,7 @@ use App\Enums\CarStatus;
 use App\Enums\FuelType;
 use App\Enums\OwnershipType;
 use App\Enums\TransmissionType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CarResource\Pages\CreateCar;
 use App\Filament\Admin\Resources\CarResource\Pages\EditCar;
 use App\Filament\Admin\Resources\CarResource\Pages\ListCars;
@@ -41,6 +42,8 @@ use UnitEnum;
 
 class CarResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Car::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-truck';

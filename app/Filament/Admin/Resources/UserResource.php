@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\Locale;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Admin\Resources\UserResource\Pages\EditUser;
 use App\Filament\Admin\Resources\UserResource\Pages\ListUsers;
@@ -28,6 +30,8 @@ use UnitEnum;
  */
 class UserResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = User::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
@@ -62,11 +66,7 @@ class UserResource extends Resource
                 TextInput::make('whatsapp')
                     ->maxLength(255),
                 Select::make('locale')
-                    ->options([
-                        'ar' => 'العربية',
-                        'fr' => 'Français',
-                        'en' => 'English',
-                    ])
+                    ->options(Locale::options())
                     ->required(),
                 Toggle::make('is_active'),
                 Select::make('roles')

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\TransactionResource\Pages\ListTransactions;
 use App\Filament\Admin\Resources\TransactionResource\Pages\ViewTransaction;
 use App\Models\Transaction;
@@ -18,6 +19,8 @@ use UnitEnum;
 
 class TransactionResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Transaction::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';

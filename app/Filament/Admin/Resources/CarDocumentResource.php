@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\CarDocumentType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CarDocumentResource\Pages\CreateCarDocument;
 use App\Filament\Admin\Resources\CarDocumentResource\Pages\EditCarDocument;
 use App\Filament\Admin\Resources\CarDocumentResource\Pages\ListCarDocuments;
@@ -27,6 +28,8 @@ use UnitEnum;
 
 class CarDocumentResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = CarDocument::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document';

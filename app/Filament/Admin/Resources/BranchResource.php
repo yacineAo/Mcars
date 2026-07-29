@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\BranchResource\Pages\CreateBranch;
 use App\Filament\Admin\Resources\BranchResource\Pages\EditBranch;
 use App\Filament\Admin\Resources\BranchResource\Pages\ListBranches;
@@ -30,6 +31,8 @@ use UnitEnum;
  */
 class BranchResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Branch::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-storefront';

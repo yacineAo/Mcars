@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationStatus;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\NotificationLogResource\Pages;
 use App\Models\NotificationLog;
 use BackedEnum;
@@ -33,6 +34,8 @@ use UnitEnum;
  */
 class NotificationLogResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = NotificationLog::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-paper-airplane';

@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\AgreementModel;
 use App\Enums\AgreementStatus;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CarOwnershipAgreementResource\Pages\CreateCarOwnershipAgreement;
 use App\Filament\Admin\Resources\CarOwnershipAgreementResource\Pages\EditCarOwnershipAgreement;
 use App\Filament\Admin\Resources\CarOwnershipAgreementResource\Pages\ListCarOwnershipAgreements;
@@ -28,6 +29,8 @@ use UnitEnum;
 
 class CarOwnershipAgreementResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = CarOwnershipAgreement::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';

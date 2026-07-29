@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\ContractStatus;
 use App\Enums\InsuranceType;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Models\Contract;
 use App\Services\Booking\ContractService;
 use BackedEnum;
@@ -28,6 +29,8 @@ use UnitEnum;
 
 class ContractResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Contract::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-duplicate';

@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\ConditionReportType;
 use App\Enums\FuelLevel;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Models\ConditionReport;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -26,6 +27,8 @@ use UnitEnum;
 
 class ConditionReportResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = ConditionReport::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';

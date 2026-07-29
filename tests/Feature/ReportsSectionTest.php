@@ -23,6 +23,7 @@ use App\Services\Reporting\ReportDataResolver;
 use App\Services\Reporting\ReportRequest;
 use App\Services\ReportService;
 use Carbon\CarbonImmutable;
+use Closure;
 use Database\Seeders\ChartOfAccountSeeder;
 use Database\Seeders\FinancialAccountSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -291,22 +292,37 @@ it('keeps the branch chosen in the form over the row default', function () {
     expect(ReportRequest::fromPendingExport($report)->branchId)->toBeNull();
 });
 
-it('registers the branch switcher only when multi-branch is on', function () {
-    // config/branches.php documents the switcher as disabled with the flag off, but
-    // the render hook used to register unconditionally — offering a choice that
-    // BranchScope and BranchContext would then ignore.
-    $hooksWhen = function (bool $enabled): array {
+it('renders the branch switcher only when multi-branch is on', function () {
+    // config/branches.php documents the switcher as disabled with the flag off —
+    // otherwise it offers a choice BranchScope and BranchContext would then ignore.
+    //
+    // Asserting on the *rendered* hook, not merely that the hook is registered: the
+    // locale switcher shares that hook and registers unconditionally, so a
+    // registration-only assertion passes whatever the branch flag does.
+    $renderWhen = function (bool $enabled): string {
         config()->set('branches.enabled', $enabled);
 
         $panel = (new AdminPanelProvider(app()))->panel(Panel::make());
 
-        $hooks = new ReflectionProperty($panel, 'renderHooks');
+        $hooks = (new ReflectionProperty($panel, 'renderHooks'))->getValue($panel);
 
-        return $hooks->getValue($panel);
+        return (string) collect($hooks[PanelsRenderHook::GLOBAL_SEARCH_AFTER][''] ?? [])
+            ->map(fn (Closure $hook): string => (string) $hook())
+            ->implode('');
     };
 
-    expect($hooksWhen(false))->not->toHaveKey(PanelsRenderHook::GLOBAL_SEARCH_AFTER)
-        ->and($hooksWhen(true))->toHaveKey(PanelsRenderHook::GLOBAL_SEARCH_AFTER);
+    $this->actingAs($this->manager);
+
+    $off = $renderWhen(false);
+    $on = $renderWhen(true);
+
+    // Livewire renders each component's class as a snapshot attribute, so the presence
+    // of the component is checkable without depending on its markup.
+    expect($off)->not->toContain('branch-switcher')
+        ->and($on)->toContain('branch-switcher')
+        // The locale switcher is present either way.
+        ->and($off)->toContain('locale-switcher')
+        ->and($on)->toContain('locale-switcher');
 });
 
 it('renders the branch switcher from filament components', function () {

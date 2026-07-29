@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\PayrollStatus;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\PayrollRunResource\Pages;
 use App\Models\PayrollRun;
 use App\Services\Payment\PaymentService;
@@ -28,6 +29,8 @@ use UnitEnum;
 
 class PayrollRunResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = PayrollRun::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Filament\Admin\Panels\AdminPanelProvider;
+use App\Http\Middleware\SetLocaleFromUser;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,7 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // The `web` group, not the global stack: global middleware runs before
+        // StartSession, so Auth::user() there is always null and the locale would
+        // never be applied. Panel routes get it from the panel's own middleware list.
+        $middleware->appendToGroup('web', SetLocaleFromUser::class);
     })
     // One panel. The system is staff-only: customers and car owners are records
     // the office manages, never accounts that log in.

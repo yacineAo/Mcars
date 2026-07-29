@@ -7,6 +7,7 @@ namespace App\Filament\Admin\Resources;
 use App\Enums\AlertType;
 use App\Enums\NotificationChannel;
 use App\Enums\UserRole;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\AlertRuleResource\Pages;
 use App\Models\AlertRule;
 use BackedEnum;
@@ -38,6 +39,8 @@ use UnitEnum;
  */
 class AlertRuleResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = AlertRule::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-bell-alert';

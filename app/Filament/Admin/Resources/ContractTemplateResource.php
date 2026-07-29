@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Models\ContractTemplate;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -25,6 +26,8 @@ use UnitEnum;
 
 class ContractTemplateResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = ContractTemplate::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';

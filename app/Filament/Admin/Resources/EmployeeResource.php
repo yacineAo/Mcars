@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\EmployeeResource\Pages;
 use App\Models\Employee;
 use BackedEnum;
@@ -23,6 +24,8 @@ use UnitEnum;
 
 class EmployeeResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Employee::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';

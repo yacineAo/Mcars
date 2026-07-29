@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\PaymentMethod;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\PaymentResource\Pages;
 use App\Models\Payment;
 use App\Services\Payment\PaymentService;
@@ -29,6 +30,8 @@ use UnitEnum;
 
 class PaymentResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = Payment::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-credit-card';

@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\AccountType;
 use App\Enums\NormalBalance;
+use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ChartOfAccountResource\Pages\CreateChartOfAccount;
 use App\Filament\Admin\Resources\ChartOfAccountResource\Pages\EditChartOfAccount;
 use App\Filament\Admin\Resources\ChartOfAccountResource\Pages\ListChartOfAccounts;
@@ -28,6 +29,8 @@ use UnitEnum;
 
 class ChartOfAccountResource extends Resource
 {
+    use TranslatesModelLabel;
+
     protected static ?string $model = ChartOfAccount::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-book-open';
