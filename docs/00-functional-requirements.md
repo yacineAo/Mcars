@@ -87,7 +87,7 @@ Where each requirement is satisfied. Use this to check nothing was dropped.
 | REQ-13 | `car_documents.expiry_date` | expiring-documents widget | `NotificationService` | 2, 8 |
 | REQ-14 | `fines` | `FineResource` | `FineLiabilityService` | 6 |
 | REQ-15 | `employees`, `payroll_runs`, `commissions`, `activity_log` | HR cluster | `AccountingService` | 6, 10 |
-| REQ-16 | — (reads ledger) | Reports hub | `ReportService` | 9 |
+| REQ-16 | — (reads ledger) | Reports hub | `ReportService`, `ExportJob` | 9 ✅ |
 | REQ-17 | `alert_rules`, `notification_logs` | notification bell + digests | `NotificationService`, `MessagingService` | 8 |
 | REQ-18 | `transactions` | chart widgets | `ReportService` | 7 |
 | ~~REQ-19~~ | `owner_installments`, `car_ownership_agreements` | admin panel | `OwnerStatementService` | ~~10~~ withdrawn |

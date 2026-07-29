@@ -699,6 +699,35 @@ numbering formats, messaging provider credentials, backup schedule.
 
 ---
 
+## Module 7 — Reports (Phase 9)
+
+### `pending_exports`
+`id`, `branch_id` (nullable — all branches), `user_id`, `report_type` (varchar → `ReportType`),
+`format` (varchar → `ExportFormat`), `parameters` (json — filters, dates, branch scope),
+`status` (varchar — `pending`, `processing`, `completed`, `failed`),
+`file_path` (nullable), `file_size` (nullable),
+`error_message` (nullable, text),
+`completed_at` (nullable, timestamptz),
+`created_at`, `updated_at`.
+
+Indexed on `(user_id, status)` for the "my recent exports" list;
+indexed on `(status, created_at)` for the queue worker.
+
+### `report_definitions`
+`id`, `branch_id` (nullable), `user_id`, `name` (varchar 255),
+`report_type` (varchar → `ReportType`), `format` (varchar → `ExportFormat`),
+`parameters` (json), `schedule_cron` (nullable, varchar — e.g. `0 8 * * 1`),
+`schedule_email` (nullable, varchar), `schedule_enabled` (bool, default false),
+`last_sent_at` (nullable, timestamptz),
+`created_by_id` (nullable), `updated_by_id` (nullable),
+soft deletes, timestamps.
+
+Indexed on `(user_id, schedule_enabled)` for the scheduled-reports list.
+
+Scheduled report infra — not yet wired to a scheduler loop.
+
+---
+
 ## Deviations from the requested table list
 
 | Requested | Delivered as | Reason |

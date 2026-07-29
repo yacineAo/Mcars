@@ -152,4 +152,19 @@ return [
         'failed' => 'فشل',
         'cancelled' => 'أُلغي',
     ],
+    'report_type' => [
+        'profit_and_loss' => 'الأرباح والخسائر',
+        'expense_breakdown' => 'تفصيل المصروفات',
+        'customer_report' => 'تقرير الزبون',
+        'fleet_profitability' => 'ربحية الأسطول',
+        'cash_flow' => 'التدفق النقدي',
+        'owner_statement' => 'كشف المالك',
+        'receivables_ageing' => 'تقادم المستحقات',
+        'cash_session_audit' => 'تدقيق جلسات الصندوق',
+    ],
+    'export_format' => [
+        'pdf' => 'PDF',
+        'xlsx' => 'إكسيل',
+        'csv' => 'CSV',
+    ],
 ];

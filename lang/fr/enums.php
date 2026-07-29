@@ -152,4 +152,19 @@ return [
         'failed' => 'Échec',
         'cancelled' => 'Annulé',
     ],
+    'report_type' => [
+        'profit_and_loss' => 'Compte de Résultat',
+        'expense_breakdown' => 'Ventilation des Dépenses',
+        'customer_report' => 'Rapport Client',
+        'fleet_profitability' => 'Rentabilité de la Flotte',
+        'cash_flow' => 'Flux de Trésorerie',
+        'owner_statement' => 'Relevé Propriétaire',
+        'receivables_ageing' => 'Échéance des Créances',
+        'cash_session_audit' => 'Audit des Sessions de Caisse',
+    ],
+    'export_format' => [
+        'pdf' => 'PDF',
+        'xlsx' => 'Excel',
+        'csv' => 'CSV',
+    ],
 ];

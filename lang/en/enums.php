@@ -152,4 +152,19 @@ return [
         'failed' => 'Failed',
         'cancelled' => 'Cancelled',
     ],
+    'report_type' => [
+        'profit_and_loss' => 'Profit & Loss',
+        'expense_breakdown' => 'Expense Breakdown',
+        'customer_report' => 'Customer Report',
+        'fleet_profitability' => 'Fleet Profitability',
+        'cash_flow' => 'Cash Flow',
+        'owner_statement' => 'Owner Statement',
+        'receivables_ageing' => 'Receivables Ageing',
+        'cash_session_audit' => 'Cash Session Audit',
+    ],
+    'export_format' => [
+        'pdf' => 'PDF',
+        'xlsx' => 'Excel',
+        'csv' => 'CSV',
+    ],
 ];

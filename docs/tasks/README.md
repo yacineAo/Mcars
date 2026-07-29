@@ -16,7 +16,7 @@ work the checklist, run its verification, tick the `REQ-*` IDs it closes.
 | [06](phase-06-payments-deposits.md) | Payments, deposits, instalments, fines, payroll | ✅ **Done** | REQ-07, REQ-14, REQ-15, ADV-07 |
 | [07](phase-07-dashboards.md) | Dashboards, KPIs, per-car profitability | ✅ **Done** | REQ-01, REQ-11, REQ-18 |
 | [08](phase-08-notifications.md) | Notifications and alerts | ✅ **Done** | REQ-17, ADV-05 |
-| [09](phase-09-reports.md) | Reports — PDF/Excel exports | ⬜ **Next** | REQ-16 |
+| [09](phase-09-reports.md) | Reports — PDF/Excel exports | ✅ Phase 9a complete | REQ-16 |
 | [10](phase-10-portals-audit-backups.md) | Audit, backups, multi-branch | ⬜ | ADV-03/04/06 |
 
 ## Dependency order

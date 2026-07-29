@@ -8,10 +8,12 @@ use App\Enums\BookingStatus;
 use App\Enums\CarStatus;
 use App\Models\Booking;
 use App\Models\Car;
+use App\Models\CarOwner;
 use App\Models\ChartOfAccount;
 use App\Models\Customer;
 use App\Models\Deposit;
 use App\Models\Fine;
+use App\Models\OwnerInstallment;
 use Carbon\CarbonImmutable;
 use Closure;
 use DateTimeInterface;
@@ -487,6 +489,157 @@ class ReportService
         });
     }
 
+    /**
+     * Owner statement — activity + balances for an owner over a period.
+     *
+     * @return array<string, mixed>
+     */
+    public function ownerStatement(int $carOwnerId, DateTimeInterface $from, DateTimeInterface $to, ?int $branchId = null): array
+    {
+        $owner = CarOwner::query()->findOrFail($carOwnerId);
+
+        $account2200 = ChartOfAccount::where('code', '2200')->value('id');
+
+        $amountCredited = (float) $this->db->table('transactions')
+            ->where('credit_account_id', $account2200)
+            ->where('car_owner_id', $carOwnerId)
+            ->whereBetween('occurred_on', $this->dateBounds($from, $to))
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
+            ->sum('amount');
+
+        $amountDebited = (float) $this->db->table('transactions')
+            ->where('debit_account_id', $account2200)
+            ->where('car_owner_id', $carOwnerId)
+            ->whereBetween('occurred_on', $this->dateBounds($from, $to))
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
+            ->sum('amount');
+
+        $installments = OwnerInstallment::where('car_owner_id', $carOwnerId)
+            ->whereBetween('due_date', $this->dateBounds($from, $to))
+            ->get();
+
+        $installmentData = [];
+        $totalPaid = 0.0;
+
+        foreach ($installments as $i) {
+            $paid = $this->installmentPaidAmount($i->id);
+            $totalPaid += $paid;
+
+            $installmentData[] = [
+                'period' => $i->period_month !== null && method_exists($i->period_month, 'format')
+                    ? $i->period_month->format('Y-m')
+                    : (string) $i->period_month,
+                'due_date' => $i->due_date !== null && method_exists($i->due_date, 'format')
+                    ? $i->due_date->format('Y-m-d')
+                    : (string) $i->due_date,
+                'amount_due' => (float) $i->amount_due,
+                'amount_paid' => $paid,
+                'status' => $i->status ? $i->status->value : (string) $i->status,
+            ];
+        }
+
+        return [
+            'owner_name' => trim($owner->first_name.' '.$owner->last_name),
+            'installments' => $installmentData,
+            'total_due' => round((float) $installments->sum('amount_due'), 2),
+            'total_paid' => round($totalPaid, 2),
+            'balance' => round($amountCredited - $amountDebited, 2),
+        ];
+    }
+
+    /**
+     * Cash session audit — all sessions with their expected vs counted amounts.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function cashSessionAudit(DateTimeInterface $from, DateTimeInterface $to, ?int $branchId = null): array
+    {
+        $query = $this->db->table('cash_sessions')
+            ->leftJoin('users as opened', 'opened.id', '=', 'cash_sessions.opened_by_id')
+            ->leftJoin('users as closed', 'closed.id', '=', 'cash_sessions.closed_by_id')
+            ->leftJoin('financial_accounts', 'financial_accounts.id', '=', 'cash_sessions.financial_account_id')
+            ->whereBetween('cash_sessions.opened_at', $this->dateBounds($from, $to))
+            ->when($branchId !== null, fn ($q) => $q->where('cash_sessions.branch_id', $branchId));
+
+        $rows = $query->selectRaw('
+                cash_sessions.id,
+                cash_sessions.opened_at,
+                cash_sessions.closed_at,
+                opened.name AS opened_by_name,
+                closed.name AS closed_by_name,
+                financial_accounts.name AS account_name,
+                cash_sessions.opening_float,
+                cash_sessions.counted_amount,
+                cash_sessions.status,
+                cash_sessions.notes
+            ')
+            ->orderBy('cash_sessions.opened_at', 'desc')
+            ->get();
+
+        $sessions = [];
+        foreach ($rows as $row) {
+            $expected = $this->expectedCashBalance((int) $row->id, $row->opening_float);
+
+            $sessions[] = [
+                'id' => (int) $row->id,
+                'opened_at' => $row->opened_at,
+                'closed_at' => $row->closed_at,
+                'opened_by' => $row->opened_by_name,
+                'closed_by' => $row->closed_by_name,
+                'account_name' => $row->account_name,
+                'opening_float' => round((float) $row->opening_float, 2),
+                'expected' => round($expected, 2),
+                'counted' => round((float) ($row->counted_amount ?? 0), 2),
+                'variance' => round((float) ($row->counted_amount ?? 0) - $expected, 2),
+                'status' => $row->status,
+                'notes' => $row->notes,
+            ];
+        }
+
+        return $sessions;
+    }
+
+    /**
+     * Expected cash balance for a session: opening float + net movements.
+     */
+    private function expectedCashBalance(int $sessionId, mixed $openingFloat): float
+    {
+        $net = (float) $this->db->table('transactions')
+            ->where('cash_session_id', $sessionId)
+            ->selectRaw('
+                COALESCE(SUM(CASE WHEN dr.is_cash_equivalent THEN transactions.amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN cr.is_cash_equivalent THEN transactions.amount ELSE 0 END), 0) AS net
+            ')
+            ->join('chart_of_accounts as dr', 'dr.id', '=', 'transactions.debit_account_id')
+            ->join('chart_of_accounts as cr', 'cr.id', '=', 'transactions.credit_account_id')
+            ->value('net');
+
+        return (float) $openingFloat + $net;
+    }
+
+    /**
+     * Paid amount for an installment, derived from the ledger.
+     */
+    private function installmentPaidAmount(int $installmentId): float
+    {
+        return (float) $this->db->table('transactions')
+            ->where('source_type', 'owner_installment')
+            ->where('source_id', $installmentId)
+            ->where('debit_account_id', function ($q) {
+                $q->select('id')->from('chart_of_accounts')->where('code', '2200');
+            })
+            ->sum('amount');
+    }
+
+    /**
+     * Account 2600 — Inter-branch clearing. When computing company-wide totals,
+     * add this filter to exclude inter-branch transfers.
+     */
+    public function interBranchClearingAccountId(): ?int
+    {
+        return ChartOfAccount::where('code', '2600')->value('id');
+    }
+
     // ---------------------------------------------------------------- caching
 
     /**
@@ -552,9 +705,21 @@ class ReportService
      */
     private function ledger(DateTimeInterface $from, DateTimeInterface $to, ?int $branchId = null): Builder
     {
-        return $this->ledgerBase()
+        $query = $this->ledgerBase()
             ->whereBetween('transactions.occurred_on', $this->dateBounds($from, $to))
             ->when($branchId !== null, fn ($q) => $q->where('transactions.branch_id', $branchId));
+
+        // Company-wide totals exclude inter-branch clearing (account 2600).
+        // Per-branch queries include everything that happened in that branch.
+        if ($branchId === null) {
+            $clearingId = $this->interBranchClearingAccountId();
+            if ($clearingId !== null) {
+                $query->where('transactions.debit_account_id', '!=', $clearingId)
+                    ->where('transactions.credit_account_id', '!=', $clearingId);
+            }
+        }
+
+        return $query;
     }
 
     private function ledgerBase(): Builder

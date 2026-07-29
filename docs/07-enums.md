@@ -291,6 +291,10 @@ Every case is a staff role; there is one panel. `car_owner` and `client` were re
 ### `SequenceKey`
 `contract` · `booking` · `transaction` · `payment` · `expense` · `invoice`
 
+### `ReportType`
+`profit_and_loss` · `expense_breakdown` · `customer_report` · `fleet_profitability` ·
+`cash_flow` · `owner_statement` · `receivables_ageing` · `cash_session_audit`
+
 ### `ExportFormat`
 `pdf` · `xlsx` · `csv`
 

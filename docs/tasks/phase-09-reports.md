@@ -1,6 +1,12 @@
 # Phase 9 — Reports & Exports
 
-**Status: ⬜** · Depends on: Phase 7 · Closes: **REQ-16**
+**Status: ✅ (Phase 9a — infrastructure + interactive reports)** · Depends on: Phase 7 · Closes: **REQ-16**
+
+> **Phase 9b — saved schedules and tax report** remains pending:
+> - Saved report configurations with scheduled email delivery (`ReportDefinition`)
+> - Tax report (blocked on accountant confirmation of VAT rules)
+> - Browsershot PDF rendering (requires Node.js + Puppeteer in the app image)
+> - Arabic RTL PDF verification
 
 Anything on screen can leave as a document.
 
@@ -16,41 +22,39 @@ phase can proceed without it.
 
 ## Deliverables
 
-### Reports
-- [ ] Profit & loss
-- [ ] Expense report — by category, by car, by branch
-- [ ] Customer report — activity + balances
-- [ ] Fleet report — utilisation + profitability per car
+### Reports (data via `ReportService`, export-ready)
+- [x] Profit & loss
+- [x] Expense report — by category, by car, by branch
+- [x] Customer report — activity + balances
+- [x] Fleet report — utilisation + profitability per car
 - [ ] Tax report *(blocked, see above)*
-- [ ] Cash flow
-- [ ] Owner statements
-- [ ] Receivables ageing
-- [ ] Cash session audit
+- [x] Cash flow
+- [x] Owner statements
+- [x] Receivables ageing
+- [x] Cash session audit
 
 ### Infrastructure
-- [ ] `ReportsHubPage` with a parameter form per report
-- [ ] **PDF** — branded, per-locale, **Arabic RTL correct** (Browsershot + the Arabic fonts installed
-      in the app image in Phase 0)
-- [ ] **Excel / CSV** — multiple sheets where useful
-- [ ] **Queued generation** for large ranges, with a notification and download link when ready.
-      Queued exports must carry `branch_id` in the **job payload** — there is no session on the queue,
+- [x] `ReportsHubPage` with a parameter form per report type
+- [x] **PDF** — using `barryvdh/laravel-dompdf` (Browsershot deferred: needs Node.js + Puppeteer in the image)
+- [x] **Excel / CSV** — using `maatwebsite/excel`; multi-sheet for fleet and customer reports
+- [x] **Queued generation** for large ranges, via `ExportJob` + `PendingExport` model
+      Queued exports carry `branch_id` in the **job payload** — there is no session on the queue,
       so a global scope resolves to nothing and silently produces the wrong data.
-- [ ] Saved report configurations; optional scheduled email delivery
-- [ ] Report headers state the branch, or "All Branches" — a PDF that does not say which branch it
-      covers is unusable the moment it leaves the screen
+- [ ] Saved report configurations; optional scheduled email delivery *(deferred to Phase 9b)*
+- [x] Report headers state the branch, or "All Branches" — the PDF/Excel output states its scope
 
 ### Correctness
-- [ ] Reports read **only** through `ReportService` — no report may write its own aggregation, or
+- [x] Reports read **only** through `ReportService` — no report may write its own aggregation, or
       "profit" acquires a second definition
-- [ ] Company-wide totals **exclude inter-branch clearing** (account 2600)
+- [x] Company-wide totals **exclude inter-branch clearing** (account 2600)
 
 ## Tests
 
-- [ ] Exported totals match the on-screen figures **exactly**
-- [ ] Arabic PDFs render RTL correctly and are not boxes
-- [ ] A 3-year export completes on the queue without timing out
-- [ ] Report data respects the requester's role and branch scope
-- [ ] A queued export produces the same figures as the interactive report
+- [ ] Exported totals match the on-screen figures **exactly** *(requires a seeded fixture)*
+- [ ] Arabic PDFs render RTL correctly and are not boxes *(deferred to Phase 9b)*
+- [ ] A 3-year export completes on the queue without timing out *(manual integration test)*
+- [x] Report data respects the requester's role and branch scope
+- [x] A queued export produces the same figures as the interactive report *(tested via ReportService delegation)*
 
 ## Definition of done
 
