@@ -150,10 +150,11 @@ No state-changing action belongs here.
 
 ## Checklist
 
-- [ ] Stop logging `password`, `remember_token`, `two_factor_secret` and
+- [x] Stop logging `password`, `remember_token`, `two_factor_secret` and
       `two_factor_recovery_codes` via `->logExcept([...])`, and add a test asserting a user
       `created` activity row contains none of them
-- [ ] Redact those keys at render time as a second layer, and scrub the rows already written
+- [x] Scrub the rows already written (migration `2026_08_07_000000_scrub_secrets_from_activity_log`)
+- [ ] Redact those keys at render time as a second layer
 - [ ] Decide `branch_id`: stamp it when activity is written, or remove the column, index, filter
       and display — and add a test that a user without `branches.view_all` sees their own branch's
       rows rather than none
@@ -166,6 +167,10 @@ No state-changing action belongs here.
       matter most: Booking, Car, Customer, User
 - [ ] Add a test asserting this resource exposes no create, edit, delete or bulk action
 - [ ] Drop the unused `TranslatesModelLabel` trait
+
+
+> **Partly done.** The items ticked above were implemented and covered by
+> `tests/Feature/PrivilegeEscalationTest.php`. The rest of the checklist is untouched.
 
 ## Verification
 

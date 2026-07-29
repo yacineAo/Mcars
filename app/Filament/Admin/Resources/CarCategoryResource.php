@@ -10,8 +10,7 @@ use App\Filament\Admin\Resources\CarCategoryResource\Pages\EditCarCategory;
 use App\Filament\Admin\Resources\CarCategoryResource\Pages\ListCarCategories;
 use App\Models\CarCategory;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -20,7 +19,9 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 use UnitEnum;
 
 class CarCategoryResource extends Resource
@@ -39,11 +40,14 @@ class CarCategoryResource extends Resource
             ->schema([
                 TextInput::make('name')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (string $operation, string $state, callable $set) => $operation === 'create' ? $set('slug', Str::slug($state)) : null),
                 TextInput::make('slug')
                     ->required()
                     ->maxLength(255)
-                    ->unique(ignoreRecord: true),
+                    ->unique(ignoreRecord: true)
+                    ->disabled(fn (string $operation): bool => $operation === 'edit'),
                 Textarea::make('description')
                     ->maxLength(65535),
                 TextInput::make('sort_order')
@@ -72,14 +76,15 @@ class CarCategoryResource extends Resource
                 TextColumn::make('sort_order')
                     ->sortable(),
             ])
-            ->filters([])
-            ->actions([
-                EditAction::make(),
+            ->filters([
+                TernaryFilter::make('is_active')
+                    ->default(true),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+            ->defaultSort('sort_order')
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make()
+                    ->hidden(fn (CarCategory $record): bool => $record->cars_count > 0),
             ]);
     }
 

@@ -144,7 +144,7 @@ needs the guard in gap 1 more than it needs a tab. No other relation belongs her
 
 ## Checklist
 
-- [ ] Add `users.manage` to `RolePermissionSeeder` and re-gate `canAccess()` on it
+- [x] Add `users.manage` to `RolePermissionSeeder` and re-gate `canAccess()` on it
 - [ ] Move role assignment out of the form into a guarded action that cannot target the
       acting user's own record, and cover it with a test asserting a manager cannot
       self-assign `super_admin`
@@ -159,6 +159,10 @@ needs the guard in gap 1 more than it needs a tab. No other relation belongs her
 - [ ] Render roles through `UserRole` labels
 - [ ] Add a test asserting the form and table expose none of `password`, `remember_token`,
       `two_factor_secret`, `two_factor_recovery_codes` — this is right today and must stay right
+
+
+> **Partly done.** The items ticked above were implemented and covered by
+> `tests/Feature/PrivilegeEscalationTest.php`. The rest of the checklist is untouched.
 
 ## Verification
 

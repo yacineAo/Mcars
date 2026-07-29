@@ -48,6 +48,30 @@ class RolePermissionSeeder extends Seeder
                 UserRole::SuperAdmin,
                 UserRole::Manager,
             ],
+            // Staff accounts. docs/02-filament-panels.md §Role → visibility matrix puts
+            // "Settings & Access" at full for a manager, so a manager creating a
+            // receptionist is intended. What is not intended is elevation: the roles a
+            // user may hand out are capped at their own in UserResource::assignableRoles().
+            //
+            // This replaces UserResource's old gate on branches.view_all, which governs
+            // cross-branch visibility and only granted account management by accident.
+            'users.manage' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
+            // The ledger is append-only (ADR-003), so a mis-posting is corrected by a
+            // reversal row and by nothing else. ViewTransaction has always gated its
+            // reverse action on this permission, but the permission was never created —
+            // and because Shield's super_admin runs with 'define_via_gate' => false and
+            // there is no Gate::before, an unseeded permission is denied to *everyone*.
+            // The only sanctioned correction path in the system was therefore unreachable.
+            //
+            // Deliberately not granted to a manager: reversing a posting is an accounting
+            // act, and the accountant is the role that answers for the books.
+            'reverse_transaction' => [
+                UserRole::SuperAdmin,
+                UserRole::Accountant,
+            ],
         ];
 
         foreach ($grants as $permissionName => $roles) {

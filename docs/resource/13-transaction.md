@@ -1,6 +1,6 @@
 # 13 — Transaction (Accounting)
 
-**Model:** `App\Models\Transaction` · **Slug:** `/admin/transactions` · **Status:** 🔴 needs work
+**Model:** `App\Models\Transaction` · **Slug:** `/admin/transactions` · **Status:** 🟡 partial
 
 Closes **REQ-08**, **REQ-09**. Read
 [`../05-accounting-model.md`](../05-accounting-model.md) in full before changing anything
@@ -104,12 +104,16 @@ strictly read-only — no create, no edit, no delete, no bulk actions — and ga
 | Action | Placement | Visible when | Guarded by | Delegates to | Notes |
 |---|---|---|---|---|---|
 | `ViewAction` | row | always | `reports.view_financials` | — | the only row action — correct |
-| `reverse` | header (view page) | `! is_reversal` | `reverse_transaction` — **never seeded** | `AccountingService::reverse()` | correct code, unreachable gate — gap 1 |
+| `reverse` | header (view page) | `! is_reversal` | `reverse_transaction` — **now seeded** | `AccountingService::reverse()` | gap 1 resolved |
 | _(none)_ | create / edit / delete / bulk | — | — | — | **deliberately absent** (ADR-003) — keep it that way |
 
 ## Gaps and risks
 
-1. **🔴 The reverse action is unreachable by everyone, including super_admin.**
+1. **✅ RESOLVED — the reverse action was unreachable by everyone, including super_admin.**
+   Fixed: `reverse_transaction` is now seeded to super_admin and accountant. Kept here because
+   the reasoning explains why an unseeded permission denies everyone, which applies to every new
+   permission proposed in this directory.
+   Original finding:
    `ViewTransaction.php:54` gates it on `can('reverse_transaction')`. That permission is
    **never created or granted** — it appears in that one line and nowhere else;
    `RolePermissionSeeder` defines only `branches.view_all`,
@@ -136,8 +140,8 @@ strictly read-only — no create, no edit, no delete, no bulk actions — and ga
 
 ## Checklist
 
-- [ ] Seed `reverse_transaction` (or re-gate the action), and cover it with a test that an
-      accountant sees the reverse action and a receptionist does not
+- [x] Seed `reverse_transaction` (super_admin + accountant), covered by
+      `tests/Feature/PrivilegeEscalationTest.php`
 - [ ] Add the `occurred_on` range, type, either-leg account, `is_reversal` and branch filters
 - [ ] Eager-load `debitAccount`, `creditAccount`, `createdBy`
 - [ ] Drop or lengthen `->poll('30s')`
@@ -146,6 +150,10 @@ strictly read-only — no create, no edit, no delete, no bulk actions — and ga
       in both directions
 - [ ] Delete the empty `form()`
 - [ ] Assert in a test that this resource exposes no create, edit, delete or bulk action
+
+
+> **Partly done.** The items ticked above were implemented and covered by
+> `tests/Feature/PrivilegeEscalationTest.php`. The rest of the checklist is untouched.
 
 ## Verification
 

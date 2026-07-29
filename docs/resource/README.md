@@ -29,7 +29,7 @@ that each piece stays reviewable on its own.
 | [10](10-chart-of-account.md) | **ChartOfAccount** | Accounting | 🔴 audited — needs work |
 | [11](11-financial-account.md) | **FinancialAccount** | Accounting | 🔴 audited — needs work |
 | [12](12-expense-category.md) | **ExpenseCategory** | Accounting | 🟡 audited — partial |
-| [13](13-transaction.md) | **Transaction** | Accounting | 🔴 audited — needs work |
+| [13](13-transaction.md) | **Transaction** | Accounting | 🟡 audited — partly fixed |
 | [14](14-cash-session.md) | **CashSession** | Accounting | 🔴 audited — needs work |
 | [15](15-expense.md) | **Expense** | Accounting | 🔴 audited — needs work |
 | [16](16-extra.md) | **Extra** | Bookings | 🟡 audited — partial |
@@ -106,19 +106,21 @@ Four themes account for most of it, and each is one sweep rather than 38 fixes:
 ### The four most serious findings
 
 None is a presentation issue. All four were verified against the running application, not inferred.
+**Three of the four are now fixed** — see the ✅ markers below and
+`tests/Feature/PrivilegeEscalationTest.php`.
 
-- **A manager can make themselves `super_admin`.** `UserResource::canAccess()` gates on
+- **✅ FIXED — a manager could make themselves `super_admin`.** `UserResource::canAccess()` gates on
   `branches.view_all` (`UserResource.php:43`), which `RolePermissionSeeder` grants to Manager, and
   the roles field is an unfiltered `Select::make('roles')->relationship('roles', 'name')` — so
   `super_admin` is in the list. Verified live: for `manager@mcars.dz`, `canAccess()` returns
   **true** for both UserResource and RoleResource. See [33](33-user.md).
-- **Password hashes are in the audit log, and the UI displays them.** `logAll()` serialises the
+- **✅ FIXED — password hashes were in the audit log, and the UI displayed them.** `logAll()` serialises the
   whole model, so `activity_log.attribute_changes` contains bcrypt hashes — the `#[Hidden]`
   attribute governs Eloquent serialisation, not Spatie's activity logger. Verified: 5 rows contain
   a `$2y$12$…` hash, including `manager@mcars.dz`'s. See [38](38-activity-log.md).
-- **The ledger's only correction path is unreachable** — `reverse_transaction` is gated on but
-  never seeded, and `super_admin` has no gate bypass. See finding 8 and [13](13-transaction.md).
-- **The Phase 0 money-safety layer was built and never adopted** — `MoneyCast` in zero models,
+- **✅ FIXED — the ledger's only correction path was unreachable.** `reverse_transaction` is now
+  seeded to super_admin and accountant. See finding 8 and [13](13-transaction.md).
+- **⬜ OPEN — the Phase 0 money-safety layer was built and never adopted** — `MoneyCast` in zero models,
   `Money::allocate()` never called, float arithmetic on money in a service. See finding 12.
 
 ## Findings that span the whole panel
