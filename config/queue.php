@@ -70,7 +70,12 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+
+            // Must exceed the longest job timeout, which is ExportJob's 600s. At the
+            // Laravel default of 90 an export still running after 90 seconds is handed
+            // to a second worker while the first is mid-render: the same report
+            // generated two or three times over, racing to write the same row.
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 700),
             'block_for' => null,
             'after_commit' => false,
         ],

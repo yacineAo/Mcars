@@ -49,4 +49,41 @@ enum ReportType: string implements HasColor, HasIcon, HasLabel
             self::CashSessionAudit => 'heroicon-o-receipt-percent',
         };
     }
+
+    /**
+     * Whether the report covers a date range.
+     *
+     * Receivables ageing is a position at a moment, not a flow over a period —
+     * its buckets are measured against today whatever dates you hand it. Showing
+     * it under a "1–31 July" heading would claim a scope it does not have.
+     */
+    public function isPeriodic(): bool
+    {
+        return $this !== self::ReceivablesAgeing;
+    }
+
+    /**
+     * The optional entity the report can be narrowed to, if any.
+     *
+     * Returning the parameter key rather than a boolean keeps the form, the
+     * resolver and the export path reading the same word for the same thing.
+     */
+    public function scopeField(): ?string
+    {
+        return match ($this) {
+            self::CustomerReport => 'customer_id',
+            self::FleetProfitability => 'car_id',
+            self::OwnerStatement => 'car_owner_id',
+            default => null,
+        };
+    }
+
+    /**
+     * Whether the entity above is mandatory. An owner statement without an owner
+     * is not a narrower report, it is no report at all.
+     */
+    public function requiresScope(): bool
+    {
+        return $this === self::OwnerStatement;
+    }
 }

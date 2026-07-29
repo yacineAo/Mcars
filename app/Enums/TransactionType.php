@@ -59,7 +59,7 @@ enum TransactionType: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::Reversal => 'danger',
-            self::CustomerPayment, self::DepositHeld, self::Capital => 'success',
+            self::Payment, self::Deposit, self::Capital => 'success',
             self::Expense, self::Maintenance, self::CashShort => 'danger',
             self::RentalRevenue, self::ExtrasRevenue => 'success',
             default => 'gray',
@@ -70,7 +70,7 @@ enum TransactionType: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::Reversal => 'heroicon-o-arrow-uturn-left',
-            self::CustomerPayment => 'heroicon-o-credit-card',
+            self::Payment => 'heroicon-o-credit-card',
             self::Expense, self::Maintenance => 'heroicon-o-shopping-cart',
             self::RentalRevenue => 'heroicon-o-truck',
             self::CashOver => 'heroicon-o-exclamation-triangle',

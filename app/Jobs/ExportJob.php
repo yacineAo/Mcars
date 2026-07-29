@@ -8,6 +8,7 @@ use App\Enums\ExportFormat;
 use App\Enums\ReportType;
 use App\Exports\CashFlowExport;
 use App\Exports\CashSessionAuditExport;
+use App\Exports\Contracts\FlattensToSingleSheet;
 use App\Exports\CustomerReportExport;
 use App\Exports\ExpenseBreakdownExport;
 use App\Exports\FleetProfitabilityExport;
@@ -15,9 +16,10 @@ use App\Exports\OwnerStatementExport;
 use App\Exports\ProfitLossExport;
 use App\Exports\ReceivablesAgeingExport;
 use App\Mail\ScheduledReportMail;
-use App\Models\Branch;
 use App\Models\PendingExport;
 use App\Models\User;
+use App\Services\Reporting\ReportDataResolver;
+use App\Services\Reporting\ReportRequest;
 use App\Services\ReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
@@ -29,6 +31,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Excel as ExcelWriter;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ExportJob implements ShouldQueue
@@ -44,7 +47,7 @@ class ExportJob implements ShouldQueue
         $this->onQueue('exports');
     }
 
-    public function handle(ReportService $reportService): void
+    public function handle(ReportService $reportService, ReportDataResolver $resolver): void
     {
         $this->pendingExport->markAsProcessing();
 
@@ -58,24 +61,19 @@ class ExportJob implements ShouldQueue
 
             /** @var ExportFormat $format */
             $format = $this->pendingExport->format;
-            /** @var array<string, mixed> $parameters */
-            $parameters = $this->pendingExport->parameters;
-            $branchId = array_key_exists('branch_id', $parameters) ? $parameters['branch_id'] : $this->pendingExport->branch_id;
-            $from = isset($parameters['from'])
-                ? CarbonImmutable::parse($parameters['from'])
-                : CarbonImmutable::today()->startOfMonth();
-            $to = isset($parameters['to'])
-                ? CarbonImmutable::parse($parameters['to'])
-                : CarbonImmutable::today()->endOfMonth();
+
+            // Same parameter resolution the on-screen report page uses, so the file
+            // and the screen cannot cover different periods or branches.
+            $request = ReportRequest::fromPendingExport($this->pendingExport);
 
             $fileName = $this->generateFileName($format);
             $disk = 'private';
             $relativePath = 'exports/'.$fileName;
 
             $content = match ($format) {
-                ExportFormat::Pdf => $this->generatePdf($reportService, $from, $to, $branchId, $parameters, $user),
-                ExportFormat::Xlsx => $this->generateExcel($reportService, $from, $to, $branchId, $parameters),
-                ExportFormat::Csv => $this->generateCsv($reportService, $from, $to, $branchId, $parameters),
+                ExportFormat::Pdf => $this->generatePdf($resolver, $request, $user),
+                ExportFormat::Xlsx => $this->generateSpreadsheet($reportService, $request, ExcelWriter::XLSX),
+                ExportFormat::Csv => $this->generateSpreadsheet($reportService, $request, ExcelWriter::CSV),
             };
 
             Storage::disk($disk)->put($relativePath, $content);
@@ -141,28 +139,18 @@ class ExportJob implements ShouldQueue
         return "{$type}_{$date}.{$format->extension()}";
     }
 
-    private function generatePdf(
-        ReportService $reportService,
-        CarbonImmutable $from,
-        CarbonImmutable $to,
-        ?int $branchId,
-        array $parameters,
-        User $user,
-    ): string {
-        $data = $this->resolveReportData($reportService, $from, $to, $branchId, $parameters);
-
-        $branchName = $this->resolveBranchName($branchId);
-
+    private function generatePdf(ReportDataResolver $resolver, ReportRequest $request, User $user): string
+    {
         $pdf = Pdf::setOptions([
             'defaultFont' => 'dejavu sans',
             'isRemoteEnabled' => true,
             'isHtml5ParserEnabled' => true,
-        ])->loadView("reports.pdf.{$this->pendingExport->report_type->value}", [
-            'data' => $data,
-            'from' => $from,
-            'to' => $to,
-            'branchId' => $branchId,
-            'branchName' => $branchName,
+        ])->loadView("reports.pdf.{$request->type->value}", [
+            'data' => $resolver->resolve($request),
+            'from' => $request->from,
+            'to' => $request->to,
+            'branchId' => $request->branchId,
+            'branchName' => $resolver->branchName($request->branchId),
             'user' => $user,
             'generatedAt' => CarbonImmutable::now(),
         ]);
@@ -170,92 +158,36 @@ class ExportJob implements ShouldQueue
         return $pdf->output();
     }
 
-    private function generateExcel(
+    /**
+     * Excel and CSV share the per-report exporter classes, so a CSV is the same table
+     * as the spreadsheet rather than a second, poorer rendering of the same figures.
+     *
+     * `Excel::raw()` returns the bytes. The previous `Excel::store()` call wrote
+     * relative to the `local` disk root while `file_get_contents()` read an absolute
+     * `/tmp` path, so every spreadsheet failed — and `tempnam()` had already leaked a
+     * file at the suffix-less path it actually created.
+     */
+    private function generateSpreadsheet(
         ReportService $reportService,
-        CarbonImmutable $from,
-        CarbonImmutable $to,
-        ?int $branchId,
-        array $parameters,
+        ReportRequest $request,
+        string $writerType,
     ): string {
         $exportClass = $this->resolveExportClass();
 
-        $exporter = new $exportClass($reportService, $from, $to, $branchId, $parameters);
+        $exporter = new $exportClass(
+            $reportService,
+            $request->from,
+            $request->to,
+            $request->branchId,
+            $request->parameters,
+        );
 
-        $tempPath = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
-
-        try {
-            Excel::store($exporter, $tempPath, 'local');
-
-            $content = file_get_contents($tempPath);
-        } finally {
-            if (file_exists($tempPath)) {
-                @unlink($tempPath);
-            }
+        // CSV holds one sheet; a multi-sheet export names which one that is.
+        if ($writerType === ExcelWriter::CSV && $exporter instanceof FlattensToSingleSheet) {
+            $exporter = $exporter->flatSheet();
         }
 
-        return $content;
-    }
-
-    private function generateCsv(
-        ReportService $reportService,
-        CarbonImmutable $from,
-        CarbonImmutable $to,
-        ?int $branchId,
-        array $parameters,
-    ): string {
-        $data = $this->resolveReportData($reportService, $from, $to, $branchId, $parameters);
-        $rows = $this->flattenDataForCsv($data);
-
-        $output = fopen('php://temp', 'r+');
-        foreach ($rows as $row) {
-            fputcsv($output, $row);
-        }
-        rewind($output);
-
-        return stream_get_contents($output);
-    }
-
-    private function resolveBranchName(?int $branchId): string
-    {
-        if ($branchId === null) {
-            return 'All Branches';
-        }
-
-        $branch = Branch::find($branchId);
-
-        if ($branch === null) {
-            return "Branch #{$branchId}";
-        }
-
-        return $branch->name;
-    }
-
-    private function resolveReportData(
-        ReportService $reportService,
-        CarbonImmutable $from,
-        CarbonImmutable $to,
-        ?int $branchId,
-        array $parameters,
-    ): mixed {
-        return match ($this->pendingExport->report_type) {
-            ReportType::ProfitAndLoss => $reportService->profitAndLoss($from, $to, $branchId),
-            ReportType::ExpenseBreakdown => $reportService->expenseBreakdown($from, $to, $branchId),
-            ReportType::CustomerReport => $parameters['customer_id'] ?? null
-                ? $reportService->customerStatement((int) $parameters['customer_id'])
-                : $reportService->topCustomers($from, $to, $branchId, 100),
-            ReportType::FleetProfitability => $parameters['car_id'] ?? null
-                ? $reportService->singleCarProfitability((int) $parameters['car_id'], $from, $to)
-                : $reportService->fleetProfitability($from, $to, $branchId),
-            ReportType::CashFlow => $reportService->cashFlow($from, $to, $branchId),
-            ReportType::OwnerStatement => $reportService->ownerStatement(
-                (int) ($parameters['car_owner_id'] ?? 0),
-                $from,
-                $to,
-                $branchId,
-            ),
-            ReportType::ReceivablesAgeing => $reportService->receivablesAgeing($branchId),
-            ReportType::CashSessionAudit => $reportService->cashSessionAudit($from, $to, $branchId),
-        };
+        return Excel::raw($exporter, $writerType);
     }
 
     private function resolveExportClass(): string
@@ -270,69 +202,5 @@ class ExportJob implements ShouldQueue
             ReportType::ReceivablesAgeing => ReceivablesAgeingExport::class,
             ReportType::CashSessionAudit => CashSessionAuditExport::class,
         };
-    }
-
-    private function flattenDataForCsv(mixed $data): array
-    {
-        if (is_array($data) && isset($data['revenue'], $data['expenses'])) {
-            return [
-                ['Metric', 'Value'],
-                ['Revenue', $data['revenue']],
-                ['Expenses', $data['expenses']],
-                ['Net Profit', $data['net_profit'] ?? ($data['revenue'] - $data['expenses'])],
-            ];
-        }
-
-        if (is_array($data) && isset($data['cash_in'])) {
-            return [
-                ['Metric', 'Value'],
-                ['Cash In', $data['cash_in']],
-                ['Cash Out', $data['cash_out']],
-                ['Net Cash Flow', $data['net_cash_flow']],
-            ];
-        }
-
-        if (is_array($data) && isset($data['total_revenue'])) {
-            $rows = [
-                ['Registration', 'Brand', 'Model', 'Revenue', 'Expenses', 'Net Profit', 'Rental Days', 'Utilisation %'],
-            ];
-            foreach ($data['cars'] ?? [] as $car) {
-                $rows[] = [
-                    $car['registration_number'] ?? '',
-                    $car['brand'] ?? '',
-                    $car['model'] ?? '',
-                    $car['revenue'] ?? 0,
-                    $car['expenses'] ?? 0,
-                    $car['net_profit'] ?? 0,
-                    $car['rental_days'] ?? 0,
-                    $car['utilisation_pct'] ?? 0,
-                ];
-            }
-
-            return $rows;
-        }
-
-        if (is_array($data) && isset($data['0_30'])) {
-            return [
-                ['Bucket', 'Amount'],
-                ['0–30 days', $data['0_30']],
-                ['31–60 days', $data['31_60']],
-                ['61–90 days', $data['61_90']],
-                ['90+ days', $data['90_plus']],
-            ];
-        }
-
-        if (is_array($data) && isset($data['invoiced'])) {
-            return [
-                ['Metric', 'Value'],
-                ['Invoiced', $data['invoiced']],
-                ['Paid', $data['paid']],
-                ['Owed', $data['owed']],
-                ['Deposits Held', $data['deposits_held']],
-                ['Active Fines', $data['active_fines_count'] ?? 0],
-            ];
-        }
-
-        return [['Data', json_encode($data)]];
     }
 }

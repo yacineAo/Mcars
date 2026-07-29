@@ -74,8 +74,16 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 `AlertRuleResource`.
 
 ### Cluster: Reports — REQ-16
-**Not built — Phase 9.** `ReportsHubPage` with per-report parameter forms and PDF/Excel export.
-Figures are currently available only as dashboard widgets.
+`ReportResource` (`/admin/reports`) is the single entry point, with `ReportDefinitionResource`
+nested under it in the navigation for saved schedules.
+
+One `pending_exports` row is one report run: the parameters requested, the figures rendered on its
+view page, and the file the queue produced. The view page recomputes live through
+`ReportDataResolver` — the same resolver `ExportJob` uses — so the screen and the file cannot
+disagree; the file remains the snapshot taken when the export ran.
+
+There is deliberately no second page listing the same runs. `ReportsHubPage` and
+`PendingExportResource` were both that page and were removed.
 
 ### Cluster: Settings & Access — REQ-20, ADV-03, ADV-06
 Built: `UserResource`, `RoleResource` (Shield), `BranchResource`, `AlertRuleResource`,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Exports\Contracts\FlattensToSingleSheet;
 use App\Services\ReportService;
 use Carbon\CarbonImmutable;
 use Maatwebsite\Excel\Concerns\FromArray;
@@ -11,7 +12,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class FleetProfitabilityExport implements WithMultipleSheets
+class FleetProfitabilityExport implements FlattensToSingleSheet, WithMultipleSheets
 {
     public function __construct(
         private readonly ReportService $reportService,
@@ -34,6 +35,19 @@ class FleetProfitabilityExport implements WithMultipleSheets
             new FleetDetailSheet($this->reportService, $this->from, $this->to, $this->branchId, $this->parameters),
         ];
     }
+
+    /**
+     * The per-car rows, not the summary. A fleet CSV carrying four totals and no cars
+     * is the one thing nobody exports it for.
+     */
+    public function flatSheet(): object
+    {
+        if (isset($this->parameters['car_id'])) {
+            return new SingleCarSheet($this->reportService, $this->from, $this->to, $this->branchId, $this->parameters);
+        }
+
+        return new FleetDetailSheet($this->reportService, $this->from, $this->to, $this->branchId, $this->parameters);
+    }
 }
 
 class FleetSummarySheet implements FromArray, WithHeadings, WithTitle
@@ -54,7 +68,7 @@ class FleetSummarySheet implements FromArray, WithHeadings, WithTitle
             ['Total Revenue', $data['total_revenue']],
             ['Total Expenses', $data['total_expenses']],
             ['Total Net Profit', $data['total_net_profit']],
-            ['Avg Utilisation', $data['avg_utilisation_pct'].'%'],
+            ['Avg Utilisation', number_format((float) $data['avg_utilisation_pct'], 1).'%'],
         ];
     }
 
@@ -137,7 +151,7 @@ class SingleCarSheet implements FromArray, WithHeadings, WithTitle
             ['Expenses', $data['expenses']],
             ['Net Profit', $data['net_profit']],
             ['Rental Days', $data['rental_days']],
-            ['Utilisation', $data['utilisation_pct'].'%'],
+            ['Utilisation', number_format((float) $data['utilisation_pct'], 1).'%'],
         ];
     }
 

@@ -9,6 +9,7 @@ use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\RoleResource;
 use App\Filament\Admin\Resources\UserResource;
 use App\Http\Middleware\ResolveBranchContext;
+use App\Livewire\BranchSwitcher;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -23,8 +24,8 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Livewire\Livewire;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -68,9 +69,15 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->renderHook(
-                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-                fn (): string => Blade::render('@livewire(\'branch-switcher\')'),
+            // The topbar branch switcher. Only when multi-branch is on: with the flag
+            // off, BranchScope and BranchContext do nothing, so a switcher would offer
+            // a choice that changes nothing (config/branches.php).
+            ->when(
+                config('branches.enabled', false),
+                fn (Panel $panel): Panel => $panel->renderHook(
+                    PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                    fn (): string => Livewire::mount(BranchSwitcher::class),
+                ),
             )
             ->plugins([
                 FilamentShieldPlugin::make(),

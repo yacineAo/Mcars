@@ -40,6 +40,19 @@ class ReportDefinitionResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
+    /**
+     * Nested under the Reports item rather than sitting beside it: a saved report is
+     * a report you run on a cron, not a second kind of thing to go looking for.
+     *
+     * Filament matches the parent by its rendered *label*, so this has to be resolved
+     * from ReportResource rather than hardcoded — the app runs in French, where the
+     * parent item reads "Rapports" and a literal 'Reports' would match nothing.
+     */
+    public static function getNavigationParentItem(): ?string
+    {
+        return ReportResource::getNavigationLabel();
+    }
+
     public static function getModelLabel(): string
     {
         return __('reports.resources.report_definition.label');

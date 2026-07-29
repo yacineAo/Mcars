@@ -34,7 +34,12 @@ phase can proceed without it.
 - [x] Cash session audit
 
 ### Infrastructure
-- [x] `ReportsHubPage` with a parameter form per report type
+- [x] `ReportResource` — the single Reports entry point (`/admin/reports`): parameter form,
+      on-screen figures, and the generated file, one run per row. `ReportDefinitionResource` nests
+      under it in the navigation.
+- [x] `ReportDataResolver` + `ReportRequest` — the one mapping from (report type, parameters) to a
+      `ReportService` call. The view page and `ExportJob` both go through it, which is what makes
+      "exported totals match the on-screen figures" a property of the code rather than a habit.
 - [x] **PDF** — using `barryvdh/laravel-dompdf` (Browsershot deferred: needs Node.js + Puppeteer in the image)
 - [x] **Excel / CSV** — using `maatwebsite/excel`; multi-sheet for fleet and customer reports
 - [x] **Queued generation** for large ranges, via `ExportJob` + `PendingExport` model

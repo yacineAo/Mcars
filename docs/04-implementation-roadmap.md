@@ -321,7 +321,8 @@ appear in the bell, once.
 **Closes.** REQ-16
 
 **Deliverables**
-- `ReportsHubPage` with a parameter form per report.
+- `ReportResource` — one entry point: a parameter form per report, the figures on screen, and the
+  generated file. Saved schedules nest under it.
 - Reports: profit & loss, expense report (by category, by car, by branch), customer report
   (activity + balances), fleet report (utilisation + profitability per car), cash flow,
   owner statements, receivables ageing, cash session audit.

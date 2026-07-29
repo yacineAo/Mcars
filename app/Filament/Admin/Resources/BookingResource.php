@@ -10,6 +10,7 @@ use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethod;
 use App\Filament\Admin\Resources\BookingResource\Pages;
 use App\Models\Booking;
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Services\Booking\BookingService;
 use App\Services\Payment\PaymentService;
@@ -53,9 +54,16 @@ class BookingResource extends Resource
                         ->schema([
                             Grid::make(2)->schema([
                                 Select::make('customer_id')
-                                    ->relationship('customer', 'first_name')
-                                    ->getOptionLabelFromRecordUsing(fn ($r) => "{$r->first_name} {$r->last_name} — {$r->phone}")
-                                    ->searchable(['first_name', 'last_name', 'phone', 'national_id'])
+                                    ->label('Customer')
+                                    ->options(fn () => Customer::query()
+                                        ->orderBy('first_name')
+                                        ->get()
+                                        ->mapWithKeys(fn (Customer $c) => [$c->id => $c->first_name
+                                            ? "{$c->first_name} {$c->last_name} — {$c->phone}"
+                                            : ($c->company_name ?? $c->phone),
+                                        ])
+                                        ->toArray())
+                                    ->searchable()
                                     ->required(),
                                 Select::make('car_id')
                                     ->relationship('car', 'registration_number')
