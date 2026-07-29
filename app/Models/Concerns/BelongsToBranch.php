@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models\Concerns;
 
 use App\Models\Branch;
+use App\Models\Scopes\BranchScope;
+use App\Services\BranchContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +32,10 @@ trait BelongsToBranch
 
             $model->branch_id = static::resolveBranchId();
         });
+
+        if (config('branches.enabled', false) && static::withoutBranchScope() === false) {
+            static::addGlobalScope(app(BranchScope::class));
+        }
     }
 
     /** @return BelongsTo<Branch, $this> */
@@ -55,16 +61,35 @@ trait BelongsToBranch
     }
 
     /**
-     * Auto-fill source, in order: the authenticated user's home branch, then the
-     * default branch.
+     * Override in the using model to opt out of the global BranchScope.
      *
-     * Phase 10 inserts the session branch context ahead of both. Deliberately
-     * returns null rather than guessing when neither is available — a wrong
-     * branch on a ledger row is worse than a null the NOT NULL constraint
-     * catches immediately.
+     * Models such as User need the branch() relation and auto-fill from this
+     * trait, but should not be restricted by the global scope — scoping the
+     * users table means an admin can lock themselves out of user management.
+     */
+    protected static function withoutBranchScope(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Auto-fill source, in order: the session branch context (Phase 10), the
+     * authenticated user's home branch, then the default branch.
+     *
+     * Deliberately returns null rather than guessing when neither is available
+     * — a wrong branch on a ledger row is worse than a null the NOT NULL
+     * constraint catches immediately.
      */
     protected static function resolveBranchId(): ?int
     {
+        if (config('branches.enabled', false)) {
+            $context = app(BranchContext::class);
+
+            if ($context->isResolved() && $context->activeBranchId() !== null) {
+                return $context->activeBranchId();
+            }
+        }
+
         $user = auth()->user();
 
         if ($user !== null && isset($user->branch_id) && $user->branch_id !== null) { // @phpstan-ignore notIdentical.alwaysTrue

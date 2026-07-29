@@ -39,6 +39,39 @@ Schedule::command('alerts:digest')
     ->onOneServer();
 
 /*
+|--------------------------------------------------------------------------
+| Phase 10 — backups
+|--------------------------------------------------------------------------
+|
+| Nightly database dump, weekly full including media. The cleanup strategy
+| in config/backup.php determines retention.
+|
+*/
+
+Schedule::command('backup:run --only-db')
+    ->daily()->at('02:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();
+
+Schedule::command('backup:run')
+    ->weekly()->sundays()->at('03:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();
+
+Schedule::command('backup:clean')
+    ->daily()->at('04:00')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Purge activity log entries older than the configured retention (365 days).
+Schedule::command('activitylog:clean')
+    ->daily()->at('05:00')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+/*
 
 |--------------------------------------------------------------------------
 | Phase 9b — saved scheduled reports

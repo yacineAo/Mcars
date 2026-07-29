@@ -9,6 +9,7 @@ use App\Enums\CustomerSource;
 use App\Enums\CustomerType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ use Illuminate\Support\Str;
 
 class Customer extends Model
 {
-    use BelongsToBranch, HasAuditColumns, HasFactory, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'branch_id',

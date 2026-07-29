@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\CashSessionStatus;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasLedgerPostings;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CashSession extends Model
 {
-    use BelongsToBranch, HasFactory, HasLedgerPostings;
+    use BelongsToBranch, HasFactory, HasLedgerPostings, LogsActivity;
 
     protected $fillable = [
         'branch_id',

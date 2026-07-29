@@ -8,6 +8,7 @@ use App\Filament\Admin\Pages\Dashboard;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\RoleResource;
 use App\Filament\Admin\Resources\UserResource;
+use App\Http\Middleware\ResolveBranchContext;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -60,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                ResolveBranchContext::class,
             ])
             ->authMiddleware([
                 Authenticate::class,

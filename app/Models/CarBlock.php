@@ -6,12 +6,13 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CarBlock extends Model
 {
-    use BelongsToBranch, HasAuditColumns;
+    use BelongsToBranch, HasAuditColumns, LogsActivity;
 
     protected $fillable = [
         'car_id',

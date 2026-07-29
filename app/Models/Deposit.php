@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\HasLedgerPostings;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Deposit extends Model
 {
-    use BelongsToBranch, HasAuditColumns, HasLedgerPostings;
+    use BelongsToBranch, HasAuditColumns, HasLedgerPostings, LogsActivity;
 
     protected $fillable = [
         'booking_id', 'contract_id', 'customer_id', 'branch_id',

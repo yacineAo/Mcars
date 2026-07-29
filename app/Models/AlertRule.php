@@ -9,6 +9,7 @@ use App\Enums\NotificationChannel;
 use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
 use Database\Factories\AlertRuleFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,7 +38,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class AlertRule extends Model
 {
     /** @use HasFactory<AlertRuleFactory> */
-    use BelongsToBranch, HasAuditColumns, HasFactory, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'branch_id',

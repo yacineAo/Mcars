@@ -11,6 +11,7 @@ use App\Enums\OwnershipType;
 use App\Enums\TransmissionType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,7 +38,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 class Car extends Model implements HasMedia
 {
-    use BelongsToBranch, HasAuditColumns, HasFactory, InteractsWithMedia, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, HasFactory, InteractsWithMedia, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'branch_id',

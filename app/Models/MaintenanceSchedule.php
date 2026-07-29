@@ -6,12 +6,13 @@ namespace App\Models;
 
 use App\Enums\MaintenanceType;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MaintenanceSchedule extends Model
 {
-    use HasAuditColumns;
+    use HasAuditColumns, LogsActivity;
 
     protected $fillable = [
         'car_id',

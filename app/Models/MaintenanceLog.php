@@ -8,13 +8,14 @@ use App\Enums\MaintenanceStatus;
 use App\Enums\MaintenanceType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MaintenanceLog extends Model
 {
-    use BelongsToBranch, HasAuditColumns, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'car_id',

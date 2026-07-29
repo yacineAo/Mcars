@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -23,7 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use BelongsToBranch, HasAuditColumns, HasFactory, HasRoles, Notifiable;
+    use BelongsToBranch, HasAuditColumns, HasFactory, HasRoles, LogsActivity, Notifiable;
 
     protected function casts(): array
     {
@@ -43,6 +44,16 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsToMany(Branch::class, 'branch_user')
             ->withPivot('is_primary')
             ->withTimestamps();
+    }
+
+    protected static function withoutBranchScope(): bool
+    {
+        return true;
+    }
+
+    public function hasGlobalBranchAccess(): bool
+    {
+        return $this->can('branches.view_all');
     }
 
     /** @return list<int> */

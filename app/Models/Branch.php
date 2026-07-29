@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsActivity;
 use Database\Factories\BranchFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,9 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Branch extends Model
 {
     /** @use HasFactory<BranchFactory> */
-    use HasFactory;
-
-    use SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     /** @var list<string> */
     protected $fillable = [

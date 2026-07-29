@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\ContractStatus;
 use App\Enums\InsuranceType;
 use App\Models\Concerns\BelongsToBranch;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +15,7 @@ use Illuminate\Support\Str;
 
 class Contract extends Model
 {
-    use BelongsToBranch;
+    use BelongsToBranch, LogsActivity;
 
     protected $fillable = [
         'uuid',

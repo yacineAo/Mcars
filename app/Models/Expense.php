@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\HasLedgerPostings;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,7 +18,7 @@ use Illuminate\Support\Str;
 
 class Expense extends Model
 {
-    use BelongsToBranch, HasAuditColumns, HasFactory, HasLedgerPostings, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, HasFactory, HasLedgerPostings, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'reference',
