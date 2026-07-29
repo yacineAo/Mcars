@@ -13,6 +13,7 @@ use App\Filament\Admin\Resources\CustomerResource\Pages\ListCustomers;
 use App\Filament\Admin\Resources\CustomerResource\Pages\ViewCustomer;
 use App\Models\Customer;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -22,6 +23,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -146,6 +148,29 @@ class CustomerResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Action::make('toggle_blacklist')
+                    ->label(fn (Customer $record): string => $record->is_blacklisted ? 'Remove Blacklist' : 'Blacklist Customer')
+                    ->icon('heroicon-o-no-symbol')
+                    ->color(fn (Customer $record): string => $record->is_blacklisted ? 'success' : 'danger')
+                    ->form(fn (Customer $record): array => $record->is_blacklisted ? [] : [
+                        Textarea::make('blacklist_reason')
+                            ->label('Blacklist Reason')
+                            ->required(),
+                    ])
+                    ->action(function (Customer $record, array $data): void {
+                        $isBlacklisted = ! $record->is_blacklisted;
+                        $record->update([
+                            'is_blacklisted' => $isBlacklisted,
+                            'blacklist_reason' => $isBlacklisted ? ($data['blacklist_reason'] ?? null) : null,
+                            'blacklisted_at' => $isBlacklisted ? now() : null,
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title($isBlacklisted ? 'Customer blacklisted' : 'Customer removed from blacklist')
+                            ->send();
+                    }),
+
                 ViewAction::make(),
                 EditAction::make(),
             ])

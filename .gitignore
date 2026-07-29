@@ -28,4 +28,11 @@
 _ide_helper.php
 Homestead.json
 Homestead.yaml
+<<<<<<< Updated upstream
 Thumbs.db/.claude
+=======
+Thumbs.db
+
+
+/.claude
+>>>>>>> Stashed changes

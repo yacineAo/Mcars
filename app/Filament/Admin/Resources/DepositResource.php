@@ -38,6 +38,11 @@ class DepositResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Payments';
 
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->can('reports.view_financials') ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema

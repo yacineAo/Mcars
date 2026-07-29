@@ -10,6 +10,7 @@ use App\Filament\Admin\Resources\CarDocumentResource\Pages\EditCarDocument;
 use App\Filament\Admin\Resources\CarDocumentResource\Pages\ListCarDocuments;
 use App\Models\CarDocument;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -82,6 +84,46 @@ class CarDocumentResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Action::make('renew')
+                    ->label('Renew Document')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('success')
+                    ->visible(fn (CarDocument $record): bool => $record->replaced_by_id === null)
+                    ->form([
+                        TextInput::make('number')
+                            ->label('New Document Number')
+                            ->required(),
+                        TextInput::make('issuer')
+                            ->maxLength(255),
+                        DatePicker::make('issue_date')
+                            ->default(now())
+                            ->required(),
+                        DatePicker::make('expiry_date')
+                            ->required(),
+                        TextInput::make('cost')
+                            ->numeric()
+                            ->prefix('DZD'),
+                    ])
+                    ->action(function (CarDocument $record, array $data): void {
+                        $newDoc = CarDocument::create([
+                            'car_id' => $record->car_id,
+                            'type' => $record->type,
+                            'number' => $data['number'],
+                            'issuer' => $data['issuer'] ?? $record->issuer,
+                            'issue_date' => $data['issue_date'],
+                            'expiry_date' => $data['expiry_date'],
+                            'cost' => $data['cost'] ?? 0,
+                            'reminder_days_before' => $record->reminder_days_before,
+                        ]);
+
+                        $record->update(['replaced_by_id' => $newDoc->id]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Document renewed successfully')
+                            ->send();
+                    }),
+
                 EditAction::make(),
             ])
             ->bulkActions([

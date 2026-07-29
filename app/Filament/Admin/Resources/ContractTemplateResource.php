@@ -6,10 +6,16 @@ namespace App\Filament\Admin\Resources;
 
 use App\Models\ContractTemplate;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -49,6 +55,30 @@ class ContractTemplateResource extends Resource
                 TextColumn::make('terms_version'),
                 IconColumn::make('is_active')->boolean(),
                 IconColumn::make('is_default')->boolean(),
+            ])
+            ->actions([
+                Action::make('set_default')
+                    ->label('Set Default')
+                    ->icon('heroicon-o-star')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->action(function (ContractTemplate $record): void {
+                        ContractTemplate::where('locale', $record->locale)->update(['is_default' => false]);
+                        $record->update(['is_default' => true]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Template set as default for '.$record->locale)
+                            ->send();
+                    })
+                    ->visible(fn (ContractTemplate $record): bool => ! $record->is_default),
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

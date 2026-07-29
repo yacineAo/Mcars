@@ -11,6 +11,7 @@ use App\Filament\Admin\Resources\CarOwnershipAgreementResource\Pages\EditCarOwne
 use App\Filament\Admin\Resources\CarOwnershipAgreementResource\Pages\ListCarOwnershipAgreements;
 use App\Models\CarOwnershipAgreement;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -101,6 +103,39 @@ class CarOwnershipAgreementResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Action::make('activate')
+                    ->label('Activate')
+                    ->icon('heroicon-o-check')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function (CarOwnershipAgreement $record): void {
+                        $record->update(['status' => AgreementStatus::Active]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Agreement activated')
+                            ->send();
+                    })
+                    ->visible(fn (CarOwnershipAgreement $record): bool => $record->status !== AgreementStatus::Active),
+
+                Action::make('end')
+                    ->label('End Agreement')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function (CarOwnershipAgreement $record): void {
+                        $record->update([
+                            'status' => AgreementStatus::Ended,
+                            'end_date' => now(),
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Agreement ended')
+                            ->send();
+                    })
+                    ->visible(fn (CarOwnershipAgreement $record): bool => $record->status === AgreementStatus::Active),
+
                 EditAction::make(),
             ])
             ->bulkActions([

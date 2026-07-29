@@ -7,9 +7,9 @@ namespace App\Filament\Admin\Resources\CustomerResource\Pages;
 use App\Filament\Admin\Resources\CustomerResource;
 use App\Models\Customer;
 use App\Services\ReportService;
-use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 

@@ -20,6 +20,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 /**
@@ -32,6 +33,11 @@ class UserResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
     protected static string|UnitEnum|null $navigationGroup = 'Settings';
+
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->can('branches.view_all') ?? false;
+    }
 
     public static function form(Schema $schema): Schema
     {

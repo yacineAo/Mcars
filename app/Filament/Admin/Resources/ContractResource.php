@@ -15,12 +15,15 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class ContractResource extends Resource
@@ -71,10 +74,61 @@ class ContractResource extends Resource
             ->actions([
                 Action::make('render_pdf')
                     ->label('Generate PDF')
-                    ->action(fn (Contract $record) => app(ContractService::class)->renderPdf($record)),
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->action(fn (Contract $record) => app(ContractService::class)->renderPdf($record))
+                    ->visible(fn (Contract $record): bool => ! $record->status->is(ContractStatus::Draft)),
+
                 Action::make('send')
                     ->label('Send')
-                    ->action(fn (Contract $record) => app(ContractService::class)->send($record)),
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('info')
+                    ->action(fn (Contract $record) => app(ContractService::class)->send($record))
+                    ->visible(fn (Contract $record): bool => $record->content_snapshot !== null),
+
+                Action::make('sign')
+                    ->label('Mark Signed')
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function (Contract $record): void {
+                        $record->update([
+                            'status' => ContractStatus::Signed,
+                            'signed_at' => now(),
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Contract marked as signed')
+                            ->send();
+                    })
+                    ->visible(fn (Contract $record): bool => $record->status->is(ContractStatus::Draft, ContractStatus::AwaitingSignature)),
+
+                Action::make('close')
+                    ->label('Close Contract')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('warning')
+                    ->form([
+                        Textarea::make('closing_notes')
+                            ->label('Closing Notes'),
+                        Toggle::make('has_damages')
+                            ->label('Has Damages'),
+                    ])
+                    ->action(function (Contract $record, array $data): void {
+                        $record->update([
+                            'status' => ContractStatus::Closed,
+                            'closed_at' => now(),
+                            'closed_by_id' => Auth::id(),
+                            'closing_notes' => $data['closing_notes'] ?? null,
+                            'has_damages' => $data['has_damages'] ?? false,
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Contract closed')
+                            ->send();
+                    })
+                    ->visible(fn (Contract $record): bool => $record->status->is(ContractStatus::Active, ContractStatus::Signed)),
+
                 EditAction::make(),
                 DeleteAction::make(),
             ])

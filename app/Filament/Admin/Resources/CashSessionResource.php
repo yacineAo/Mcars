@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\CashSessionStatus;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\CreateCashSession;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\EditCashSession;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\ListCashSessions;
 use App\Models\CashSession;
+use App\Services\CashRegisterService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -73,6 +77,29 @@ class CashSessionResource extends Resource
             ->defaultSort('id', 'desc')
             ->filters([])
             ->actions([
+                Action::make('close_session')
+                    ->label('Close & Reconcile')
+                    ->icon('heroicon-o-lock-closed')
+                    ->color('warning')
+                    ->form([
+                        TextInput::make('counted_amount')
+                            ->label('Actual Counted Cash (DZD)')
+                            ->numeric()
+                            ->required(),
+                        Textarea::make('closing_notes')
+                            ->label('Closing Notes'),
+                    ])
+                    ->action(function (CashSession $record, array $data, CashRegisterService $service): void {
+                        $service->closeSession($record, (string) $data['counted_amount'], auth()->user());
+
+                        Notification::make()
+                            ->success()
+                            ->title('Cash session closed and reconciled')
+                            ->body('Variance has been posted to the ledger.')
+                            ->send();
+                    })
+                    ->visible(fn (CashSession $record): bool => $record->status === CashSessionStatus::Open),
+
                 ViewAction::make(),
                 EditAction::make(),
             ])

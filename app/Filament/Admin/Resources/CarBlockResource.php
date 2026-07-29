@@ -7,9 +7,15 @@ namespace App\Filament\Admin\Resources;
 use App\Enums\BlockReason;
 use App\Models\CarBlock;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -52,6 +58,29 @@ class CarBlockResource extends Resource
                 TextColumn::make('reason'),
                 TextColumn::make('starts_at')->dateTime(),
                 TextColumn::make('ends_at')->dateTime(),
+            ])
+            ->actions([
+                Action::make('unblock')
+                    ->label('Unblock Now')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function (CarBlock $record): void {
+                        $record->update(['ends_at' => now()]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Car unblocked successfully')
+                            ->send();
+                    })
+                    ->visible(fn (CarBlock $record): bool => $record->ends_at > now()),
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ])
             ->defaultSort('starts_at', 'desc');
     }

@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class TransactionResource extends Resource
@@ -22,6 +23,11 @@ class TransactionResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
     protected static string|UnitEnum|null $navigationGroup = 'Accounting';
+
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->can('reports.view_financials') ?? false;
+    }
 
     public static function form(Schema $schema): Schema
     {

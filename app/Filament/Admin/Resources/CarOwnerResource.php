@@ -8,14 +8,18 @@ use App\Filament\Admin\Resources\CarOwnerResource\Pages\CreateCarOwner;
 use App\Filament\Admin\Resources\CarOwnerResource\Pages\EditCarOwner;
 use App\Filament\Admin\Resources\CarOwnerResource\Pages\ListCarOwners;
 use App\Models\CarOwner;
+use App\Models\CarOwnershipAgreement;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -103,6 +107,52 @@ class CarOwnerResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Action::make('create_agreement')
+                    ->label('New Agreement')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('primary')
+                    ->visible(fn (CarOwner $record): bool => $record->is_active)
+                    ->form([
+                        Select::make('car_id')
+                            ->relationship('cars', 'registration_number')
+                            ->required(),
+                        Select::make('model')
+                            ->options([
+                                'fixed_monthly' => 'Fixed Monthly',
+                                'revenue_share' => 'Revenue Share',
+                                'hybrid' => 'Hybrid',
+                            ])
+                            ->required(),
+                        TextInput::make('monthly_rent_amount')
+                            ->numeric()
+                            ->prefix('DZD'),
+                        TextInput::make('share_percentage')
+                            ->numeric()
+                            ->suffix('%'),
+                        DatePicker::make('start_date')
+                            ->default(now())
+                            ->required(),
+                        DatePicker::make('end_date'),
+                    ])
+                    ->action(function (CarOwner $record, array $data): void {
+                        CarOwnershipAgreement::create([
+                            'car_owner_id' => $record->id,
+                            'car_id' => $data['car_id'],
+                            'branch_id' => $record->branch_id,
+                            'model' => $data['model'],
+                            'monthly_rent_amount' => $data['monthly_rent_amount'] ?? 0,
+                            'share_percentage' => $data['share_percentage'] ?? 0,
+                            'start_date' => $data['start_date'],
+                            'end_date' => $data['end_date'] ?? null,
+                            'status' => 'active',
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Ownership agreement created')
+                            ->send();
+                    }),
+
                 EditAction::make(),
             ])
             ->bulkActions([

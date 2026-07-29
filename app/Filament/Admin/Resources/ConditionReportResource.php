@@ -8,6 +8,10 @@ use App\Enums\ConditionReportType;
 use App\Enums\FuelLevel;
 use App\Models\ConditionReport;
 use BackedEnum;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -58,6 +62,15 @@ class ConditionReportResource extends Resource
                 TextColumn::make('performed_at')->dateTime(),
                 TextColumn::make('performedBy.name'),
                 IconColumn::make('is_clean')->boolean(),
+            ])
+            ->actions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ])
             ->defaultSort('performed_at', 'desc');
     }

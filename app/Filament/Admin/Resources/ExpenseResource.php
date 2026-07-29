@@ -12,7 +12,11 @@ use App\Filament\Admin\Resources\ExpenseResource\Pages\ListExpenses;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\ViewExpense;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\FinancialAccount;
+use App\Services\Accounting\AccountingService;
+use App\Services\Accounting\ExpensePoster;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -22,10 +26,13 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use UnitEnum;
 
 class ExpenseResource extends Resource
@@ -132,6 +139,61 @@ class ExpenseResource extends Resource
             ->defaultSort('id', 'desc')
             ->filters([])
             ->actions([
+                Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function (Expense $record): void {
+                        $record->update([
+                            'status' => ExpenseStatus::Approved,
+                            'approved_by_id' => Auth::id(),
+                            'approved_at' => now(),
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Expense approved')
+                            ->send();
+                    })
+                    ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Draft || $record->status === ExpenseStatus::PendingApproval),
+
+                Action::make('pay')
+                    ->label('Record Payment')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('primary')
+                    ->form([
+                        Select::make('payment_method')
+                            ->options(PaymentMethod::options())
+                            ->required(),
+                        Select::make('financial_account_id')
+                            ->relationship('financialAccount', 'name')
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (Expense $record, array $data, AccountingService $accounting, ExpensePoster $poster): void {
+                        DB::transaction(function () use ($record, $data, $accounting, $poster): void {
+                            $account = FinancialAccount::findOrFail($data['financial_account_id']);
+
+                            $draft = $poster->postImmediateExpense($record, $account, Auth::id());
+                            $transaction = $accounting->post($draft);
+
+                            $record->update([
+                                'status' => ExpenseStatus::Paid,
+                                'payment_method' => $data['payment_method'],
+                                'financial_account_id' => $account->id,
+                                'paid_at' => now(),
+                                'transaction_id' => $transaction->id,
+                            ]);
+                        });
+
+                        Notification::make()
+                            ->success()
+                            ->title('Expense payment recorded')
+                            ->send();
+                    })
+                    ->visible(fn (Expense $record): bool => $record->status === ExpenseStatus::Approved),
+
                 ViewAction::make(),
                 EditAction::make(),
             ])

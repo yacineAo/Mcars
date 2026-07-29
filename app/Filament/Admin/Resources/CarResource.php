@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\BlockReason;
 use App\Enums\BodyType;
 use App\Enums\CarStatus;
 use App\Enums\FuelType;
@@ -18,20 +19,24 @@ use App\Filament\Admin\Resources\CarResource\RelationManagers\DocumentsRelationM
 use App\Filament\Admin\Resources\CarResource\RelationManagers\MaintenanceLogsRelationManager;
 use App\Models\Car;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class CarResource extends Resource
@@ -158,6 +163,80 @@ class CarResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Action::make('book_now')
+                    ->label('Book Now')
+                    ->icon('heroicon-o-calendar-days')
+                    ->color('primary')
+                    ->url(fn (Car $record): string => BookingResource::getUrl('create', ['car_id' => $record->id]))
+                    ->visible(fn (Car $record): bool => $record->status->is(CarStatus::Available, CarStatus::Reserved))
+                    ->openUrlInNewTab(),
+
+                Action::make('update_status_odometer')
+                    ->label('Update Status & Mileage')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->color('info')
+                    ->visible(fn (Car $record): bool => ! $record->status->is(CarStatus::Sold, CarStatus::ReturnedToOwner))
+                    ->form([
+                        Select::make('status')
+                            ->options(CarStatus::options())
+                            ->required(),
+                        TextInput::make('odometer')
+                            ->numeric()
+                            ->suffix('km')
+                            ->required(),
+                        TextInput::make('fuel_level')
+                            ->numeric()
+                            ->suffix('%')
+                            ->nullable(),
+                    ])
+                    ->fillForm(fn (Car $record): array => [
+                        'status' => $record->status?->value ?? $record->status,
+                        'odometer' => $record->odometer,
+                        'fuel_level' => $record->fuel_level,
+                    ])
+                    ->action(function (Car $record, array $data): void {
+                        $record->update([
+                            'status' => $data['status'],
+                            'odometer' => $data['odometer'],
+                            'odometer_updated_at' => now(),
+                            'fuel_level' => $data['fuel_level'] ?? $record->fuel_level,
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Vehicle status & mileage updated')
+                            ->send();
+                    }),
+
+                Action::make('block_car')
+                    ->label('Block Car')
+                    ->icon('heroicon-o-no-symbol')
+                    ->color('warning')
+                    ->visible(fn (Car $record): bool => $record->status->is(CarStatus::Available, CarStatus::Reserved))
+                    ->form([
+                        Select::make('reason')
+                            ->options(BlockReason::options())
+                            ->required(),
+                        DateTimePicker::make('starts_at')->default(now())->required(),
+                        DateTimePicker::make('ends_at')->required(),
+                        Textarea::make('notes'),
+                    ])
+                    ->action(function (Car $record, array $data): void {
+                        $record->blocks()->create([
+                            'branch_id' => $record->branch_id,
+                            'reason' => $data['reason'],
+                            'starts_at' => $data['starts_at'],
+                            'ends_at' => $data['ends_at'],
+                            'notes' => $data['notes'] ?? null,
+                            'created_by_id' => Auth::id(),
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Car blocked successfully')
+                            ->send();
+                    }),
+
                 ViewAction::make(),
                 EditAction::make(),
             ])

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\MaintenanceStatus;
 use App\Enums\MaintenanceType;
 use App\Filament\Admin\Resources\MaintenanceScheduleResource\Pages\CreateMaintenanceSchedule;
 use App\Filament\Admin\Resources\MaintenanceScheduleResource\Pages\EditMaintenanceSchedule;
 use App\Filament\Admin\Resources\MaintenanceScheduleResource\Pages\ListMaintenanceSchedules;
+use App\Models\MaintenanceLog;
 use App\Models\MaintenanceSchedule;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -17,6 +20,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -101,6 +105,28 @@ class MaintenanceScheduleResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Action::make('log_maintenance')
+                    ->label('Log Service Now')
+                    ->icon('heroicon-o-wrench')
+                    ->color('primary')
+                    ->form([
+                        DatePicker::make('scheduled_for')->default(now())->required(),
+                    ])
+                    ->action(function (MaintenanceSchedule $record, array $data): void {
+                        MaintenanceLog::create([
+                            'car_id' => $record->car_id,
+                            'type' => $record->task_type,
+                            'status' => MaintenanceStatus::Scheduled,
+                            'scheduled_for' => $data['scheduled_for'],
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Maintenance service logged')
+                            ->send();
+                    })
+                    ->visible(fn (MaintenanceSchedule $record): bool => ! empty($record->car_id)),
+
                 EditAction::make(),
             ])
             ->bulkActions([

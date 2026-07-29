@@ -6,9 +6,13 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\BookingStatus;
 use App\Enums\FuelLevel;
+use App\Enums\PaymentDirection;
+use App\Enums\PaymentMethod;
 use App\Filament\Admin\Resources\BookingResource\Pages;
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Services\Booking\BookingService;
+use App\Services\Payment\PaymentService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -240,6 +244,49 @@ class BookingResource extends Resource
                             ->send();
                     })
                     ->visible(fn (Booking $record): bool => ! $record->status->isTerminal()),
+
+                Action::make('record_payment')
+                    ->label('Record Payment')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('success')
+                    ->form([
+                        TextInput::make('amount')
+                            ->numeric()
+                            ->prefix('DZD')
+                            ->required(),
+                        Select::make('method')
+                            ->options(PaymentMethod::options())
+                            ->required(),
+                        Select::make('financial_account_id')
+                            ->relationship('financialAccount', 'name')
+                            ->searchable()
+                            ->nullable(),
+                        Textarea::make('notes'),
+                    ])
+                    ->action(function (Booking $record, array $data, PaymentService $payments): void {
+                        $payment = Payment::create([
+                            'branch_id' => $record->branch_id,
+                            'direction' => PaymentDirection::Inbound,
+                            'payable_type' => Booking::class,
+                            'payable_id' => $record->id,
+                            'customer_id' => $record->customer_id,
+                            'method' => $data['method'],
+                            'amount' => $data['amount'],
+                            'currency' => 'DZD',
+                            'paid_at' => now(),
+                            'financial_account_id' => $data['financial_account_id'] ?? null,
+                            'received_by_id' => Auth::id(),
+                            'notes' => $data['notes'] ?? null,
+                        ]);
+
+                        $payments->recordPayment($payment, (int) Auth::id());
+
+                        Notification::make()
+                            ->success()
+                            ->title('Payment recorded successfully')
+                            ->send();
+                    })
+                    ->visible(fn (Booking $record): bool => ! $record->status->is(BookingStatus::Cancelled, BookingStatus::Draft)),
 
                 EditAction::make(),
                 DeleteAction::make(),
