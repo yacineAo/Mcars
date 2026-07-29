@@ -43,6 +43,7 @@ class ChartOfAccountSeeder extends Seeder
             ['code' => '2300', 'name' => 'Salaries Payable', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
             ['code' => '2310', 'name' => 'Social Contributions Payable', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
             ['code' => '2500', 'name' => 'Customer Credit Balances', 'type' => AccountType::Liability, 'normal_balance' => NormalBalance::Credit],
+            ['code' => '2600', 'name' => 'Inter-branch Clearing', 'type' => AccountType::Asset, 'normal_balance' => NormalBalance::Debit, 'is_system' => true],
 
             // 3xxx — Equity
             ['code' => '3000', 'name' => 'Owner Capital', 'type' => AccountType::Equity, 'normal_balance' => NormalBalance::Credit],

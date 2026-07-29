@@ -76,6 +76,7 @@ Codes are stable; do not renumber after go-live.
 | 2300 | Salaries Payable | REQ-15 |
 | 2310 | Social Contributions Payable | |
 | 2500 | Customer Credit Balances | overpayments held on account |
+| **2600** | **Inter-branch Clearing** | **clearing, excluded from company-wide reports** |
 
 ### 3xxx — Equity
 | Code | Account |

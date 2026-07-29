@@ -8,7 +8,9 @@ use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class Transaction extends Model
 {
@@ -51,6 +53,35 @@ class Transaction extends Model
             $transaction->uuid ??= (string) Str::uuid();
             $transaction->posted_at ??= now();
         });
+
+        static::updating(function (Transaction $transaction): never {
+            $transaction->logRejectedMutation('update');
+            throw new RuntimeException(
+                'Transactions are append-only. Use AccountingService::reverse() to correct mistakes.',
+            );
+        });
+
+        static::deleting(function (Transaction $transaction): never {
+            $transaction->logRejectedMutation('delete');
+            throw new RuntimeException('Transactions are append-only. Deletion is not permitted.');
+        });
+    }
+
+    protected function logRejectedMutation(string $operation): void
+    {
+        activity('ledger')
+            ->causedBy(Auth::user())
+            ->performedOn($this)
+            ->withProperties([
+                'operation' => $operation,
+                'transaction_id' => $this->id,
+                'transaction_uuid' => $this->uuid,
+                'reference' => $this->reference,
+                'attempted_at' => now()->toIso8601String(),
+                'ip' => optional(request())->ip(),
+                'user_agent' => optional(request())->userAgent(),
+            ])
+            ->log("rejected_ledger_mutation:{$operation}");
     }
 
     public function casts(): array

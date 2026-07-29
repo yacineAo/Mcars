@@ -1,6 +1,6 @@
 # Phase 10 — Audit, Backups, Multi-Branch
 
-**Status: ⬜** · Depends on: all previous · Closes: **ADV-03**, **ADV-04**, **ADV-06**
+**Status: ✅ Done** · Depends on: all previous · Closes: **ADV-03**, **ADV-04**, **ADV-06**
 
 The system becomes operationally safe to run.
 
@@ -25,28 +25,28 @@ via `OwnerStatementService` — a report the office runs, not a page an owner lo
 ever wanted. Reintroducing one means restoring the whole isolation model, not just adding a panel.
 
 ### Audit (ADV-03)
-- [ ] Activitylog on every model that matters, with old/new values
-- [ ] `ActivityLogResource` — view-only, filterable by user / model / date
-- [ ] **Rejected ledger-mutation attempts logged**
-- [ ] `branch_id` on log rows
+- [x] Activitylog on every model that matters, with old/new values
+- [x] `ActivityLogResource` — view-only, filterable by user / model / date
+- [x] **Rejected ledger-mutation attempts logged**
+- [x] `branch_id` on log rows
 
 ### Backups (ADV-04)
-- [ ] Scheduled nightly database + weekly full with media; off-site destination; retention policy;
+- [x] Scheduled nightly database + weekly full with media; off-site destination; retention policy;
       failure alerts to the manager
-- [ ] **`BackupService::verifyLatest()`** — restore into a scratch database and assert row counts, on
-      a schedule. A backup that has never been restored is only a hypothesis.
+- [x] **`BackupService::verifyLatest()`** — restore into a scratch database and assert row counts, on
+      a schedule
 
 ### Multi-branch enforcement (ADV-06)
-- [ ] Flip `config('mcars.branches.enabled')` to true; add `BranchScope`
-- [ ] `BranchContext` singleton + `ResolveBranchContext` middleware (session-scoped, re-validated
+- [x] Flip `config('mcars.branches.enabled')` to true; add `BranchScope`
+- [x] `BranchContext` singleton + `ResolveBranchContext` middleware (session-scoped, re-validated
       against `accessibleBranchIds()` **every request**, so a stale session cannot outlive a revoked
       grant)
-- [ ] `BranchSwitcher` Livewire component in the topbar via a render hook — **not** Filament native
+- [x] `BranchSwitcher` Livewire component in the topbar via a render hook — **not** Filament native
       tenancy, which puts the tenant in the URL (breaking existing links) and has no "all branches"
       mode
-- [ ] Per-branch cash boxes, sequences and reports; cross-branch booking (pickup A, return B);
+- [x] Per-branch cash boxes, sequences and reports; cross-branch booking (pickup A, return B);
       consolidated vs per-branch dashboards
-- [ ] **Inter-branch clearing account 2600** — a transfer posts two rows sharing a `group_uuid`, one
+- [x] **Inter-branch clearing account 2600** — a transfer posts two rows sharing a `group_uuid`, one
       per branch, or both branches' cash balances are wrong. Company-wide reports exclude 2600.
 
 ### ⚠ Two things that break silently

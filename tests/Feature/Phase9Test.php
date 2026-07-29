@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Enums\AccountType;
 use App\Enums\ExportFormat;
-use App\Enums\NormalBalance;
 use App\Enums\ReportType;
 use App\Enums\TransactionType;
 use App\Jobs\ExportJob;
@@ -154,12 +152,8 @@ it('computes cash session audit', function () {
 });
 
 it('excludes inter-branch clearing account 2600 from company-wide P&L', function () {
-    $clearing = ChartOfAccount::create([
-        'code' => '2600',
-        'name' => 'Inter-branch Clearing',
-        'type' => AccountType::Asset,
-        'normal_balance' => NormalBalance::Debit,
-    ]);
+    $clearing = ChartOfAccount::where('code', '2600')->first();
+    expect($clearing)->not->toBeNull();
 
     $clearingId = $this->reportService->interBranchClearingAccountId();
     expect($clearingId)->not->toBeNull();

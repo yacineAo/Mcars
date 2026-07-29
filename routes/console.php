@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\BackupService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -68,6 +69,26 @@ Schedule::command('backup:clean')
 // Purge activity log entries older than the configured retention (365 days).
 Schedule::command('activitylog:clean')
     ->daily()->at('05:00')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+/*
+|--------------------------------------------------------------------------
+| Phase 10 — backup verification
+|--------------------------------------------------------------------------
+|
+| A backup that has never been restored is only a hypothesis. Weekly
+| verification restores the latest backup into a scratch database and
+| asserts every table's row count matches the production database.
+|
+| Runs after the weekly full backup on Sunday morning. Must NOT overlap
+| with backup:run or backup:clean on the same server.
+|
+*/
+
+Schedule::call(fn () => app(BackupService::class)->verifyLatest())
+    ->name('backup-verify')
+    ->weekly()->sundays()->at('05:00')
     ->withoutOverlapping()
     ->onOneServer();
 

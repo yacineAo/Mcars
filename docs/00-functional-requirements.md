@@ -94,10 +94,10 @@ Where each requirement is satisfied. Use this to check nothing was dropped.
 | REQ-20 | Spatie `roles`/`permissions` | all panels, Shield | — | 1 |
 | ADV-01 | `bookings`, `car_blocks` | Booking Calendar | `BookingAvailabilityService` | 5 ✓ |
 | ADV-02 | Media Library collections | Documents archive | — | 2 ✓, 3 ✓, 5 ✓ |
-| ADV-03 | `activity_log` | Audit Log resource | — | 10 |
-| ADV-04 | — | scheduled command | `BackupService` | 10 |
+| ADV-03 | `activity_log` | Audit Log resource | — | 10 ✅ |
+| ADV-04 | — | scheduled command | `BackupService` | 10 ✅ |
 | ADV-05 | `notification_logs` | — | `MessagingService` | 5 ✓, 8 |
-| ADV-06 | `branches` + `branch_id` everywhere | branch switcher | — | 1 (columns), 10 (enforcement) |
+| ADV-06 | `branches` + `branch_id` everywhere | branch switcher | — | 1 (columns), 10 (enforcement) ✅ |
 | ADV-07 | `deposits`, `deposit_deductions` | deposit panel on contract | `DepositService` | 6 |
 | ~~ADV-08~~ | — | — | — | withdrawn |
 | ~~ADV-09~~ | — | — | — | withdrawn |
