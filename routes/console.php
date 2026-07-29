@@ -37,3 +37,22 @@ Schedule::command('alerts:digest')
     ->hourly()
     ->withoutOverlapping()
     ->onOneServer();
+
+/*
+
+|--------------------------------------------------------------------------
+| Phase 9b — saved scheduled reports
+|--------------------------------------------------------------------------
+|
+| Every minute we check which saved report definitions are due and dispatch
+| their export jobs. ExportJob emails the completed file on success.
+| withoutOverlapping is necessary because a report that takes >1 min to
+| dispatch could otherwise fire twice in the same minute.
+|
+*/
+
+Schedule::command('reports:run-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->runInBackground();

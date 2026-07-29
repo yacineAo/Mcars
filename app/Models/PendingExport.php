@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
  * @property array<string, mixed> $parameters
  * @property ExportFormat $format
  * @property ReportType $report_type
+ * @property-read ReportDefinition|null $reportDefinition
  */
 class PendingExport extends Model
 {
@@ -53,6 +54,11 @@ class PendingExport extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function reportDefinition(): BelongsTo
+    {
+        return $this->belongsTo(ReportDefinition::class);
     }
 
     public function isPending(): bool

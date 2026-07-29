@@ -14,6 +14,7 @@ use App\Exports\FleetProfitabilityExport;
 use App\Exports\OwnerStatementExport;
 use App\Exports\ProfitLossExport;
 use App\Exports\ReceivablesAgeingExport;
+use App\Mail\ScheduledReportMail;
 use App\Models\Branch;
 use App\Models\PendingExport;
 use App\Models\User;
@@ -26,6 +27,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -83,6 +85,8 @@ class ExportJob implements ShouldQueue
                 fileName: $fileName,
                 fileSize: Storage::disk($disk)->size($relativePath),
             );
+
+            $this->sendScheduledReportEmail();
         } catch (\Throwable $e) {
             Log::error('Export failed', [
                 'export_id' => $this->pendingExport->id,
@@ -92,6 +96,41 @@ class ExportJob implements ShouldQueue
 
             $this->pendingExport->markAsFailed($e->getMessage());
         }
+    }
+
+    private function sendScheduledReportEmail(): void
+    {
+        $definitionId = $this->pendingExport->report_definition_id;
+
+        if ($definitionId === null) {
+            return;
+        }
+
+        $definition = $this->pendingExport->reportDefinition;
+
+        if ($definition === null || $definition->schedule_email === null) {
+            return;
+        }
+
+        $fileContent = Storage::disk('private')->get($this->pendingExport->file_path);
+
+        if ($fileContent === null) {
+            Log::warning('Scheduled report email skipped: file not found', [
+                'report_definition_id' => $definitionId,
+                'file_path' => $this->pendingExport->file_path,
+            ]);
+
+            return;
+        }
+
+        Mail::mailer()
+            ->to($definition->schedule_email)
+            ->send(new ScheduledReportMail(
+                reportName: $definition->name,
+                fileName: $this->pendingExport->file_name,
+                content: $fileContent,
+                mimeType: $this->pendingExport->format->mimeType(),
+            ));
     }
 
     private function generateFileName(ExportFormat $format): string
