@@ -1,6 +1,6 @@
 # 11 — FinancialAccount (Accounting)
 
-**Model:** `App\Models\FinancialAccount` · **Slug:** `/admin/financial-accounts` · **Status:** 🔴 needs work
+**Model:** `App\Models\FinancialAccount` · **Slug:** `/admin/financial-accounts` · **Status:** 🟡 partial
 
 Closes **REQ-09**. See [`../05-accounting-model.md`](../05-accounting-model.md).
 
@@ -14,108 +14,65 @@ where the cash went and how to post it. Set up once, edited rarely.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | `->filters([])` empty |
-| create | ✅ | name, type, account number, RIB, holder, currency, opening balance, allowed methods, default-for-cash, active |
-| view | ❌ | see Relations |
-| edit | ✅ | nothing frozen |
-| row actions | ✅ | Edit, Delete — deprecated `->actions([...])` |
-| header / toolbar actions | 🟡 | `CreateAction`; **`DeleteBulkAction`** |
-| relation managers | ❌ | none |
-| `canAccess()` | ❌ | **absent** |
+| index | ✅ | filters: type, is_active, branch |
+| create | ✅ | name, type, ledger account, account number, RIB, holder, currency, opening balance, allowed methods, default-for-cash, active |
+| view | ✅ | account details, bank details (conditional), derived current balance gated on `reports.view_financials`, transactions + cash sessions relation managers |
+| edit | ✅ | `ledger_account_id` and `opening_balance` frozen once postings exist |
+| row actions | ✅ | View, Edit — `->recordActions([...])` |
+| header / toolbar actions | ✅ | `CreateAction` only; bulk actions removed |
+| relation managers | ✅ | Transactions (both legs, read-only, gated) + CashSessions (read-only, gated) on the view page |
+| `canAccess()` | ✅ | gates on `reports.view_financials` |
 
 Confirmed good: the table has **no `current_balance` column**. Its columns are
 `opening_balance`, `opened_on`, … — an opening figure, not a running one. That is exactly
 right (CLAUDE.md bans `financial_accounts.current_balance`); any balance shown must be
-derived through `CashRegisterService` / `ReportService`.
+derived through `CashRegisterService` / `ReportService`. The index uses
+`scopeWithCurrentBalance()` + `CashRegisterService::balancesBatch()` for N+1-safe display.
 
-## Should be
+## What remains
 
-### Index
-Add the balance the screen is missing — **current balance, derived**, not stored. "How much
-is in the till right now" is the only question this list is opened to answer, and it cannot
-be answered here today. Source it from `CashRegisterService::cashOnHand()` or an equivalent
-`ReportService` method, gated on `reports.view_financials`. If that means one query per row,
-add a method that returns balances for all accounts in one query rather than accepting N+1.
+1. **Enforce a single `is_default_for_cash` in a service.** Partially done — `CreateFinancialAccount`
+   and `EditFinancialAccount` mutate form data to reset other defaults. Belongs in a dedicated
+   action/service when the pattern is established elsewhere.
+2. **Restrict `ledger_account_id` to cash-equivalent accounts.** Currently filtered to
+   `is_postable` accounts only, which excludes revenue accounts but still allows pointing a
+   till at a payable. Should also filter to `is_cash_equivalent` where the type implies it.
 
-Filters: `type`, `is_active`, and branch with `branches.view_all`.
-
-### Create
-Two rules that belong in a service, surfaced here as validation:
-
-- **Only one account may be `is_default_for_cash`.** Nothing currently prevents a second,
-  and `resolveBranchId`-style "pick the default" lookups will then be arbitrary.
-- `ledger_account_id` should be restricted to accounts that are `is_postable` and
-  cash-equivalent where the type implies it — pointing a till at a revenue account produces
-  postings that balance but mean nothing.
-
-`rib`, `account_number` and `holder_name` should show conditionally on `type`: a cash till
-has none of them, a CCP account has all three.
-
-### View
-Worth adding, for the postings table below — "show me every movement through the CCP account
-this month" currently has no home.
-
-### Edit
-Freeze `ledger_account_id` and `opening_balance` once the account has postings. Both feed the
-derived balance; changing either retroactively rewrites every balance ever shown for that
-account, without touching the append-only rows that produced it.
-
-### Relations
+## Relations
 
 | Relation | Where | Read-only | Gate | Columns |
 |---|---|---|---|---|
-| `transactions` (either leg) | **view** | **yes, strictly** | `reports.view_financials` | reference, date, type, amount, running total |
-| `cashSessions` | **view** | yes | `reports.view_financials` | opened/closed, opened by, counted, variance |
-
-Neither exists as a `hasMany` on the model today (the model has no has-many relations at
-all), so both need adding — or building as query-backed tables. The cash-sessions table is
-the more useful of the two for a manager: it is the till's history per account.
+| `transactions` (either leg) | view | yes, strictly | `reports.view_financials` | occurred_on, description, type, amount, debit account, credit account |
+| `cashSessions` | view | yes | `reports.view_financials` | opened_at, closed_at, opening_float, counted_amount, status, opened by |
 
 Strictly read-only, no bulk actions (ADR-003).
 
-### Actions
+## Actions
 
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| `EditAction` | row | always | **nothing** | — | freeze ledger account + opening balance once posted |
-| `DeleteAction` | row | always | **nothing** | — | must refuse accounts with postings |
-| `DeleteBulkAction` | toolbar | always | **nothing** | — | **remove** — gap 2 |
-
-## Gaps and risks
-
-1. **🔴 No `canAccess()`.** Any staff role can create, edit and bulk-delete the accounts that
-   money is posted against, including the RIB and holder name of the company's bank accounts.
-   This is bank detail — it should be `reports.view_financials` at minimum for read, and
-   narrower for write.
-2. **🔴 `DeleteBulkAction`.** Deleting an account that payments and cash sessions reference
-   leaves those rows pointing at nothing, and the derived balance for it becomes
-   unanswerable. Remove it; guard single delete on having postings.
-3. **🟡 No current balance anywhere in the UI.** The invariant is correctly honoured in the
-   schema, but the consequence — that someone must *write the query* — was never done, so
-   the panel cannot tell you how much is in the till. See Index.
-4. **🟡 Nothing stops two default-cash accounts.**
-5. **🟡 No conditional fields by `type`** — a cash till currently prompts for a RIB.
-6. **🟡 No filters.**
-7. **🟡 Deprecated `->actions([...])`.**
+| Action | Placement | Visible when | Guarded by | Notes |
+|---|---|---|---|---|
+| `ViewAction` | row | always | `reports.view_financials` on resource | — |
+| `EditAction` | row | always | `reports.view_financials` on resource | `ledger_account_id` + `opening_balance` frozen once posted |
 
 ## Checklist
 
-- [ ] Add `canAccess()`; decide the read/write split for bank details
-- [ ] Remove `DeleteBulkAction`; guard single delete on postings
-- [ ] Add a derived current-balance column, gated, with a batched query (no N+1)
+- [x] Add `canAccess()`; decide the read/write split for bank details
+- [x] Remove `DeleteBulkAction`; guard single delete on postings
+- [x] Add a derived current-balance column, gated, with a batched query (no N+1)
 - [ ] Enforce a single `is_default_for_cash` in a service
-- [ ] Restrict `ledger_account_id` to sensible accounts
-- [ ] Show `rib` / `account_number` / `holder_name` conditionally on `type`
-- [ ] Add `type` / `is_active` / branch filters
-- [ ] Add a view page with read-only, gated transactions and cash-sessions tables
-- [ ] Freeze `ledger_account_id` and `opening_balance` once postings exist
-- [ ] `->actions(` → `->recordActions(`
+- [ ] Restrict `ledger_account_id` to sensible accounts (cash-equivalent)
+- [x] Show `rib` / `account_number` / `holder_name` conditionally on `type`
+- [x] Add `type` / `is_active` / branch filters
+- [x] Add a view page with read-only, gated transactions and cash-sessions tables
+- [x] Freeze `ledger_account_id` and `opening_balance` once postings exist
+- [x] `->actions(` → `->recordActions(`
 
 ## Verification
 
 ```bash
 docker compose exec app ./vendor/bin/pest tests/Feature/AccountingLedgerTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/SchemaConventionsTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/FinancialAccountTest.php
 ```
 
 `SchemaConventionsTest` asserts the banned stored-balance columns do not exist — it must stay

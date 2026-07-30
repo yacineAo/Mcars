@@ -61,7 +61,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 | `ExpenseCategoryResource` | Each mapped to a COA account |
 | `DepositResource` | Hold / deduct / refund, with deduction line items |
 | `OwnerInstallmentResource` | Generation, due, paid, overdue |
-| `FinancialAccountResource` | Cash boxes, bank, CCP, BaridiMob, POS |
+| `FinancialAccountResource` | Cash boxes, bank, CCP, BaridiMob, POS. Index has derived `current_balance` column gated on `reports.view_financials` (batched via `CashRegisterService::balancesBatch()`), filters by type/is_active/branch. View page with account details, bank details (conditional on type), and two read-only relation managers: Transactions (both legs) and CashSessions. |
 | `ChartOfAccountResource` | Accountant + super_admin only |
 | `CashSessionResource` | Shift history and variance audit |
 

@@ -63,6 +63,7 @@ register shifts: open with a float, close with a physical count, reconcile the v
 ```
 balance(FinancialAccount $a, ?Carbon $asOf): Money       // Σ debits − Σ credits, from transactions
 balanceAll(?Branch $b): Collection
+balancesBatch(Collection $accounts): array               // [accountId => balance_string], N+1-safe
 openSession(FinancialAccount $a, Money $float, User $by): CashSession
 closeSession(CashSession $s, Money $counted, User $by): CashSessionSummary
 entries(FinancialAccount $a, Period $p): LazyCollection  // the cash_register_entries view

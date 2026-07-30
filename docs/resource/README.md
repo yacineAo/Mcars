@@ -27,7 +27,7 @@ that each piece stays reviewable on its own.
 | [08](08-vendor.md) | **Vendor** | Fleet | 🟡 audited — partial |
 | [09](09-customer.md) | **Customer** | CRM | 🔴 audited — needs work |
 | [10](10-chart-of-account.md) | **ChartOfAccount** | Accounting | 🔴 audited — needs work |
-| [11](11-financial-account.md) | **FinancialAccount** | Accounting | 🔴 audited — needs work |
+| [11](11-financial-account.md) | **FinancialAccount** | Accounting | 🟡 audited — partial |
 | [12](12-expense-category.md) | **ExpenseCategory** | Accounting | 🟡 audited — partial |
 | [13](13-transaction.md) | **Transaction** | Accounting | 🟡 audited — partly fixed |
 | [14](14-cash-session.md) | **CashSession** | Accounting | 🔴 audited — needs work |
@@ -80,18 +80,18 @@ Settings 33-38  ← last: it grants access, so it is audited once the rest is un
 All 38 resources audited.
 
 | | Count |
-|---|---|
-| 🔴 needs work | 23 |
-| 🟡 partial | 14 |
+|---|---|---|
+| 🔴 needs work | 22 |
+| 🟡 partial | 15 |
 | ✅ fine | 1 — [31 Report](31-report.md), the newest and the only one built to these conventions |
 
 Four themes account for most of it, and each is one sweep rather than 38 fixes:
 
-1. **Authorization is largely absent.** 26 of the 38 files record a missing `canAccess()`.
+1. **Authorization is largely absent.** 25 of the 38 files record a missing `canAccess()` (FinancialAccount now has one).
    The worst cases are not the money screens but HR: any staff role can read every colleague's
    salary ([27](27-employee.md)), grant themselves a salary advance ([28](28-employee-advance.md)),
    and approve and pay payroll ([30](30-payroll-run.md)).
-2. **`DeleteBulkAction` is nearly universal** — flagged in 28 of 38 files, including on posted money
+2. **`DeleteBulkAction` is nearly universal** — flagged in 27 of 38 files (FinancialAccount now uses `->bulkActions([])`), including on posted money
    records, the chart of accounts, and condition reports that justify charges already in the ledger.
 3. **Records stay editable after they post.** Payment, Expense, Deposit, Fine, OwnerInstallment and
    Booking all keep a fully open edit form after posting to an append-only ledger, so a figure can
@@ -128,17 +128,17 @@ None is a presentation issue. All four were verified against the running applica
 Verified across all 38 resources on 2026-07-29. Fixing these once is worth more than
 fixing them 38 times, so they are recorded here rather than repeated in every file.
 
-1. **Only 7 resources have a view page** — ActivityLog, Car, Customer, Expense,
-   NotificationLog, Report, Transaction. The other 31 are index/create/edit. Most do not
+1. **Only 8 resources have a view page** — ActivityLog, Car, Customer, Expense,
+   FinancialAccount, NotificationLog, Report, Transaction. The other 30 are index/create/edit. Most do not
    need one; the ones that do are the records with history hanging off them (Booking is
    the glaring omission — a booking is the hub of the system and has no view page).
-2. **Only 10 of 38 declare `canAccess()`.** Every other resource is reachable by any
+2. **Only 11 of 38 declare `canAccess()`.** Every other resource is reachable by any
    staff role, including Settings resources that grant access. Money is gated on the
    permission `reports.view_financials`, cross-branch visibility on `branches.view_all` —
    never a role list.
 3. **31 resources still use the deprecated Filament 5 alias `->actions([...])`** instead
    of `->recordActions([...])`. Mechanical, but worth one sweep.
-4. **Relation managers exist on only 2 resources** — Car (3) and Customer (1). This is
+4. **Relation managers exist on only 3 resources** — Car (3), Customer (1) and FinancialAccount (2). This is
    the largest single gap in the panel: the data is all related, and almost none of it is
    reachable from the record it belongs to. Where a related table is read-only history it
    belongs on the **view** page; where the office edits it in place, on **edit**.
