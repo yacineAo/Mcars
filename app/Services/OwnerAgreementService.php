@@ -6,14 +6,24 @@ namespace App\Services;
 
 use App\Enums\AgreementModel;
 use App\Enums\AgreementStatus;
+use App\Enums\InstallmentStatus;
 use App\Models\Car;
 use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
+use App\Models\OwnerInstallment;
+use App\Services\Accounting\AccountingService;
+use App\Services\Payment\OwnerInstallmentPoster;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OwnerAgreementService
 {
+    public function __construct(
+        private readonly AccountingService $accounting,
+        private readonly OwnerInstallmentPoster $poster,
+    ) {}
+
     /**
      * @param array<string, mixed> $data
      */
@@ -39,7 +49,7 @@ class OwnerAgreementService
                 'installments_count' => $data['installments_count'] ?? null,
                 'first_due_date' => $data['first_due_date'] ?? null,
                 'grace_days' => $data['grace_days'] ?? 0,
-                'status' => AgreementStatus::Active->value,
+                'status' => AgreementStatus::Draft->value,
                 'notes' => $data['notes'] ?? null,
             ]);
         } catch (QueryException $e) {
@@ -51,6 +61,63 @@ class OwnerAgreementService
 
             throw $e;
         }
+    }
+
+    public function activate(CarOwnershipAgreement $agreement): CarOwnershipAgreement
+    {
+        if ($agreement->status === AgreementStatus::Active) {
+            return $agreement;
+        }
+
+        $overlapping = $this->findOverlappingActive($agreement);
+
+        if ($overlapping !== null) {
+            throw ValidationException::withMessages([
+                'status' => __(
+                    'Cannot activate: car :reg already has an active agreement (:id) covering this period.',
+                    ['reg' => $overlapping->car->registration_number, 'id' => $overlapping->id],
+                ),
+            ]);
+        }
+
+        $agreement->update(['status' => AgreementStatus::Active]);
+
+        return $agreement->fresh();
+    }
+
+    public function end(CarOwnershipAgreement $agreement, ?string $endDate = null, ?int $userId = null): CarOwnershipAgreement
+    {
+        $endDate = $endDate ?? now()->toDateString();
+
+        if ($endDate < $agreement->start_date->toDateString()) {
+            throw ValidationException::withMessages([
+                'end_date' => __('The end date cannot be before the start date.'),
+            ]);
+        }
+
+        DB::transaction(function () use ($agreement, $endDate, $userId): void {
+            $agreement->update([
+                'status' => AgreementStatus::Ended,
+                'end_date' => $endDate,
+            ]);
+
+            $futureInstallments = OwnerInstallment::where('car_ownership_agreement_id', $agreement->id)
+                ->where('status', InstallmentStatus::Pending)
+                ->where('due_date', '>', $endDate)
+                ->get();
+
+            foreach ($futureInstallments as $installment) {
+                if ($installment->accrual_transaction_id !== null) {
+                    $this->accounting->postMany(
+                        $this->poster->postWaived($installment, $userId ?? 0),
+                    );
+                }
+
+                $installment->update(['status' => InstallmentStatus::Waived]);
+            }
+        });
+
+        return $agreement->fresh();
     }
 
     /**
@@ -77,6 +144,27 @@ class OwnerAgreementService
         }
     }
 
+    private function findOverlappingActive(CarOwnershipAgreement $agreement): ?CarOwnershipAgreement
+    {
+        $start = $agreement->start_date->toDateString();
+        $end = $agreement->end_date?->toDateString();
+
+        return CarOwnershipAgreement::where('car_id', $agreement->car_id)
+            ->where('id', '!=', $agreement->id)
+            ->where('status', AgreementStatus::Active)
+            ->where(function ($query) use ($start, $end): void {
+                if ($end !== null) {
+                    $query->where('start_date', '<', $end);
+                }
+
+                $query->where(function ($q) use ($start): void {
+                    $q->whereNull('end_date')
+                        ->orWhere('end_date', '>', $start);
+                });
+            })
+            ->first();
+    }
+
     /**
      * @param array<string, mixed> $data
      */
@@ -88,8 +176,6 @@ class OwnerAgreementService
         $existing = CarOwnershipAgreement::where('car_id', $car->id)
             ->where('status', AgreementStatus::Active->value)
             ->where(function ($query) use ($start, $end): void {
-                // Match daterange '[)' semantics: [existing_start, existing_end) ⋂ [start, end)
-                // Overlap when: existing.start < new.end AND (existing.end IS NULL OR existing.end > new.start)
                 if ($end !== null) {
                     $query->where('start_date', '<', $end);
                 }

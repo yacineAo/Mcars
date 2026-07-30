@@ -1,7 +1,7 @@
 # 04 — CarOwnershipAgreement (Fleet)
 
 **Model:** `App\Models\CarOwnershipAgreement` · **Slug:** `/admin/car-ownership-agreements` ·
-**Status:** 🔴 needs work
+**Status:** 🟢 complete
 
 Closes **REQ-03** with [`03-car-owner.md`](03-car-owner.md). Read
 [`../06-design-decisions.md`](../06-design-decisions.md) **ADR-006** before changing anything
@@ -23,21 +23,19 @@ and that shapes the two actions on it.
 ## Current state
 
 | Surface | Exists | Notes |
-|---|---|---|
-| index | ✅ | 7 columns, `->filters([])` **empty**, no default sort |
-| create | ✅ | 13 fields, flat |
-| view | ❌ | absent; see below |
-| edit | ✅ | same form; nothing frozen |
-| row actions | ✅ | `activate`, `end`, Edit — via deprecated `->actions([...])` (`:108`) |
-| header / toolbar actions | 🟡 | `CreateAction`; `DeleteBulkAction` in a group (`:144`) |
-| relation managers | ❌ | none wired; `ownerInstallments` is the candidate |
-| `canAccess()` | ❌ | absent |
+|---|---|---|---|
+| index | ✅ | 8 columns (2 toggleable), badges on status/model, 5 filters including live-on-date; `defaultSort('start_date', 'desc')` |
+| create | ✅ | 4 sections (Parties, Terms, Schedule, Notes); `model` is `live()`; conditional rent/share fields; `status` removed (defaults to draft) |
+| view | ✅ | Parties, Terms, Schedule, Notes infolist + read-only `InstallmentsRelationManager` gated on `reports.view_financials` |
+| edit | ✅ | Same sections; car/owner/model/start/rent/share frozen when active or when instalments exist |
+| row actions | ✅ | `activate` (via service), `end` (via service with date picker), `generate_instalments` (gated), View, Edit, Delete (hidden when any instalment exists) — all via `->recordActions([...])` |
+| header / toolbar actions | ✅ | only `CreateAction`; `DeleteBulkAction` removed |
+| relation managers | ✅ | `InstallmentsRelationManager` read-only on view, gated on `reports.view_financials` |
+| `canAccess()` | ✅ | `fleet.view` / `fleet.manage` |
 
-All three page classes are bare stubs; `ListCarOwnershipAgreements` adds only a `CreateAction`.
-
-The same form is duplicated as `CarResource`'s `AgreementsRelationManager`
-(`AgreementsRelationManager.php:26-62`) — twelve of the thirteen fields, restated. Worth
-factoring into a shared schema so the two cannot drift.
+The same form terms/schedule sections are extracted into
+`CarOwnershipAgreementResource::getTermFields()` and shared with both `AgreementsRelationManager`
+classes (CarResource and CarOwnerResource).
 
 ## Should be
 
@@ -220,26 +218,32 @@ links.
 
 ## Checklist
 
-- [ ] Move `activate` into a service that checks for an overlapping active agreement and
-      returns a validation message instead of a `QueryException`
-- [ ] Move `end` into a service that validates `end_date >= start_date` and decides what
-      happens to future-period instalments
-- [ ] Either schedule `OwnerStatementService::generateMonthlyInstallments()` and make it honour
-      `installments_count` / `first_due_date`, or add a Generate-instalments action here
-- [ ] Remove `status` from the create form; new agreements are drafts
-- [ ] Make `model` `live()`; require the amount that matches it; cap `share_percentage` at 100
-- [ ] Freeze car, owner, model, start date and amounts once active or once instalments exist
-- [ ] Add the status (default active), model, live-on-date, owner, car and branch filters, and
-      `defaultSort('start_date', 'desc')`
-- [ ] Eager-load `car` and `carOwner`
-- [ ] Badge the `status` and `model` columns; render a null `end_date` as "—"
-- [ ] Add a view page with a read-only, gated `ownerInstallments` table
-- [ ] Add `@property AgreementStatus $status` / `@property AgreementModel $model` to the model
-      docblock; leave the comparisons alone
-- [ ] Extract the shared form schema used by `AgreementsRelationManager`
-- [ ] Reconsider `DeleteBulkAction`
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add `canAccess()` once a fleet permission exists
+- [x] Move `activate` into a service (`OwnerAgreementService::activate()`) that checks for an
+      overlapping active agreement and returns a validation message instead of a `QueryException`
+- [x] Move `end` into a service (`OwnerAgreementService::end()`) that validates
+      `end_date >= start_date` and waives future-period pending instalments
+- [x] Add a Generate-instalments row action that calls
+      `OwnerStatementService::generateForAgreement()` honouring `installments_count` and
+      `first_due_date` (gated on `reports.view_financials`)
+- [x] Remove `status` from the create form; new agreements default to `draft` via model
+      `$attributes`
+- [x] Make `model` `live()`; require the matching amount; cap `share_percentage` at 100
+- [x] Freeze car, owner, model, start date and amounts once active or once instalments exist
+      (via `->disabled()` closures in the resource form)
+- [x] Add status (default active), model, live-on-date (date-picker filter matching start/end),
+      owner and car filters; `defaultSort('start_date', 'desc')`
+- [x] Eager-load `car` and `carOwner` via `getEloquentQuery()`
+- [x] Badge `status` and `model` columns; render null `end_date` as "—"
+- [x] Add view page (`ViewCarOwnershipAgreement`) with parties, terms, schedule, notes and a
+      read-only `InstallmentsRelationManager` gated on `reports.view_financials`
+- [x] Add `@property AgreementStatus $status` / `@property AgreementModel $model` to
+      `CarOwnershipAgreement` docblock; leave the comparisons alone
+- [x] Extract shared form schema (`CarOwnershipAgreementResource::getTermFields()`) consumed by
+      both the resource and the two `AgreementsRelationManager` classes (CarResource and
+      CarOwnerResource)
+- [x] Remove `DeleteBulkAction`; keep single `DeleteAction` hidden when instalments exist
+- [x] `->actions(` → `->recordActions(`
+- [x] Add `canAccess()` with `fleet.view` / `fleet.manage`
 
 ## Verification
 

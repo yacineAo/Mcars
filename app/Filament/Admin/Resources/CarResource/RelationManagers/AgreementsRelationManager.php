@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources\CarResource\RelationManagers;
 
-use App\Enums\AgreementModel;
-use App\Enums\AgreementStatus;
+use App\Filament\Admin\Resources\CarOwnershipAgreementResource;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -52,37 +49,16 @@ class AgreementsRelationManager extends RelationManager
     {
         return $schema
             ->schema([
-                Select::make('car_owner_id')
-                    ->relationship('carOwner', 'first_name')
-                    ->required()
-                    ->searchable(),
-                Select::make('model')
-                    ->options(AgreementModel::options())
-                    ->required(),
-                Select::make('status')
-                    ->options(AgreementStatus::options())
-                    ->required(),
-                TextInput::make('monthly_rent_amount')
-                    ->numeric()
-                    ->prefix('DZD'),
-                TextInput::make('share_percentage')
-                    ->numeric()
-                    ->suffix('%'),
-                DatePicker::make('start_date')
-                    ->required(),
-                DatePicker::make('end_date'),
-                TextInput::make('payment_day_of_month')
-                    ->numeric()
-                    ->minValue(1)
-                    ->maxValue(28),
-                TextInput::make('installments_count')
-                    ->numeric(),
-                DatePicker::make('first_due_date'),
-                TextInput::make('grace_days')
-                    ->numeric()
-                    ->default(0),
-                Textarea::make('notes')
-                    ->maxLength(65535),
+                Section::make('Parties')
+                    ->columns(2)
+                    ->schema([
+                        Select::make('car_owner_id')
+                            ->relationship('carOwner', 'first_name')
+                            ->required()
+                            ->searchable(),
+                        // car_id is implied by the parent (Car) context
+                    ]),
+                ...CarOwnershipAgreementResource::getTermFields(),
             ]);
     }
 

@@ -8,14 +8,28 @@ use App\Enums\AgreementModel;
 use App\Enums\AgreementStatus;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
+use App\Models\Concerns\LogsActivity;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property AgreementStatus $status
+ * @property AgreementModel $model
+ * @property CarbonInterface $start_date
+ * @property CarbonInterface|null $end_date
+ * @property CarbonInterface|null $first_due_date
+ */
 class CarOwnershipAgreement extends Model
 {
-    use BelongsToBranch, HasAuditColumns, HasFactory, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
+
+    protected $attributes = [
+        'status' => 'draft',
+    ];
 
     protected $fillable = [
         'car_id',
@@ -60,5 +74,11 @@ class CarOwnershipAgreement extends Model
     public function carOwner(): BelongsTo
     {
         return $this->belongsTo(CarOwner::class);
+    }
+
+    /** @return HasMany<OwnerInstallment> */
+    public function ownerInstallments(): HasMany
+    {
+        return $this->hasMany(OwnerInstallment::class, 'car_ownership_agreement_id');
     }
 }

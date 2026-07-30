@@ -12,10 +12,12 @@ use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
 use App\Models\Vendor;
 use App\Services\FleetStatusService;
+use App\Services\OwnerAgreementService;
 use Database\Seeders\CarCategorySeeder;
 use Database\Seeders\VendorSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -97,6 +99,31 @@ it('rejects overlapping active ownership agreements for the same car', function 
         'start_date' => now()->subMonth(),
         'end_date' => null,
     ]))->toThrow(QueryException::class);
+});
+
+it('returns a validation error when activating an overlapping draft', function () {
+    $owner = CarOwner::factory()->create();
+    $service = app(OwnerAgreementService::class);
+
+    // Has an existing active agreement, so activating this draft should fail.
+    CarOwnershipAgreement::factory()->create([
+        'car_id' => $this->car->id,
+        'car_owner_id' => $owner->id,
+        'status' => AgreementStatus::Active,
+        'start_date' => now()->subYear(),
+        'end_date' => null,
+    ]);
+
+    $draft = CarOwnershipAgreement::factory()->create([
+        'car_id' => $this->car->id,
+        'car_owner_id' => $owner->id,
+        'status' => AgreementStatus::Draft,
+        'start_date' => now()->subMonth(),
+        'end_date' => null,
+    ]);
+
+    expect(fn () => $service->activate($draft))
+        ->toThrow(ValidationException::class, 'active agreement');
 });
 
 it('syncs insurance expiry date on car when document is created', function () {
