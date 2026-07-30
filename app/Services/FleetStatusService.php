@@ -13,7 +13,7 @@ class FleetStatusService
     /** @var array<string, list<string>> status => allowed next statuses */
     private const TRANSITIONS = [
         'available' => ['reserved', 'maintenance', 'out_of_service', 'sold', 'returned_to_owner'],
-        'reserved' => ['available', 'rented', 'cancelled'],
+        'reserved' => ['available', 'rented'],
         'rented' => ['available', 'maintenance', 'out_of_service'],
         'maintenance' => ['available', 'out_of_service', 'sold'],
         'out_of_service' => ['available', 'maintenance', 'sold', 'returned_to_owner'],
@@ -29,7 +29,7 @@ class FleetStatusService
             return;
         }
 
-        $allowed = self::TRANSITIONS[$current] ?? [];
+        $allowed = self::TRANSITIONS[$current];
 
         if (! in_array($newStatus->value, $allowed, strict: true)) {
             throw new InvalidArgumentException(
@@ -51,6 +51,6 @@ class FleetStatusService
     /** @return list<string> */
     public function allowedTransitions(Car $car): array
     {
-        return self::TRANSITIONS[$car->status->value] ?? [];
+        return self::TRANSITIONS[$car->status->value];
     }
 }

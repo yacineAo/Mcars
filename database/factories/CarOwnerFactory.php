@@ -17,7 +17,7 @@ class CarOwnerFactory extends Factory
             'type' => 'individual',
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
-            'phone' => fake()->phoneNumber(),
+            'phone' => '0'.fake()->numerify('#########'),
             'is_active' => true,
         ];
     }

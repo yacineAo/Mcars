@@ -7,9 +7,25 @@ namespace App\Models;
 use App\Enums\MaintenanceType;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int|null $car_id
+ * @property int|null $car_category_id
+ * @property MaintenanceType $task_type
+ * @property int|null $interval_km
+ * @property int|null $interval_days
+ * @property CarbonInterface|null $last_done_at
+ * @property int|null $last_done_odometer
+ * @property CarbonInterface|null $next_due_at
+ * @property int|null $next_due_odometer
+ * @property int|null $alert_km_before
+ * @property int|null $alert_days_before
+ * @property bool $is_active
+ */
 class MaintenanceSchedule extends Model
 {
     use HasAuditColumns, LogsActivity;

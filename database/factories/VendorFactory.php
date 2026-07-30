@@ -17,7 +17,7 @@ class VendorFactory extends Factory
             'name' => fake()->company(),
             'type' => fake()->randomElement(['garage', 'insurance', 'parts', 'fuel_station', 'towing', 'other']),
             'contact_name' => fake()->name(),
-            'phone' => fake()->phoneNumber(),
+            'phone' => '0'.fake()->numerify('#########'),
             'is_active' => true,
         ];
     }

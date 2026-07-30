@@ -6,9 +6,7 @@ namespace App\Filament\Admin\Resources\CarResource\RelationManagers;
 
 use App\Enums\AgreementModel;
 use App\Enums\AgreementStatus;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -18,10 +16,37 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class AgreementsRelationManager extends RelationManager
 {
     protected static string $relationship = 'agreements';
+
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('Owner');
+    }
+
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+    {
+        return Auth::user()?->can('fleet.view') ?? false;
+    }
+
+    protected function canCreate(): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
+
+    protected function canEdit(Model $record): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
+
+    protected function canDelete(Model $record): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
 
     public function form(Schema $schema): Schema
     {
@@ -87,13 +112,11 @@ class AgreementsRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make(),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+            // No bulk delete: an agreement is what E32 accrues owner rent against, so
+            // removing a batch of them silently rewrites per-car profitability.
+            ->toolbarActions([]);
     }
 }

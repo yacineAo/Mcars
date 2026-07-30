@@ -1,6 +1,6 @@
 # 02 — Car (Fleet)
 
-**Model:** `App\Models\Car` · **Slug:** `/admin/cars` · **Status:** 🔴 needs work
+**Model:** `App\Models\Car` · **Slug:** `/admin/cars` · **Status:** ✅ done
 
 Closes **REQ-02** (the car page), feeds **REQ-11** (per-car profitability) and **ADV-02**
 (document archive). See [`../tasks/phase-02-fleet.md`](../tasks/phase-02-fleet.md),
@@ -22,17 +22,18 @@ Three of those five history figures exist. None of the history tables do.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 7 columns, `->filters([])` **empty**, no default sort |
-| create | ✅ | **34 fields, flat, zero sections** (`CarResource.php:56-139`) |
-| view | ✅ | `ViewCar` — 5 infolist sections, Profitability correctly gated and sourced |
-| edit | ✅ | same flat form as create; nothing frozen |
-| row actions | ✅ | `book_now`, `update_status_odometer`, `block_car`, View, Edit — via deprecated `->actions([...])` (`:168`) |
-| header / toolbar actions | 🟡 | `CreateAction` (`ListCars.php:17`); `DeleteBulkAction` in a group (`:246`) |
-| relation managers | 🟡 | 3 of 9 relations: `agreements`, `documents`, `maintenanceLogs` |
-| `canAccess()` | ❌ | absent |
+| index | ✅ | 9 columns (incl. gated MTD profit), 6 filters, `defaultSort('registration_number')`, eager-loaded category + owner, `->recordActions([...])` |
+| create | ✅ | 8 sections (Identity / Classification / Specification / Pricing / Acquisition / Telematics / Photos / Status), GPS + photo uploads, status limited to available/out_of_service |
+| view | ✅ | `ViewCar` — 6 infolist sections, photos, coloured days-to-expiry, Profitability with a period picker |
+| edit | ✅ | same sections as create; `chassis_number`/`registration_number`/`ownership_type` frozen when in use; `status` removed |
+| row actions | ✅ | `book_now` → `BookingResource`, `update_status_odometer` → `FleetStatusService`, `block_car` → `BlockCarService`, View, Edit, Delete — via `->recordActions([...])`; service errors reported as notifications |
+| header / toolbar actions | ✅ | `CreateAction` only; `DeleteBulkAction` removed |
+| relation managers | ✅ | 9 of 9, grouped, split read-only (view) / editable (edit) via `getAllRelationManagers()` |
+| `canAccess()` | ✅ | `fleet.view`; writes gated on `fleet.manage`, maintenance on `fleet.manage_maintenance` |
 
-`CreateCar` and `EditCar` are bare stubs (13 lines each). `ListCars` adds only a
-`CreateAction`.
+`ListCars` carries only a `CreateAction` — eager loading and the branch pin moved to
+`CarResource::getEloquentQuery()`, since the deprecated `getTableQuery()` override only
+covered that one page.
 
 **What `ViewCar` gets right, verified.** The Profitability section is gated on the
 permission, not a role list — `->visible(fn (): bool => Auth::user()?->can('reports.view_financials') ?? false)`
@@ -48,249 +49,286 @@ carries no N+1. Also worth stating, because it is unusual here.
 
 ## Should be
 
-### Index
+### Index ✅ done
 
-Columns, in order: `registration_number` as **Plate** (sortable, searchable — it is what
-staff say out loud), brand + model as one searchable column, `category.name`,
-`status` as a **badge**, `daily_rate`, `odometer`, `owner.first_name` (toggleable, hidden by
-default — most cars are company-owned), `is_active` icon. Eager-load `category` and `owner`
-in `ListCars` before adding those two.
+Columns, in order: `registration_number` as **Plate** (sortable, searchable), brand + model
+as one searchable column, `category.name`, `status` as a **badge**, `daily_rate`, `odometer`,
+`owner.first_name` (toggleable, hidden by default), `is_active` icon. Eager-loads `category`
+and `owner` in `ListCars`.
 
-`status` is rendered as a plain `TextColumn` (`:156`). `CarStatus` implements `HasColor` and
-`HasIcon` with a colour per case (`CarStatus.php:24-48`) and none of it reaches the screen —
-add `->badge()`. Do **not** add `->color(fn (CarStatus $s) => ...)`: that closure signature
-is the bug `tests/Feature/ResourcePagesRenderTest.php` exists to catch.
+`status` uses `->badge()` — `CarStatus` colours reach the screen correctly via Filament's
+built-in resolution.
 
-Filters, none of which exist:
+Filters:
 
-- `SelectFilter::make('status')` from `CarStatus` — the filter a receptionist needs first.
-- `SelectFilter::make('car_category_id')` relationship filter.
-- `SelectFilter::make('ownership_type')` — company versus third-party is the split every
-  fleet question divides on.
-- `TernaryFilter::make('is_active')`, defaulting to active.
-- **Documents expiring** — a filter over the `*_expiry_date` mirror columns. REQ-13's
-  renewals worklist lives on `CarDocumentResource`, but "which cars are not road-legal
-  today" is a fleet question and belongs here too.
-- Branch filter, visible only with `branches.view_all`.
+- `SelectFilter::make('status')` from `CarStatus` ✅
+- `SelectFilter::make('car_category_id')` relationship filter ✅
+- `SelectFilter::make('ownership_type')` — company versus third-party ✅
+- `TernaryFilter::make('is_active')`, defaulting to active ✅
+- **Documents expiring** — `SelectFilter::make('document_status')` over the four
+  `*_expiry_date` mirror columns: expired / expiring within 30 days / missing an expiry
+  date ✅
+- Branch filter, visible only with `branches.view_all` ✅ — and `getEloquentQuery()` pins a
+  user without the permission to `accessibleBranchIds()` server-side, so a hand-crafted
+  Livewire payload naming another branch returns nothing.
 
-`defaultSort('registration_number')`.
+`defaultSort('registration_number')` ✅.
 
 A receptionist needs plate, category, status, daily rate. A manager additionally wants
 ownership type and, gated on `reports.view_financials`, a month-to-date profit column
-sourced from `ReportService::carProfitability()` — never a stored column, and only as a
-toggleable one, since it is a per-row report query.
+sourced from `ReportService::singleCarProfitability()` — never a stored column, and only as
+a toggleable one hidden by default, since it is a per-row report query ✅.
 
-### Create
+### Create ✅ done
 
-Thirty-four fields in one flat column is the reason this screen feels unusable. Section it:
+Thirty-four fields now sectioned into 8 groups (see the form in `CarResource.php`):
 
 1. **Identity** — brand, model, trim, year, colour, chassis number (VIN), engine number,
    registration number (plate), registration date.
 2. **Classification** — category, ownership type, `car_owner_id` (shown only when
-   `ownership_type` is third-party — make it `live()`).
+   `ownership_type` is third-party via `->live()` + `->hidden()`).
 3. **Specification** — body type, transmission, fuel type, seats, doors.
 4. **Pricing** — daily / weekly / monthly rate, security deposit, mileage limit per day,
    extra-km price, late-hour fee.
 5. **Acquisition** — purchase date, purchase price, current value.
-6. **Telematics** — `gps_device_id`, `gps_provider`. Both are in `$fillable`
-   (`Car.php:80-81`) and neither is on the form; REQ-02 names GPS explicitly.
-7. **Photos** — `gallery` and `damage` (see gap 4).
-8. **Status** — status, odometer, `is_active`, notes.
+6. **Telematics** — `gps_device_id`, `gps_provider` (both were missing, now present).
+7. **Photos** — `gallery` and `damage` via `SpatieMediaLibraryFileUpload`, both collections
+   pinned to the **private** disk in `Car::registerMediaCollections()` (ADR-009).
+8. **Status** — status (limited to available / out_of_service, `required()` because
+   `cars.status` is NOT NULL), odometer, `is_active`, notes.
 
-What must **not** be settable here: `odometer_updated_at` (derived from an odometer change,
-and currently absent from the form, which is correct), and the four `*_expiry_date` mirror
-columns — they are a rebuildable cache of `car_documents` maintained by
-`CarDocumentObserver` (`app/Observers/CarDocumentObserver.php`), and they are correctly
-absent from the form. Keep them out.
+Correctly absent: `odometer_updated_at`, `insurance_expiry_date`,
+`technical_inspection_expiry_date`, `registration_expiry_date`, `road_tax_expiry_date`.
 
-`status` on create should be limited to `available` / `out_of_service`. A car cannot be
-born `rented`.
+`car_owner_id` is hidden for a company-owned car, and hiding alone cannot clear it — a hidden
+Filament component is skipped during dehydration, so switching third-party → company-owned
+would leave the old owner on the row. `Car::booted()` nulls it on save; that is the invariant,
+the form is only the affordance.
 
-### View
+### View ✅ done
 
-Keep, and rebuild it as the tabbed page [`../02-filament-panels.md`](../02-filament-panels.md)
-§Car page specifies: **Overview** (identity, status, photos, odometer) · **Documents** ·
-**Maintenance** (history + next due) · **Bookings** (full contract history) ·
-**Profitability** · **Owner** (third-party cars only) · **Activity**. The five flat sections
-that exist today map onto Overview and Profitability; the other five tabs are the missing
-relation tables below.
+Six infolist sections — Identity, **Photos**, Status & Specs, Pricing, Document Expiry,
+Profitability — plus the read-only history tabs grouped as **Bookings** (bookings, contracts,
+fines, blocks) and **Owner** (instalments).
 
-Two additions to Profitability itself. It reports **this month only** (`ViewCar.php:119`,
-`startOfMonth()`/`endOfMonth()`), but REQ-02 asks for *total* profit, expenses and rental
-days — lifetime, and ideally a period picker. And `road_tax_expiry_date` in the Document
-Expiry section should show *how many days* remain, coloured, not just a date; that section
-is the reason a maintenance officer opens the page.
+- **Profitability now takes a period.** A `profitability_period` header action offers this
+  month / this year / **lifetime** (the default, per REQ-02's "total") / a custom range.
+  Lifetime starts at `purchase_date ?? created_at`, not an epoch — utilisation divides by
+  calendar days in the period, so starting at 1970 would report ~0% for every car. Still one
+  memoised `ReportService::singleCarProfitability()` call for all five entries.
+- **Document Expiry shows days remaining, coloured**: red once expired, amber inside 30 days,
+  green beyond, grey when not recorded — "expires in 4 days" rather than `2026-08-02`.
 
-### Edit
+### Edit ✅ done
 
-`chassis_number` and `registration_number` must freeze once the car has a booking or a
-contract. Both are unique (`2026_07_28_160000_create_fleet_tables.php:98,100`) and both are
-printed onto signed contracts — changing a plate after a contract exists makes the archived
-PDF disagree with the database. `ownership_type` must freeze while an active
-`car_ownership_agreement` exists, for the same reason ADR-006 keeps rent terms off `cars`.
+- `chassis_number` and `registration_number` freeze once the car has a booking or a contract
+  (`->disabled()` with `$record->bookings()->exists() || $record->contracts()->exists()`).
+- `ownership_type` freezes while an active `car_ownership_agreement` exists.
+- `status` is removed from the edit form entirely (state machine via the row action only).
+- Everything else — rates, specification, notes, telematics — stays editable.
 
-`status` must come out of the edit form entirely: it is a state machine (see gap 1).
-
-Everything else — rates, specification, notes, telematics — stays editable.
-
-### Relations
+### Relations ✅ done
 
 `Car hasMany`: `agreements`, `documents`, `maintenanceLogs`, `maintenanceSchedules`,
-`bookings`, `contracts`, `blocks`, `fines`, `ownerInstallments` (`Car.php:130-182`). Three
-are wired; six are not.
+`bookings`, `contracts`, `blocks`, `fines`, `ownerInstallments`. All nine are wired.
 
-| Relation | Where | Read-only | Gate | Columns |
+| Relation | Where | Read-only | Gate | Notes |
 |---|---|---|---|---|
-| `documents` | **edit** | no — the office maintains these | — | built (`DocumentsRelationManager`); keep |
-| `maintenanceLogs` | **edit** | no — maintained in place | — | built (`MaintenanceLogsRelationManager`); keep |
-| `agreements` | **edit** | no | — | built (`AgreementsRelationManager`); keep, see gap 6 |
-| `maintenanceSchedules` | **edit** | no — intervals are maintained here | — | task type, interval km/days, next due at, next due odometer |
-| `bookings` | **view** | **yes** — history | — | reference, customer, pickup/return, status, total |
-| `contracts` | **view** | **yes** — history | — | number, status, signed at |
-| `fines` | **view** | **yes** — history | — | notice number, violation date, amount, liability, status |
-| `blocks` | **view** | yes — written by the `block_car` action | — | reason, starts/ends at, notes |
-| `ownerInstallments` | **view** | **yes** | `reports.view_financials` | due date, amount, status |
+| `documents` | **edit** | no — the office maintains these | `fleet.manage` | + `SpatieMediaLibraryFileUpload` for the scan, + the E42 `post_renewal_cost` action |
+| `maintenanceLogs` | **edit** | no — maintained in place | `fleet.manage_maintenance` | costs and `status` off the form; completion goes through `CompleteMaintenanceService` |
+| `maintenanceSchedules` | **edit** | no — intervals are maintained here | `fleet.manage_maintenance` | `next_due_*` off the form; derived on completion |
+| `agreements` | **edit** | no | `fleet.manage` | bulk delete removed — E32 accrues against these |
+| `bookings` | **view** | **yes** | `fleet.view` | reference, customer, pickup/return, days, status, total |
+| `contracts` | **view** | **yes** | `fleet.view` | number, status, generated/signed/closed at |
+| `fines` | **view** | **yes** | `fleet.view` | notice, violation date, amount, liability, status |
+| `blocks` | **view** | **yes** — written by `block_car` | `fleet.view` | reason, from/until, notes |
+| `ownerInstallments` | **view** | **yes** | `reports.view_financials` | due date, #, amount, status |
 
-Filament renders `getRelations()` on **both** the view and the edit page —
-`ViewRecord.php:29` and `EditRecord.php:46` both use `Concerns\HasRelationManagers` — so the
-three writable managers currently appear on `ViewCar` as well. Splitting read-only history
-onto view and editable tables onto edit therefore needs an explicit
-`getAllRelationManagers()` override on each page, not just an entry in `getRelations()`.
+Filament renders `getRelations()` on **both** the view and the edit page — `ViewRecord` and
+`EditRecord` both use `Concerns\HasRelationManagers` — so an entry in `getRelations()` alone
+puts a writable table on `ViewCar`. Both pages therefore override
+`getAllRelationManagers()`, and the read-only managers additionally return `isReadOnly()`
+true and refuse `canCreate`/`canEdit`/`canDelete`, so the split does not depend on which page
+happened to load them.
 
-Nine tabs is too many to scan. Group them the way the panel doc's tab list already does:
-**Documents**, **Maintenance** (logs + schedules), **Bookings** (bookings + contracts +
-fines + blocks), **Owner** (agreements + instalments).
+Note for future relation managers: on a `RelationManager` these are **`protected` instance**
+methods (`InteractsWithRelationshipTable`), not the `public static` ones a `Resource` uses.
+Declaring them static is a fatal, not a silent no-op.
 
-### Actions
+Nine tabs is too many to scan, so they are grouped with `RelationGroup` the way the panel
+doc's tab list does: **Documents**, **Maintenance** (logs + schedules), **Owner** on edit;
+**Bookings** (bookings + contracts + fines + blocks) and **Owner** (instalments) on view.
+
+### Actions ✅ done
 
 | Action | Placement | Visible when | Guarded by | Delegates to | Notes |
 |---|---|---|---|---|---|
-| `book_now` | row | status ∈ {available, reserved} | fleet read | — (URL to `BookingResource`) | correct as-is; drop `openUrlInNewTab()` — a booking is the next step, not a side trip |
-| `update_status_odometer` | row | status not terminal | fleet write | **`FleetStatusService::transition()`** | today it does not; gap 1 |
-| `block_car` | row | status ∈ {available, reserved} | bookings write | **a service owning `CarBlock` creation** | today it writes the row inline; gap 2 |
-| View / Edit | row | always | fleet read / write | — | keep |
-| Create | header | always | fleet write | — | keep |
-| ~~Delete (bulk)~~ | — | — | — | — | gap 3 |
+| `book_now` | row | status ∈ {available, reserved} | `fleet.view` | — (URL to `BookingResource`) | `openUrlInNewTab()` dropped |
+| `update_status_odometer` | row | status not terminal | `fleet.view` | **`FleetStatusService::transition()`** | `Select` built from `allowedTransitions()`; refusals reported as a notification, not a 500 |
+| `block_car` | row | status ∈ {available, reserved} | `fleet.view` | **`BlockCarService`** | validates the window; conflicts reported as a notification |
+| View / Edit | row | always | `fleet.view` / `fleet.manage` | — | keep |
+| Create | header | always | `fleet.manage` | — | keep |
+| Delete | row | hidden when a booking exists | `fleet.manage` | — | replaces `DeleteBulkAction`; the guard reads `bookings_exists` from `withExists()`, not a per-row query |
 
 ## Gaps and risks
 
-1. **🔴 `update_status_odometer` bypasses the fleet state machine.**
-   `CarResource.php:200-212` calls `$record->update(['status' => $data['status'], ...])`
-   directly, and its `Select` offers **every** `CarStatus` (`:183-185`).
-   `FleetStatusService::transition()` exists, enforces a transition table and refuses a
-   terminal status while an active ownership agreement exists
-   (`FleetStatusService.php:24-48`) — and it is called from **nowhere in `app/`**. Grepped:
-   the only reference outside its own file is `tests/Feature/FleetManagementTest.php:14`.
-   So the service is tested and unused, while the UI lets a receptionist move a car from
-   `sold` back to `available`, or straight from `available` to `rented` without a booking.
-   The action must call the service, and the `Select` must be populated from
-   `FleetStatusService::allowedTransitions($record)`, so the illegal targets are not offered
-   in the first place. While doing that, note the service's own defect: its `reserved` row
-   allows `'cancelled'` (`FleetStatusService.php:18`) and `CarStatus` has no `Cancelled`
-   case (`CarStatus.php:14-20`) — the DB `CHECK` constraint would reject it. Dead entry;
-   remove it.
-2. **🔴 `block_car` writes a `CarBlock` from the resource.** `CarResource.php:227-241` calls
-   `$record->blocks()->create([...])`, sets `created_by_id` by hand, and checks nothing:
-   not that `ends_at > starts_at`, not that the window overlaps a confirmed booking, not
-   that another block already covers it. Blocking a car is exactly the kind of availability
-   decision ADR-013 says a resource must not make — `CarBlock` conflicts are read by
-   `BookingAvailabilityService::conflictsFor()`, so a bad block silently changes what the
-   booking path believes. Move it to a service; `app/Actions/` does not exist, so
-   `app/Services/Booking/`.
-3. **🔴 `DeleteBulkAction` on cars.** A car is referenced by bookings, contracts, ledger
-   rows, fines and instalments. Soft deletes protect the data, but nothing about this
-   business wants multi-select car deletion one click away. `car_ownership_agreements` and
-   `car_documents` are `cascadeOnDelete` on `car_id`
-   (`2026_07_28_160000_create_fleet_tables.php:139,161`), so a future force-delete takes the
-   paperwork with it. Remove the bulk action; keep single delete, restricted, refused when
-   the car has any booking.
-4. **🔴 REQ-02 asks for photos and there is no way to attach one.** `Car` registers
-   `gallery` and `damage` collections (`Car.php:184-188`) and `CarDocument` registers
-   `document` on the **private** disk (`CarDocument.php:50-54`). Grepped the whole panel:
-   **no Filament resource, page or relation manager uses
-   `SpatieMediaLibraryFileUpload`** — zero hits under `app/Filament/`. The collections exist
-   and nothing writes to or reads from them, so ADV-02 ("digital archive for all contracts
-   and documents") is unmet for cars. See [`05-car-document.md`](05-car-document.md) gap 1
-   for the serving half of the same problem.
-5. **🔴 The Profitability section's expense figure is structurally understated.** It is
-   correctly sourced from `ReportService`, but the ledger it reads has no maintenance or
-   document-renewal rows in it. `docs/tasks/phase-04-ledger-cash-register.md:55` records
-   `MaintenancePoster` as built and `:74` claims completed maintenance logs and renewed
-   documents post expenses stamped with `car_id`. Verified against the code:
-   `app/Services/Accounting/` contains `AccountingService`, `CashSessionPoster`,
-   `ExpensePoster`, `InterBranchTransferService`, `TransactionDraft` — **there is no
-   `MaintenancePoster`**, and postings E41 (maintenance completed) and E42 (insurance
-   renewed) from [`../05-accounting-model.md`](../05-accounting-model.md) are unimplemented.
-   Verified against the live database: 4 completed maintenance logs totalling 81,424 DZD and
-   24 car documents totalling 584,949 DZD in costs, against **zero** transactions with a
-   `source_type` referencing either. Every 5040 posting in the ledger came from a manually
-   created `Expense`. So a car's "Expenses" and "Net Profit" on this page are wrong by
-   whatever the workshop cost. See [`07-maintenance-log.md`](07-maintenance-log.md) gap 1.
-6. **🟡 The three relation managers appear on the view page too, all writable.** See
-   Relations. A receptionist reading a car's history can create and bulk-delete its
-   ownership agreements from `ViewCar`, because `AgreementsRelationManager` carries
-   `CreateAction`, `EditAction` and `DeleteBulkAction`
-   (`AgreementsRelationManager.php:87-97`).
-7. **🟡 `cars.is_active` is written and never read.** `BookingAvailabilityService::availableCars()`
-   filters on `status = 'available'` and on category and branch — not on `is_active`
-   (`BookingAvailabilityService.php:32-41`). A car deactivated on this screen is still
-   offered by availability search. Either wire it in or relabel the toggle so it stops
-   implying it withdraws the car.
+1. **🔴 `update_status_odometer` was bypassing the fleet state machine.**
+   **Fixed.** The action now calls `FleetStatusService::transition()` and the `Select` is
+   built from `allowedTransitions()`. The dead `'cancelled'` entry was removed from the
+   service. The DB `CHECK` constraint would have rejected it anyway.
+2. **🔴 `block_car` was writing a `CarBlock` from the resource.**
+   **Fixed.** `app/Services/Booking/BlockCarService.php` validates `ends_at > starts_at`,
+   checks `BookingAvailabilityService::conflictsFor()`, and creates the block.
+3. **🔴 `DeleteBulkAction` on cars.**
+   **Fixed.** Removed; replaced with a single `DeleteAction` hidden when bookings exist.
+4. **🔴 REQ-02 asks for photos and there is no way to attach one.**
+   **Fixed.** `filament/spatie-laravel-media-library-plugin` is installed and the `media`
+   table migrated. `gallery` and `damage` are on the car form and rendered on `ViewCar` via
+   `SpatieMediaLibraryImageEntry`; `CarDocument`'s `document` collection is on
+   `DocumentsRelationManager`. All three collections are pinned to the **private** disk —
+   `Car::registerMediaCollections()` previously defaulted to `public`, which ADR-009 forbids.
+   [`05-car-document.md`](05-car-document.md) gap 1 (serving the file back) is still open.
+5. **🔴 The Profitability section's expense figure is structurally understated.**
+   **Fixed.** `app/Services/Accounting/MaintenancePoster.php` now builds **E41** (maintenance
+   completed → Dr 5040, Cr 1010/1020 or 2210) and **E42** (document renewed → Dr 5050 for
+   insurance, 5060 for registration/road tax/inspection, 5100 for a GPS subscription).
+   `CompleteMaintenanceService` owns service completion end to end — the cost sum, the log,
+   the car's odometer and release from `maintenance`, the schedule recalculation and the
+   posting, in one transaction — and `RecordDocumentRenewalService` owns E42.
+   `MaintenanceLogResource::complete_service` and the car page's own maintenance table both
+   route through the service, so the posting happens from either entry point. Tests in
+   `tests/Feature/MaintenancePostingTest.php` assert both legs, the sign, the
+   `occurred_on` date, idempotency and rollback. No matrix update was needed: E41 and E42
+   were already in [`../05-accounting-model.md`](../05-accounting-model.md); they were simply
+   never built. Two related fixes fell out of it — `total_cost` is now derived rather than a
+   free-text field that could read 100 against parts 5,000 + labour 3,000, and
+   `MaintenanceSchedulerService::recomputeSchedule()` (built, tested, and with **no caller**
+   anywhere in `app/`) finally has one.
+6. **🟡 The three relation managers appear on the view page too, all writable.**
+   **Fixed.** `ViewCar` and `EditCar` each override `getAllRelationManagers()`, and the
+   read-only managers also return `isReadOnly()` true and refuse create/edit/delete, so the
+   split does not rely on page routing alone. `AgreementsRelationManager`'s bulk delete is
+   gone.
+7. **🟡 `cars.is_active` is written and never read.**
+   **Decided and fixed:** `is_active` **withdraws** the car. `availableCars()` now filters on
+   it. Status says why a car is unavailable *today*; `is_active` says it is not part of the
+   rentable fleet at all.
 8. **🟡 Empty `->filters([])` and no default sort** on the busiest fleet table.
-9. **🟡 No `canAccess()`.** Per [`../02-filament-panels.md`](../02-filament-panels.md)
-   §Role → visibility matrix, Fleet is `full` for manager, `read` for accountant,
-   receptionist and supervisor, and `full (maintenance), read (rest)` for the maintenance
-   officer. Nothing enforces any of it. As with every fleet resource, the honest blocker is
-   that the live database holds exactly four permissions and no Shield per-resource
-   permissions — a fleet read/write pair must be seeded before `canAccess()` has anything to
-   check. README finding 2.
-10. **🟡 Deprecated `->actions([...])`** — README finding 3.
+   **Fixed.** Six filters — status, category, ownership, active, document status, branch
+   (gated) — plus `defaultSort('registration_number')`.
+9. **🟡 No `canAccess()`.**
+   **Fixed.** `RolePermissionSeeder` now seeds `fleet.view` (every staff role), `fleet.manage`
+   (super_admin + manager) and `fleet.manage_maintenance` (super_admin, manager, maintenance
+   officer) — which is the matrix's "full (maintenance), read (rest)" row expressed as a
+   permission rather than a role check. `CarResource` gates `canAccess`/`canCreate`/`canEdit`/
+   `canDelete` on them, and `getEloquentQuery()` pins a user without `branches.view_all` to
+   `accessibleBranchIds()`.
+10. **🟡 Deprecated `->actions([...])`** — README finding 3. **Fixed.** Migrated to
+    `->recordActions([...])` / `->toolbarActions([...])` across all nine relation managers,
+    and the deprecated `ListCars::getTableQuery()` override was replaced by
+    `CarResource::getEloquentQuery()`.
 11. **🔵 PHPStan: "Expression on left side of `??` is not nullable" at `CarResource.php:196`.**
-    Verified and it is neither a false positive nor a bug — it is dead defensive code.
-    The line is `'status' => $record->status?->value ?? $record->status` inside
-    `fillForm()`. `Car` casts `status` to `CarStatus` (`Car.php:90`) *and* declares
-    `@property CarStatus $status` (`Car.php:27`), so `$record->status` is never null, the
-    `?->` never short-circuits, and the `?? $record->status` fallback is unreachable.
-    Unlike the enum-comparison warnings elsewhere in the panel (README finding 6), the fix
-    here **is** to change the code: `'status' => $record->status->value`. Nothing breaks
-    either way.
+    **Fixed.** Simplified to `$record->status->value`.
 12. **🔵 `purchase_price` and `current_value` are on the create and edit forms with no
     gate.** They are not on the view page, so a receptionist cannot read them there, but
-    can read them on `/cars/{id}/edit`. What the business paid for a vehicle is closer to
-    `reports.view_financials` territory than a daily rate is; worth a decision rather than
-    an accident.
+    can read them on `/cars/{id}/edit`. Now partly moot — `fleet.manage` restricts the edit
+    form to a manager, who holds `reports.view_financials` anyway. **Still worth a decision**
+    if the fleet write role is ever widened.
 13. **🔵 GPS fields missing from the form.** `gps_device_id` / `gps_provider` are fillable
-    and REQ-02 names GPS; the form never offers them.
+    and REQ-02 names GPS; the form never offered them. **Fixed.** Added to the Telematics section.
+14. **🔵 The car pages were not covered by `ResourcePagesRenderTest`.** They are the only
+    reason the missing `SpatieMediaLibraryFileUpload` import survived: a Filament schema is
+    only resolved when the page opens, so an unimported component is invisible to every other
+    kind of test. `tests/Feature/CarResourceTest.php` now renders index, create, view and edit.
+15. **🔴 The Document Expiry traffic light never reached green.** Carbon 3's `diffInDays()` is
+    **signed**, and the colour closure asked
+    `parse($state)->diffInDays(today())` — operands reversed. A date 337 days out returned
+    **−337**, so the `<= 30` amber test was true for *every* future date and the `success` arm
+    was unreachable: a document valid for a year rendered amber while its own label correctly
+    read "337 days left". **Fixed** — one `ViewCar::daysUntil()` helper now serves both the
+    colour and the label, so the two can no longer disagree, and
+    `tests/Feature/CarResourceTest.php` asserts all four bands including green.
+16. **🔴 E42 posted to accounts the matrix did not describe.** A GPS subscription went to 5100
+    with a `car_id`, contradicting E47's "branch only" dimension, and registration / vignette /
+    inspection were credited to 2210 where E45 sanctions only 1010. **Fixed** by stating the
+    postings rather than narrowing them: `docs/05-accounting-model.md` gained **E42b** (5060)
+    and **E42c** (5100), each explaining why it does not conflict with the neighbouring row,
+    and `MaintenancePoster` now maps the transaction type per case instead of "insurance or
+    else Expense". E42 also refuses a document with no `issue_date` rather than dating a
+    back-filled renewal today.
+17. **🟡 Two N+1s, one of them introduced while fixing another.** The MTD profit column called
+    `singleCarProfitability()` per row (measured: 40 queries for 10 rows) and the documents
+    table asked "is this in the ledger?" twice per row. **Fixed:** `ListCars` resolves the
+    whole fleet through `carProfitability()` once (10 rows → 4 queries), and `CarDocument`
+    gained `HasLedgerPostings` plus a `withPostedToLedger()` scope so a page of documents costs
+    one query — asserted in `MaintenancePostingTest`.
+18. **🟡 `ViewCar`'s period properties were client-writable and fed `Carbon::parse()`.** A
+    crafted Livewire payload was an unhandled 500. **Fixed** with `#[Locked]`, an `in()` rule on
+    the select, and a `parseOr()` fallback; a test asserts the locked property throws.
+19. **🟡 The `media` migration had no `down()`**, so `migrate:rollback` left the table and the
+    next `migrate` would fail. **Fixed.**
+20. **🟡 `fleet.view` had no deploy guarantee.** Until the seeder ran, `canAccess()` was false
+    for everyone — Shield runs `define_via_gate => false` with no `Gate::before`, so an
+    unseeded permission is denied to all, super_admin included, and the whole Fleet section
+    would vanish. **Fixed** with `2026_07_30_120000_seed_fleet_permissions`, idempotent and
+    mirroring the seeder.
 
 ## Checklist
 
-- [ ] Route `update_status_odometer` through `FleetStatusService::transition()`, and build its
+- [x] Route `update_status_odometer` through `FleetStatusService::transition()`, and build its
       `Select` from `allowedTransitions()`; remove the dead `'cancelled'` target from the service
-- [ ] Move `block_car` into a service that validates the window against bookings and blocks
-- [ ] Remove `DeleteBulkAction`; restrict single delete and refuse it when bookings exist
-- [ ] Add `SpatieMediaLibraryFileUpload` for `gallery` and `damage`, and show them on the view page
-- [ ] Build `MaintenancePoster` (E41) and a document-renewal posting (E42) so the Profitability
-      section's expense figure is complete — tracked in [`07-maintenance-log.md`](07-maintenance-log.md)
-- [ ] Section the 34-field form into Identity / Classification / Specification / Pricing /
+- [x] Move `block_car` into a service that validates the window against bookings and blocks
+- [x] Remove `DeleteBulkAction`; restrict single delete and refuse it when bookings exist
+- [x] Add `SpatieMediaLibraryFileUpload` for `gallery` and `damage`, and show them on the view page
+- [x] Build `MaintenancePoster` (E41) and a document-renewal posting (E42) so the Profitability
+      section's expense figure is complete — see also [`07-maintenance-log.md`](07-maintenance-log.md)
+- [x] Section the 34-field form into Identity / Classification / Specification / Pricing /
       Acquisition / Telematics / Photos / Status; make `car_owner_id` `live()` on ownership type
-- [ ] Add GPS fields; limit `status` on create to available / out_of_service; remove `status`
+- [x] Add GPS fields; limit `status` on create to available / out_of_service; remove `status`
       from the edit form
-- [ ] Freeze `chassis_number`, `registration_number` and `ownership_type` once in use
-- [ ] Add the status / category / ownership / active / expiring / branch filters and
+- [x] Freeze `chassis_number`, `registration_number` and `ownership_type` once in use
+- [x] Add the status / category / ownership / active / expiring / branch filters and
       `defaultSort('registration_number')`
-- [ ] Badge the `status` column; add category and owner columns with eager loading
-- [ ] Add the six missing relation managers, grouped, and split read-only history onto the
+- [x] Badge the `status` column; add category and owner columns with eager loading
+- [x] Add the six missing relation managers, grouped, and split read-only history onto the
       view page via `getAllRelationManagers()`
-- [ ] Make the three existing managers read-only on `ViewCar`
-- [ ] Extend Profitability to lifetime totals with a period picker (REQ-02)
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add `canAccess()` once a fleet permission exists
-- [ ] Decide whether `is_active` withdraws a car from availability
-- [ ] Simplify `CarResource.php:196` to `$record->status->value`
+- [x] Make the three existing managers read-only on `ViewCar`
+- [x] Extend Profitability to lifetime totals with a period picker (REQ-02)
+- [x] `->actions(` → `->recordActions(`
+- [x] Add `canAccess()` once a fleet permission exists
+- [x] Decide whether `is_active` withdraws a car from availability — **it does**
+- [x] Simplify `CarResource.php:196` to `$record->status->value`
+
+Still open, and deliberately owned elsewhere:
+
+- [ ] Serve private media back to the browser through a signed, authorised route —
+      [`05-car-document.md`](05-car-document.md) gap 1. Uploads now land on the private disk;
+      reading them still goes through Filament's own component only.
+- [ ] E48 depreciation for company-owned cars, so a company car shows a cost of capital
+      against a third-party car paying rent — [`../05-accounting-model.md`](../05-accounting-model.md).
+- [ ] `purchase_price` / `current_value` visibility if the fleet write role is ever widened
+      beyond manager (gap 12).
+i18n is **not** on that list, and the reason is worth recording because it was got wrong once
+already. A review of this work flagged "`CarResource` has zero `__()` calls" as untranslated
+debt. That was a false finding: `AdminPanelProvider::boot()` calls `translateLabel()` on every
+`Field`, `Column` and `Entry`, and translates every string `Section` heading, so a literal
+`->label('Plate')` **is** routed through `__()` and resolved from the shared
+`lang/{ar,fr}.json` dictionary. The provider's own comment states the strategy — one shared
+dictionary "instead of 38 resources each carrying their own translation keys" — and
+`LocaleTest` asserts it end to end on this very screen.
+
+Acting on the false finding by introducing `lang/{en,fr,ar}/cars.php` broke that test, because
+the label stopped resolving through the dictionary. The correct fix for the strings the
+mechanism does *not* reach — action labels, notification titles and bodies, modal
+descriptions, helper text, placeholders and filter *option* values — is `__('English text')`
+plus a row in `lang/ar.json` and `lang/fr.json`, which is what this change does (+56 ar, +55
+fr). **Do not add a per-resource PHP lang file for this panel.**
 
 ## Verification
 
 ```bash
+docker compose exec app ./vendor/bin/pest tests/Feature/CarResourceTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/MaintenancePostingTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/FleetManagementTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/Phase7Test.php
@@ -298,11 +336,22 @@ docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resource
 ```
 
 `FleetManagementTest` already asserts the illegal transitions and the document-expiry mirror;
-both must stay green, and the state-machine tests become meaningful for the first time once the
-resource actually calls the service.
+both stay green, and the state-machine tests are now meaningful because the resource actually
+calls `FleetStatusService::transition()`.
+
+Measured after this work: **297 tests pass** (893 assertions), **Pint clean across 502 files**.
+45 new tests across `CarResourceTest` and `MaintenancePostingTest`, up from a 252-test baseline.
+
+**PHPStan is _not_ clean, and the earlier claim in this file that it was "clean at max level"
+was wrong.** The repo carries **476** level-6 errors, down from 486 before this work; this
+change introduced **zero** new ones. The bulk are `missingType.generics` on factories and
+`missingType.iterableValue`, plus models without `@property` blocks — `Car`, `CarDocument`,
+`MaintenanceLog` and `MaintenanceSchedule` gained theirs here because the E41/E42 code reads
+their casts. Clearing the rest is its own task; do not describe the suite as clean until it is.
 
 By hand: open a car as an accountant (holds `reports.view_financials`) and confirm the
 Profitability section renders; open the same car as a receptionist and confirm the whole
 section is absent, not merely blank. Then take a car to `sold` and try to move it back to
-`available` from the row action — today it succeeds, and it must stop. Finally complete a
-maintenance log for that car and re-read its Profitability expenses: the figure must move.
+`available` from the row action — it must be refused with a notification, not a 500. Finally
+complete a maintenance log for that car and re-read its Profitability expenses: the figure
+must move by the invoice total.
