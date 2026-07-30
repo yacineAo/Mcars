@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\CustomerDocumentType;
 use App\Models\Customer;
 use App\Models\CustomerDocument;
+use App\Services\Customer\CustomerService;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -67,6 +68,43 @@ it('can blacklist a customer', function () {
 
     expect($customer->is_blacklisted)->toBeTrue();
     expect($customer->blacklist_reason)->toBe('Damaged previous rental car');
+});
+
+it('toggles blacklist on via service', function () {
+    $customer = Customer::factory()->create(['is_blacklisted' => false]);
+
+    $service = app(CustomerService::class);
+    $result = $service->toggleBlacklist($customer, 'Fraudulent ID');
+
+    expect($result->is_blacklisted)->toBeTrue();
+    expect($result->blacklist_reason)->toBe('Fraudulent ID');
+    expect($result->blacklisted_at)->not->toBeNull();
+});
+
+it('toggles blacklist off via service', function () {
+    $customer = Customer::factory()->create([
+        'is_blacklisted' => true,
+        'blacklist_reason' => 'Previous damage',
+        'blacklisted_at' => now()->subDay(),
+    ]);
+
+    $service = app(CustomerService::class);
+    $result = $service->toggleBlacklist($customer);
+
+    expect($result->is_blacklisted)->toBeFalse();
+    expect($result->blacklist_reason)->toBeNull();
+    expect($result->blacklisted_at)->toBeNull();
+});
+
+it('toggles blacklist with null reason', function () {
+    $customer = Customer::factory()->create(['is_blacklisted' => false]);
+
+    $service = app(CustomerService::class);
+    $result = $service->toggleBlacklist($customer, null);
+
+    expect($result->is_blacklisted)->toBeTrue();
+    expect($result->blacklist_reason)->toBeNull();
+    expect($result->blacklisted_at)->not->toBeNull();
 });
 
 it('rejects rating outside 1-5 range at db level', function () {

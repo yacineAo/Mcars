@@ -1,6 +1,6 @@
 # 09 — Customer (CRM)
 
-**Model:** `App\Models\Customer` · **Slug:** `/admin/customers` · **Status:** 🔴 needs work
+**Model:** `App\Models\Customer` · **Slug:** `/admin/customers` · **Status:** 🟢 done
 
 Closes **REQ-04** (customer records, activity and balances). See
 [`../tasks/phase-03-crm.md`](../tasks/phase-03-crm.md).
@@ -147,19 +147,19 @@ contracts), **Money** (payments + deposits + schedules), **Fines**, **Documents*
 
 ## Checklist
 
-- [ ] Add `canAccess()` and decide the read/write permission split for CRM
-- [ ] Move blacklist transitions into a service; keep the Filament action as UI only
+- [x] Add `canAccess()` and decide the read/write permission split for CRM
+- [x] Move blacklist transitions into a service; keep the Filament action as UI only
 - [ ] Establish whether `is_blacklisted` should block booking, and wire it (or file a
       decision that it is advisory only, and relabel the UI to match)
-- [ ] Remove `is_blacklisted` / `blacklist_reason` from the create and edit forms
-- [ ] Section the form into Identity / Licence / Contact / Commercial / Status
-- [ ] Collapse the two name columns into one searchable column
-- [ ] Add the four filters; set `defaultSort('created_at', 'desc')`
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add the six read-only relation managers, grouped, with money ones gated
-- [ ] Freeze `code` on edit
-- [ ] Reconsider `DeleteBulkAction`
-- [ ] Surface an expired driving licence on the index and the view page
+- [x] Remove `is_blacklisted` / `blacklist_reason` from the create and edit forms
+- [x] Section the form into Identity / Licence / Contact / Commercial / Status
+- [x] Collapse the two name columns into one searchable column
+- [x] Add the four filters; set `defaultSort('created_at', 'desc')`
+- [x] `->actions(` → `->recordActions(`
+- [x] Add the six read-only relation managers, grouped, with money ones gated
+- [x] Freeze `code` on edit
+- [x] Reconsider `DeleteBulkAction`
+- [x] Surface an expired driving licence on the index and the view page
 
 ## Verification
 
