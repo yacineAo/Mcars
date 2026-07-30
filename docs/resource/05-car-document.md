@@ -1,6 +1,6 @@
 # 05 — CarDocument (Fleet)
 
-**Model:** `App\Models\CarDocument` · **Slug:** `/admin/car-documents` · **Status:** 🔴 needs work
+**Model:** `App\Models\CarDocument` · **Slug:** `/admin/car-documents` · **Status:** ✅ complete
 
 Closes **REQ-13** (expiry notifications) and half of **ADV-02** (document archive). Read
 [`../06-design-decisions.md`](../06-design-decisions.md) **ADR-009** — this is the resource it
@@ -19,14 +19,14 @@ The list exists. The expiry filter does not, which is the whole feature.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 6 columns, `->filters([])` **empty**, no default sort |
-| create | ✅ | 9 fields, flat — no file upload |
-| view | ❌ | absent; see below |
-| edit | ✅ | same form; nothing frozen |
-| row actions | ✅ | `renew`, Edit — via deprecated `->actions([...])` (`:89`) |
-| header / toolbar actions | 🟡 | `CreateAction`; `DeleteBulkAction` in a group (`:132`) |
+| index | ✅ | 9 columns, 5 filters (expiry window defaulted, current-only, type, car, branch), `defaultSort('expiry_date')`, eager-load + `withPostedToLedger` |
+| create | ✅ | 10 fields including `SpatieMediaLibraryFileUpload` for the scan |
+| view | ❌ | absent by design — modal preview action on row is enough |
+| edit | ✅ | `car_id`/`type` frozen after creation; superseded docs gated by `canEdit()` returning false |
+| row actions | ✅ | `renew`, `preview_scan`, Edit, Delete — via `->recordActions([...])` |
+| header / toolbar actions | 🟡 | `CreateAction` only; no `DeleteBulkAction` |
 | relation managers | ❌ | none needed |
-| `canAccess()` | ❌ | absent |
+| `canAccess()` | ✅ | gates on `fleet.view` |
 
 **What is right, verified.** ADR-009's schema half holds: `car_documents` has **no `*_path`
 column** — the table is `car_id`, `type`, `number`, `issuer`, `issue_date`, `expiry_date`,
@@ -192,21 +192,23 @@ This screen exists for the cross-fleet worklist view, not for per-car editing.
 
 ## Checklist
 
-- [ ] Add the expiry-window filter and default it to "expiring or expired";
+- [x] Add the expiry-window filter and default it to "expiring or expired";
       `defaultSort('expiry_date')`
-- [ ] Add a current-only `TernaryFilter` on `replaced_by_id`, defaulted to current
-- [ ] Add type, car and branch (via `car`) filters; eager-load `car`
-- [ ] Add a **days remaining** column, coloured, and a superseded icon
-- [ ] Build the policy-checked media controller ADR-009 specifies, then add a
-      `SpatieMediaLibraryFileUpload` for the `document` collection and a preview action
-- [ ] Move `renew` into a service, inside one transaction
-- [ ] Post the renewal cost through `AccountingService` (E42) — coordinate with
-      [`07-maintenance-log.md`](07-maintenance-log.md) gap 1, same missing poster work
-- [ ] Require `expiry_date`
-- [ ] Freeze `car_id` and `type` on edit; make superseded documents read-only
-- [ ] Remove `DeleteBulkAction`
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add `canAccess()` once a fleet permission exists; gate `cost`
+- [x] Add a current-only `TernaryFilter` on `replaced_by_id`, defaulted to current
+- [x] Add type, car and branch (via `car`) filters; eager-load `car` + `withPostedToLedger`
+- [x] Add a **days remaining** column, coloured (`danger`/`warning`/`gray`), and a superseded icon
+- [x] Build the policy-checked media controller ADR-009 specifies — `DocumentMediaController` at
+      `GET /media/car-documents/{id}/download` with a `temporarySignedRoute` + `fleet.view` check;
+      then add `SpatieMediaLibraryFileUpload` for the `document` collection and a preview action
+- [x] Move `renew` into `RecordDocumentRenewalService::renew()`, inside one transaction
+- [x] Post the renewal cost through `AccountingService` (E42 / E42b / E42c) inside the same
+      transaction — `renew()` calls `MaintenancePoster::postDocumentRenewed()` when cost > 0
+- [x] Require `expiry_date` in the form schema
+- [x] Freeze `car_id` and `type` on edit via `->disabled(fn (... $operation === 'edit'))`;
+      superseded docs gated by `canEdit()`/`canDelete()` returning false
+- [x] Remove `DeleteBulkAction`; toolbar is empty
+- [x] `->actions(` → `->recordActions(`
+- [x] Add `canAccess()` gated on `fleet.view`; `cost` gated on `reports.view_financials`
 
 ## Verification
 

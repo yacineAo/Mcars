@@ -60,6 +60,49 @@ class RecordDocumentRenewalService
     }
 
     /**
+     * Renew a document: create the replacement, mark the old one as superseded, and
+     * optionally post the renewal cost (E42 / E42b / E42c) if the cost is positive.
+     * All three writes happen inside one database transaction.
+     *
+     * @param array{number: string, issuer?: ?string, issue_date: string, expiry_date: string, cost?: string} $data
+     */
+    public function renew(CarDocument $oldDocument, array $data, ?FinancialAccount $account, int $userId): CarDocument
+    {
+        return $this->db->transaction(function () use ($oldDocument, $data, $account, $userId): CarDocument {
+            // Guard against concurrent renewals: re-read the row with a lock so that
+            // a second request entering this transaction sees the committed write
+            // (or waits for the first transaction's lock to release).
+            $locked = CarDocument::lockForUpdate()->findOrFail($oldDocument->id);
+
+            if ($locked->replaced_by_id !== null) {
+                throw new RuntimeException('This document has already been renewed.');
+            }
+
+            $newDocument = CarDocument::create([
+                'car_id' => $oldDocument->car_id,
+                'type' => $oldDocument->type,
+                'number' => $data['number'],
+                'issuer' => $data['issuer'] ?? $oldDocument->issuer,
+                'issue_date' => $data['issue_date'],
+                'expiry_date' => $data['expiry_date'],
+                'cost' => $data['cost'] ?? 0,
+                'reminder_days_before' => $oldDocument->reminder_days_before,
+            ]);
+
+            $oldDocument->update(['replaced_by_id' => $newDocument->id]);
+
+            $cost = Money::of($newDocument->cost ?? '0');
+            if ($cost->isPositive() && $this->isPostable($newDocument->type)) {
+                $this->accounting->post(
+                    $this->poster->postDocumentRenewed($newDocument, $account, $userId),
+                );
+            }
+
+            return $newDocument;
+        });
+    }
+
+    /**
      * Whether a live (non-reversed) E42 row exists for this document.
      *
      * A table showing this per row must **not** call this per record — that is one query a
