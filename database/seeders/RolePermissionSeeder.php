@@ -72,6 +72,35 @@ class RolePermissionSeeder extends Seeder
                 UserRole::SuperAdmin,
                 UserRole::Accountant,
             ],
+            // Fleet, per docs/02-filament-panels.md §Role → visibility matrix: the row
+            // reads "full | read | read | full (maintenance), read (rest) | read", so
+            // every staff role reads the fleet — a receptionist cannot pick a car to
+            // rent out without seeing it.
+            'fleet.view' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+                UserRole::Receptionist,
+                UserRole::MaintenanceOfficer,
+                UserRole::Supervisor,
+            ],
+            // Writing the car record itself — plate, VIN, rates, ownership. "full" in
+            // the matrix belongs to the manager alone. The maintenance officer's "full"
+            // is scoped to maintenance and is fleet.manage_maintenance below, not this:
+            // a mechanic who may complete a service may not re-price the car.
+            'fleet.manage' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
+            // The "(maintenance)" half of the maintenance officer's row — logs and
+            // schedules. Separate from fleet.manage so the officer's write access stops
+            // at the workshop record. Note this permission gates an action that posts
+            // E41 to the ledger, so it is deliberately narrower than fleet.view.
+            'fleet.manage_maintenance' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::MaintenanceOfficer,
+            ],
         ];
 
         foreach ($grants as $permissionName => $roles) {

@@ -176,7 +176,24 @@ should appear read-only under a vendor — see [`08-vendor.md`](08-vendor.md) §
    to make; and the same figure can be entered twice, once here and once as an Expense, with
    nothing detecting the double count. Build the poster, add its row to the posting matrix, and
    correct the phase doc.
+
+   **Fixed** (with [`02-car.md`](02-car.md) gap 5). `app/Services/Accounting/MaintenancePoster.php`
+   builds E41 — Dr 5040, Cr the chosen financial account's ledger account or 2210 AP–Suppliers
+   when the bill is left on credit, stamped `car_id` with vendor, invoice number and odometer in
+   `meta`, and `occurred_on` set to the completion date rather than today.
+   `App\Services\Fleet\CompleteMaintenanceService` is the single owner of "a service was
+   completed" and posts it. No posting-matrix row was needed: E41 was already in the matrix and
+   simply unimplemented. A zero-cost service (warranty, in-house) completes without a posting,
+   since a zero-amount row would fail `validateDraft()` and say nothing. Completing an
+   already-completed log is refused, because the ledger is append-only and a double post could
+   only be undone by a reversal. Both call sites — this resource and the car page's own
+   maintenance table — go through the service, so neither can record work without the money.
+   Covered by `tests/Feature/MaintenancePostingTest.php`.
 2. **🔴 The resource computes the total.** `MaintenanceLogResource.php:142-144`. See §Money.
+   **Fixed.** The sum moved into `CompleteMaintenanceService`, which derives `total_cost` from
+   `Money::of(parts)->plus(labour)`. `total_cost` on the form is now `disabled()` and
+   `dehydrated(false)`, so it can no longer read 100 against parts 5,000 and labour 3,000 — which
+   mattered more once E41 started posting that figure.
 3. **🔴 `complete_service` forces the car to `Available`, bypassing the state machine.**
    `MaintenanceLogResource.php:157-161` calls `$record->car->update([... 'status' => CarStatus::Available])`
    unconditionally. `FleetStatusService::transition()` exists to judge exactly this
@@ -186,11 +203,23 @@ should appear read-only under a vendor — see [`08-vendor.md`](08-vendor.md) §
    search will now offer twice; and a car that was `sold` or `returned_to_owner` is dragged back
    out of a terminal state, which the transition table forbids. Route it through the service and
    only move the car when it was actually in `maintenance`.
+
+   **Fixed.** `CompleteMaintenanceService::releaseCar()` calls
+   `FleetStatusService::transition()`, and only when the car's status is actually
+   `maintenance` — so a car serviced mid-rental stays `rented` and a terminal car is never
+   dragged back. The odometer is advanced with `max()`, so a completion can never lower a
+   recorded reading.
 4. **🔴 `complete_service` does not recompute the schedule.** The whole point of recording
    `completed_at` and `odometer_at_service` is to advance the next service due, and
    `MaintenanceSchedulerService::recomputeSchedule()` is never called from here or anywhere else.
    Full evidence in [`06-maintenance-schedule.md`](06-maintenance-schedule.md) gap 1. Practical
    effect: the service-due alert keeps firing for a car that was serviced this morning.
+
+   **Fixed.** `CompleteMaintenanceService` calls `recomputeSchedule()` inside the same
+   transaction as the log write and the posting. The scheduler itself was left in place rather
+   than reimplemented — it already had the calculation, it only lacked a caller — but its date
+   assignments were changed from `toDateString()` strings to Carbon instances so they match the
+   `date` casts on `MaintenanceSchedule`.
 5. **🟡 `total_cost` is shown to every staff role.** `TextColumn::make('total_cost')->money('DZD')`
    (`:104-106`) with no gate and no `canAccess()` on the resource. Per CLAUDE.md,
    `reports.view_financials` gates "revenue, profit, cash flow and receivables" — a workshop

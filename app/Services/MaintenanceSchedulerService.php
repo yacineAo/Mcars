@@ -26,19 +26,19 @@ class MaintenanceSchedulerService
 
     private function recomputeSingle(MaintenanceSchedule $schedule, MaintenanceLog $log): void
     {
-        $schedule->last_done_at = $log->completed_at?->toDateString();
+        $completedAt = $log->completed_at;
+
+        $schedule->last_done_at = $completedAt;
         $schedule->last_done_odometer = $log->odometer_at_service;
 
         $nextDueAt = null;
         $nextDueOdometer = null;
 
-        if ($schedule->interval_days && $log->completed_at) {
-            $nextDueAt = Carbon::parse($log->completed_at)
-                ->addDays($schedule->interval_days)
-                ->toDateString();
+        if ($schedule->interval_days !== null && $completedAt !== null) {
+            $nextDueAt = Carbon::parse($completedAt)->addDays($schedule->interval_days);
         }
 
-        if ($schedule->interval_km && $log->odometer_at_service) {
+        if ($schedule->interval_km !== null && $log->odometer_at_service !== null) {
             $nextDueOdometer = $log->odometer_at_service + $schedule->interval_km;
         }
 

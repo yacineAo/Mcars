@@ -12,6 +12,7 @@ use App\Enums\TransmissionType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +36,10 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property int|null $mileage_limit_per_day
  * @property int|null $odometer
  * @property string|null $security_deposit_amount
+ * @property CarbonInterface|null $odometer_updated_at
+ * @property CarbonInterface|null $purchase_date
+ * @property CarbonInterface|null $created_at
+ * @property bool $is_active
  */
 class Car extends Model implements HasMedia
 {
@@ -183,7 +188,27 @@ class Car extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('gallery');
-        $this->addMediaCollection('damage');
+        // ADR-009: media lives on the private disk. A car photo identifies a vehicle
+        // and its plate, so it is no more public than a contract scan.
+        $this->addMediaCollection('gallery')
+            ->useDisk('private');
+
+        $this->addMediaCollection('damage')
+            ->useDisk('private');
+    }
+
+    /**
+     * A company-owned car has no third-party owner. The edit form hides `car_owner_id`
+     * when ownership is not third-party, and a hidden Filament field is skipped during
+     * dehydration — so without this the previous owner would survive the switch and the
+     * car would read as company-owned while still pointing at a `car_owner`.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $car): void {
+            if ($car->ownership_type === OwnershipType::CompanyOwned) {
+                $car->car_owner_id = null;
+            }
+        });
     }
 }

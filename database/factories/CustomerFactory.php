@@ -18,7 +18,7 @@ class CustomerFactory extends Factory
             'type' => 'individual',
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
-            'phone' => fake()->phoneNumber(),
+            'phone' => '0'.fake()->numerify('#########'),
             'national_id' => fake()->numerify('##############'),
             'driving_license_number' => strtoupper(fake()->bothify('LIC-#######')),
             'is_active' => true,

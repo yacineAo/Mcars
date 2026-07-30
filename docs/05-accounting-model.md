@@ -211,8 +211,10 @@ is the balance of 2200 filtered by `car_owner_id`** — never a stored column. I
 | E38 | Expense approved, unpaid (on credit) | 5xxx per category | 2210 AP–Suppliers | car *(if car-related)*, vendor, expense_category |
 | E39 | Expense paid immediately | 5xxx per category | 1010 / 1020 / 1030 | car, vendor, category, cash_session |
 | E40 | Supplier paid later | 2210 AP–Suppliers | 1010 / 1020 | vendor |
-| E41 | Maintenance completed | 5040 Maintenance & Repairs | 1010 or 2210 | **car**, vendor, maintenance_log |
-| E42 | Insurance renewed | 5050 Insurance | 1010 or 2210 | **car**, car_document |
+| E41 | Maintenance completed | 5040 Maintenance & Repairs | 1010 / 1020 / 1030 or 2210 | **car**, vendor, maintenance_log |
+| E42 | Insurance renewed | 5050 Insurance | 1010 / 1020 / 1030 or 2210 | **car**, car_document |
+| E42b | Registration card / road-tax vignette / technical inspection renewed | 5060 Taxes & Registration | 1010 / 1020 / 1030 or 2210 | **car**, car_document |
+| E42c | GPS subscription renewed for a car | 5100 Internet & Telecom | 1010 / 1020 / 1030 or 2210 | **car**, car_document |
 | E43 | Fuel | 5020 Fuel | 1010 | **car** *(required)* |
 | E44 | Car wash | 5030 Car Wash | 1010 | **car** |
 | E45 | Registration / road tax | 5060 Taxes & Registration | 1010 | **car** |
@@ -223,6 +225,26 @@ is the balance of 2200 filtered by `car_owner_id`** — never a stored column. I
 E48 matters for fairness: without it, a company-owned car shows no cost of capital and always appears
 more profitable than an identical third-party car paying rent. Optional in Phase 4, recommended
 before comparing the two fleets in reports.
+
+**E42, E42b and E42c are one code path** — `App\Services\Fleet\RecordDocumentRenewalService`, whose
+draft comes from `MaintenancePoster::postDocumentRenewed()`. The expense account follows
+`car_documents.type`; the row split above exists so each account choice is stated rather than
+inferred. Three things they deliberately clarify, because each one contradicts a neighbouring row
+if you read it quickly:
+
+- **E42b overlaps E45 on purpose.** Both debit 5060. E45 is an ad-hoc cash payment recorded as an
+  `Expense`; E42b is a renewal backed by a `car_documents` row, so it carries the `car_document`
+  dimension and may be left on credit. Same account, different source document.
+- **E42c is the car-dimensioned counterpart of E47.** E47 says "branch only" for 5100 because office
+  internet belongs to a branch, not a vehicle. A GPS subscription is billed per tracked car, and
+  REQ-02 names GPS explicitly, so it *must* carry `car_id` or per-car profitability loses it. E47's
+  "branch only" constrains E47, not the account.
+- **The 2210 leg is the E38 accrual shape**, not a new idea: "expense approved, unpaid → 5xxx per
+  category / 2210". Choosing a financial account pays now; leaving it empty owes the supplier.
+
+`ownership_title`, `purchase_invoice` and `other` have **no** row here and none is intended — an
+ownership title is acquisition paperwork, not a running cost. `RecordDocumentRenewalService::isPostable()`
+refuses them, so an unmapped type fails loudly instead of guessing an account.
 
 ### Fines (REQ-14)
 

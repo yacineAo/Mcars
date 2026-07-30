@@ -52,7 +52,9 @@ not be comparable in profitability reports.
 ### Services
 - [x] **`AccountingService`** — `post()`, `postMany()` (atomic, for multi-leg entries sharing a
       `group_uuid`), `reverse()`, `balanceOf()`. Thin; the account knowledge lives in Posters.
-- [x] Posters: `ExpensePoster`, `MaintenancePoster`, `CashSessionPoster`
+- [x] Posters: `ExpensePoster`, `CashSessionPoster`, `MaintenancePoster` (E41 + E42 —
+      **actually built later, with `docs/resource/02-car.md`**; this line claimed it in Phase 4
+      while `app/Services/Accounting/` held no such class)
 - [x] **`CashRegisterService`** — balance from the ledger, open/close session, physical count,
       **variance posted as a real transaction** (E68/E69) so the ledger reconciles to the drawer
 
@@ -71,8 +73,13 @@ not be comparable in profitability reports.
       **orphan dimensions** (a car-related expense with `car_id IS NULL` silently corrupts per-car P&L)
 
 ### Retro-wire Phase 2
-- [x] Completed maintenance logs and renewed car documents now post expenses stamped with `car_id`.
-      Find them by the `// PHASE-4:` markers.
+- [x] Completed maintenance logs and renewed car documents post expenses stamped with `car_id`.
+      **This was not true when first ticked** — there were no `// PHASE-4:` markers and no
+      posting; 4 completed logs worth 81,424 DZD and 24 documents worth 584,949 DZD sat outside
+      the ledger. Delivered with `docs/resource/02-car.md`: E41 via
+      `App\Services\Fleet\CompleteMaintenanceService`, E42 via `RecordDocumentRenewalService`,
+      both building drafts through `MaintenancePoster`. Tests:
+      `tests/Feature/MaintenancePostingTest.php`.
 
 ## Tests
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Booking;
 
 use App\Enums\BookingStatus;
+use App\Enums\CarStatus;
 use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\Car;
@@ -29,7 +30,13 @@ class BookingAvailabilityService
 
     public function availableCars(CarbonPeriod $period, ?CarCategory $category = null, ?Branch $branch = null): Collection
     {
-        $query = Car::query()->where('status', 'available');
+        // `is_active` withdraws a car from availability. Decided in docs/resource/02-car.md:
+        // the toggle on the car page said "active" and did nothing, so a car taken off the
+        // road was still offered by search. Status covers *why* a car is unavailable today;
+        // is_active covers "not part of the rentable fleet at all".
+        $query = Car::query()
+            ->where('status', CarStatus::Available->value)
+            ->where('is_active', true);
 
         if ($category !== null) {
             $query->where('car_category_id', $category->id);
