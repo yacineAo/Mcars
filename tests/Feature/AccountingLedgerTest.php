@@ -485,3 +485,39 @@ it('generates consecutive transaction references', function () {
     expect($txn2->reference)->toMatch('/^TRX-/');
     expect($txn2->reference)->not->toBe($txn1->reference);
 });
+
+it('returns false from hasPostings for a new account with no transactions', function () {
+    $account = ChartOfAccount::factory()->create();
+
+    expect($account->hasPostings())->toBeFalse();
+});
+
+it('returns true from hasPostings for an account used as debit leg', function () {
+    $account = account('1010');
+
+    $this->service->post(new TransactionDraft(
+        debitAccountId: $account->id,
+        creditAccountId: account('4010')->id,
+        amount: '1000.00',
+        type: TransactionType::RentalRevenue,
+        occurredOn: new DateTimeImmutable,
+        createdById: $this->user->id,
+    ));
+
+    expect($account->fresh()->hasPostings())->toBeTrue();
+});
+
+it('returns true from hasPostings for an account used as credit leg', function () {
+    $account = account('4010');
+
+    $this->service->post(new TransactionDraft(
+        debitAccountId: account('1010')->id,
+        creditAccountId: $account->id,
+        amount: '1000.00',
+        type: TransactionType::RentalRevenue,
+        occurredOn: new DateTimeImmutable,
+        createdById: $this->user->id,
+    ));
+
+    expect($account->fresh()->hasPostings())->toBeTrue();
+});

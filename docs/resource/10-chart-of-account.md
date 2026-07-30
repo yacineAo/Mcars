@@ -1,6 +1,6 @@
 # 10 — ChartOfAccount (Accounting)
 
-**Model:** `App\Models\ChartOfAccount` · **Slug:** `/admin/chart-of-accounts` · **Status:** 🔴 needs work
+**Model:** `App\Models\ChartOfAccount` · **Slug:** `/admin/chart-of-accounts` · **Status:** 🟢 done
 
 Closes **REQ-08**. Read [`../05-accounting-model.md`](../05-accounting-model.md) — this
 table *is* the posting matrix's vocabulary.
@@ -94,13 +94,13 @@ A postings table must match either leg (debit **or** credit), which is a query, 
 
 ## Checklist
 
-- [ ] Remove `DeleteBulkAction`; guard single delete on postings and `is_system`
-- [ ] Make `is_system` display-only in the form
-- [ ] Freeze `code`, `type` and `normal_balance` once the account has postings
-- [ ] Add `type` / `is_active` / `is_postable` / `is_system` filters
-- [ ] Render the tree (group by type, or indent by parent)
-- [ ] Decide on a view page carrying a read-only, gated postings table
-- [ ] `->actions(` → `->recordActions(`
+- [x] Remove `DeleteBulkAction`; guard single delete on postings and `is_system`
+- [x] Make `is_system` display-only in the form
+- [x] Freeze `code`, `type` and `normal_balance` once the account has postings
+- [x] Add `type` / `is_active` / `is_postable` / `is_system` filters
+- [x] Render the tree (group by type, or indent by parent)
+- [x] Decide on a view page carrying a read-only, gated postings table
+- [x] `->actions(` → `->recordActions(`
 
 ## Verification
 

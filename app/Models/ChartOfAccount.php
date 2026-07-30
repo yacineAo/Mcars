@@ -66,4 +66,12 @@ class ChartOfAccount extends Model
     {
         return $this->type->is(AccountType::Revenue, AccountType::Expense);
     }
+
+    public function hasPostings(): bool
+    {
+        return Transaction::query()
+            ->where('debit_account_id', $this->id)
+            ->orWhere('credit_account_id', $this->id)
+            ->exists();
+    }
 }
