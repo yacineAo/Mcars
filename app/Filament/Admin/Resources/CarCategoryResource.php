@@ -21,6 +21,8 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use UnitEnum;
 
@@ -33,6 +35,26 @@ class CarCategoryResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
     protected static string|UnitEnum|null $navigationGroup = 'Fleet';
+
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->can('fleet.view') ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
 
     public static function form(Schema $schema): Schema
     {

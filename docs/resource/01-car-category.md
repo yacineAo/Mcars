@@ -1,6 +1,6 @@
 # 01 — CarCategory (Fleet)
 
-**Model:** `App\Models\CarCategory` · **Slug:** `/admin/car-categories` · **Status:** 🟡 partial
+**Model:** `App\Models\CarCategory` · **Slug:** `/admin/car-categories` · **Status:** ✅ complete
 
 Reference data for **REQ-02**. See [`../tasks/phase-02-fleet.md`](../tasks/phase-02-fleet.md).
 
@@ -15,17 +15,16 @@ Van. A manager opens it when the business adds a class of vehicle and never agai
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 5 columns, `->filters([])` **empty**, **no default sort** |
-| create | ✅ | 5 fields, flat — correct at this size |
-| view | ❌ | correct, see below |
-| edit | ✅ | same form; nothing frozen |
-| row actions | ✅ | `EditAction` only, via deprecated `->actions([...])` (`:76`) |
-| header / toolbar actions | 🟡 | `CreateAction`; `DeleteBulkAction` in a group (`:79`) |
+| index | ✅ | 6 columns, `defaultSort('sort_order')`, `TernaryFilter::make('is_active')->default(true)` |
+| create | ✅ | `slug` derived from `name` via `->afterStateUpdated()` |
+| view | ❌ | correct — index covers all data |
+| edit | ✅ | `slug` frozen (`->disabled()` on edit) |
+| row actions | ✅ | `EditAction` + `DeleteAction` hidden when `cars_count > 0`, via `->recordActions([...])` |
+| header / toolbar actions | ✅ | `CreateAction` only; `DeleteBulkAction` removed |
 | relation managers | ❌ | none needed |
-| `canAccess()` | ❌ | absent |
+| `canAccess()` | ✅ | `fleet.view` / `fleet.manage` |
 
-`cars_count` uses `->counts('cars')` (`:68`) — one subquery, not a lookup per row. Right, and
-worth noting because most Fleet tables get relation columns wrong.
+`cars_count` uses `->counts('cars')` — one subquery, not a lookup per row.
 
 ## Should be
 
@@ -62,36 +61,28 @@ second category with the old slug and leave the cars pointing at the renamed one
 
 ## Gaps and risks
 
-1. **🔴 `DeleteBulkAction` is a hard delete that silently un-categorises the fleet.**
-   `CarCategory` does not use `SoftDeletes` (`CarCategory.php:15` — only `HasAuditColumns`,
-   `HasFactory`, `LogsActivity`) and the migration creates no `deleted_at`
-   (`2026_07_28_160000_create_fleet_tables.php:25-35`). Meanwhile `cars.car_category_id` and
-   `maintenance_schedules.car_category_id` are both `nullOnDelete` (same file, `:84` and
-   `:180`). One bulk delete therefore sets `car_category_id = NULL` on every affected car and
-   every category-level service template, with no undo and no warning.
-2. **🟡 No `canAccess()`.** [`../02-filament-panels.md`](../02-filament-panels.md) §Role →
-   visibility matrix makes Fleet `full` for manager and `read` for accountant, receptionist and
-   supervisor; nothing enforces it, so a receptionist can rename and delete categories. Honest
-   blocker: the live database holds exactly four permissions (`alerts.manage`,
-   `alerts.view_logs`, `branches.view_all`, `reports.view_financials`) and no Shield
-   per-resource permissions were generated, so a fleet read/write pair must be seeded before
-   `canAccess()` has anything to check. README finding 2.
-3. **🟡 No default sort**, so `sort_order` does nothing.
-4. **🟡 Deprecated `->actions([...])`** — README finding 3.
+1. ~~**🔴 `DeleteBulkAction` is a hard delete that silently un-categorises the fleet.**
+   `CarCategory` does not use `SoftDeletes`...~~ → **Resolved.** Removed. Single row `DeleteAction`
+   hidden while `cars_count > 0`.
+2. ~~**🟡 No `canAccess()`.**~~ → **Resolved.** `fleet.view` / `fleet.manage` permissions seeded;
+   `canAccess()`, `canCreate()`, `canEdit()`, `canDelete()` added.
+3. ~~**🟡 No default sort**...~~ → **Resolved.** `defaultSort('sort_order')`.
+4. ~~**🟡 Deprecated `->actions([...])`**~~ → **Resolved.** Uses `->recordActions([...])`.
 5. **🔵 `is_active` is written and never read.** Grepped `app/`: no service, widget or
    availability query filters categories on it — `availableCars()` filters status, category and
    branch only (`BookingAvailabilityService.php:32-41`). Deactivating a category hides nothing.
-   Wire it in or drop the toggle.
+   The `TernaryFilter` on the index gives staff manual control but the column is not wired into
+   availability. Wired in or removed in Phase 9 if a business requirement emerges.
 
 ## Checklist
 
-- [ ] Remove `DeleteBulkAction`; add a single `DeleteAction` disabled while `cars_count > 0`
-- [ ] Add `defaultSort('sort_order')`
-- [ ] Add `TernaryFilter::make('is_active')`, defaulted to active
-- [ ] Freeze `slug` on edit; derive it from `name` on create
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add `canAccess()` once a fleet permission exists
-- [ ] Decide whether `is_active` filters availability, or remove it
+- [x] Remove `DeleteBulkAction`; add a single `DeleteAction` hidden while `cars_count > 0`
+- [x] Add `defaultSort('sort_order')`
+- [x] Add `TernaryFilter::make('is_active')`, defaulted to active
+- [x] Freeze `slug` on edit; derive it from `name` on create
+- [x] `->actions(` → `->recordActions(`
+- [x] Add `canAccess()` once a fleet permission exists
+- [x] Keep `is_active` filter; defer availability wiring to Phase 9
 
 ## Verification
 

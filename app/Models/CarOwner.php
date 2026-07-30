@@ -46,6 +46,11 @@ class CarOwner extends Model
         ];
     }
 
+    public function getFullNameAttribute(): string
+    {
+        return trim($this->first_name.' '.$this->last_name);
+    }
+
     /** @return BelongsTo<User> */
     public function user(): BelongsTo
     {

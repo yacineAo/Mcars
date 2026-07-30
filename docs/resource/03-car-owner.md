@@ -1,6 +1,6 @@
 # 03 — CarOwner (Fleet)
 
-**Model:** `App\Models\CarOwner` · **Slug:** `/admin/car-owners` · **Status:** 🔴 needs work
+**Model:** `App\Models\CarOwner` · **Slug:** `/admin/car-owners` · **Status:** 🟢 complete
 
 Closes **REQ-03** (third-party cars) together with
 [`04-car-ownership-agreement.md`](04-car-ownership-agreement.md) and
@@ -20,17 +20,16 @@ None of it is on this screen.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 6 columns, `->filters([])` **empty**, no default sort |
-| create | ✅ | 17 fields, flat, zero sections |
-| view | ❌ | absent — and it is the missing piece; see below |
-| edit | ✅ | same flat form; nothing frozen |
-| row actions | ✅ | `create_agreement`, Edit — via deprecated `->actions([...])` (`:112`) |
-| header / toolbar actions | 🟡 | `CreateAction`; `DeleteBulkAction` in a group (`:161`) |
-| relation managers | ❌ | **none** — the panel doc specifies three |
-| `canAccess()` | ❌ | absent |
+| index | ✅ | `full_name` column, 7 columns including `active_agreements_count` and gated toggleable `outstanding_balance`; filters: type, is_active, has-active-agreement, wilaya; `defaultSort('created_at', 'desc')` |
+| create | ✅ | 4 sections (Identity, Contact, Payment Details gated, Status); `type` is `live()`; `first_name`/`last_name` vs `company_name`/`trade_register` toggle on type |
+| view | ✅ | Identity & Contact, gated Payment Details, gated Statement, Notes + 3 relation groups (Cars, Instalments, Payments) |
+| edit | ✅ | same sections; `type` freezes when agreements exist; agreements relation manager on edit page |
+| row actions | ✅ | `ViewAction`, `create_agreement`, `EditAction`, `DeleteAction` hidden when cars or agreements exist — all via `->recordActions([...])` |
+| header / toolbar actions | ✅ | only `CreateAction`; `DeleteBulkAction` removed |
+| relation managers | ✅ | `CarsRelationManager` (view, read-only), `AgreementsRelationManager` (edit, writable), `InstallmentsRelationManager` (view, gated), `PaymentsRelationManager` (view, gated) |
+| `canAccess()` | ✅ | `fleet.view` / `fleet.manage` |
 
-`cars_count` uses `->counts('cars')` (`:106`), a single subquery — correct, and the only
-relation column on the table, so the index carries no N+1.
+`cars_count` uses `->counts('cars')`, a single subquery — no N+1.
 
 ## Should be
 
@@ -128,57 +127,34 @@ called out in [`09-customer.md`](09-customer.md).
 
 ## Gaps and risks
 
-1. **🔴 `create_agreement` builds an ownership agreement in the resource, incompletely, and
-   can 500.** `CarOwnerResource.php:140-157` calls `CarOwnershipAgreement::create()` directly.
-   Three separate problems:
-   - It writes `'status' => 'active'` as a raw string and defaults
-     `monthly_rent_amount` and `share_percentage` to `0` regardless of the `model` chosen, so
-     a `fixed_monthly` agreement can be saved with 0 rent and a `revenue_share` one with 0%.
-     Nothing validates that the model and the amounts agree.
-   - It never sets `payment_day_of_month`, `installments_count` or `first_due_date`. Those are
-     the three fields REQ-03 asks for ("payment due date… number of instalments") and the
-     three an instalment generator needs. An agreement created here produces no schedule.
-   - The database has an `EXCLUDE` constraint `agreements_no_overlap` on
-     `(car_id, daterange(start_date, end_date)) WHERE status = 'active'`
-     (`2026_07_28_160000_create_fleet_tables.php:248-255`, ADR-006). Creating a second active
-     agreement for a car raises a raw `QueryException` with no handling in the action, so the
-     user gets a 500 rather than "this car already has an active agreement".
-     `FleetManagementTest` asserts the constraint fires; nothing asserts the UI survives it.
-
-   All of it belongs in a service. `app/Actions/` does not exist (README finding 5), so
-   `app/Services/`.
-2. **🔴 Zero relation managers, against an explicit spec.** See Relations. The consequence is
-   concrete: there is no screen in the panel that shows one owner's cars, agreements and
-   instalments together, so "what do we owe Ahmed?" is answered by running a report and
-   reading a PDF.
-3. **🟡 The `car_id` Select in `create_agreement` is wrong either way.**
-   `CarOwnerResource.php:119-121` is `Select::make('car_id')->relationship('cars', 'registration_number')`
-   — a `hasMany` used as a Select source inside an action form. **Unverified which way it
-   resolves**, and both are defects: if it resolves against the record it offers only cars
-   whose `car_owner_id` is already this owner, which is chicken-and-egg since the agreement
-   is what makes a car third-party; if it resolves against `Car` globally it offers every
-   company-owned car in the fleet. Replace it with an explicit `->options()` listing cars that
-   have no active agreement. Verify the current behaviour before changing it.
-4. **🟡 `DeleteBulkAction` on owners.** An owner is referenced by cars, agreements,
-   instalments and ledger rows carrying `car_owner_id`. `car_ownership_agreements.car_owner_id`
-   is `cascadeOnDelete` (`2026_07_28_160000_create_fleet_tables.php:140`), so a future
-   force-delete removes the agreement history behind the payments. Soft deletes cover the
-   normal case, but bulk-deleting the people you owe money to should not be one click away.
-5. **🟡 Bank RIB, CCP account and BaridiMob number are readable by every staff role.** They sit
-   on an ungated create/edit form. These are payment credentials; the same reasoning that puts
-   `reports.view_financials` in front of receivables applies. Move them into a gated section.
-6. **🟡 Empty `->filters([])`, no default sort.**
-7. **🟡 No `canAccess()`.** Fleet is `read` for receptionist and supervisor per
-   [`../02-filament-panels.md`](../02-filament-panels.md) §Role → visibility matrix. Same
-   blocker as the rest of the cluster: the live database holds four permissions and no Shield
-   per-resource permissions, so a fleet permission pair must be seeded first (README
-   finding 2).
-8. **🟡 Deprecated `->actions([...])`** — README finding 3.
+1. ~~**🔴 `create_agreement` builds an ownership agreement in the resource, incompletely...**~~ →
+   **Resolved.** Delegated to `OwnerAgreementService` which validates model-vs-amounts (requires
+   `monthly_rent_amount` for `fixed_monthly` / `hybrid`, `share_percentage` for `revenue_share` /
+   `hybrid`), includes instalment fields (`payment_day_of_month`, `installments_count`,
+   `first_due_date`), and proactively checks for overlapping active agreements before creating —
+   turns the `EXCLUDE` violation into a validation message.
+2. ~~**🔴 Zero relation managers, against an explicit spec.**~~ → **Resolved.** Four relation
+   managers wired: `CarsRelationManager` (view, read-only), `AgreementsRelationManager` (edit,
+   writable), `InstallmentsRelationManager` (view, gated on `reports.view_financials`),
+   `PaymentsRelationManager` (view, gated on `reports.view_financials`).
+3. ~~**🟡 The `car_id` Select in `create_agreement` is wrong either way.**~~ → **Resolved.**
+   Replaced with explicit `->options()` listing cars without an active agreement (via
+   `whereDoesntHave('agreements', fn ($q) => $q->where('status', 'active'))`).
+4. ~~**🟡 `DeleteBulkAction` on owners.**~~ → **Resolved.** `DeleteBulkAction` removed. Single row
+   `DeleteAction` hidden when `cars_count > 0 || agreements()->exists()`.
+5. ~~**🟡 Bank RIB, CCP account and BaridiMob number are readable by every staff role.**~~ →
+   **Resolved.** Payment Details section gated on `reports.view_financials`.
+6. ~~**🟡 Empty `->filters([])`, no default sort.**~~ → **Resolved.** Filters: `type`,
+   `is_active` (defaulted true), `has_active_agreement` (toggle), `wilaya` (distinct values).
+   `defaultSort('created_at', 'desc')`.
+7. ~~**🟡 No `canAccess()`.**~~ → **Resolved.** `fleet.view` / `fleet.manage` seeded;
+   `canAccess()`, `canCreate()`, `canEdit()`, `canDelete()` added.
+8. ~~**🟡 Deprecated `->actions([...])`**~~ → **Resolved.** Uses `->recordActions([...])`.
 9. **🔵 `national_id` has no unique constraint.** `car_owners.national_id` is a nullable
    `string` with no index (`2026_07_28_160000_create_fleet_tables.php:46`). Customers got
    `2026_07_28_171000_add_customer_unique_constraints.php`; owners did not, so the same person
    can be entered twice and their instalments split across two records. Worth confirming
-   against REQ-03 whether that was deliberate.
+   against REQ-03 whether that was deliberate. **Deferred** — needs a migration.
 10. **🔵 Action labels do not translate.** "New Agreement" is set with `->label()` and never
     `->translateLabel()`. Filament's `HasLabel::getLabel()` only calls `__()` when
     `$shouldTranslateLabel` is true (default `false`), and `AdminPanelProvider` configures
@@ -187,26 +163,29 @@ called out in [`09-customer.md`](09-customer.md).
     `lang/fr.json` / `lang/ar.json` ("New Agreement" → "Nouveau contrat"), so the dictionary
     entries are dead weight. This affects every custom action in the Fleet cluster; the fix is
     one `Action::configureUsing(fn (Action $a) => $a->translateLabel())` in the panel
-    provider, not ten per-file edits.
+    provider, not ten per-file edits. **Unchanged** — cross-cutting fix outside this resource.
 
 ## Checklist
 
-- [ ] Move agreement creation into a service that validates model-vs-amounts, requires the
-      instalment fields, and turns the `EXCLUDE` violation into a validation message
-- [ ] Add a view page: identity, gated payment details, gated statement from
+- [x] Move agreement creation into a service (`OwnerAgreementService`) that validates
+      model-vs-amounts, requires the instalment fields, and turns the `EXCLUDE` violation
+      into a validation message
+- [x] Add a view page with identity, gated payment details, gated statement from
       `ReportService::ownerStatement()`
-- [ ] Add the four relation managers — `cars` and `payments` and `ownerInstallments` read-only
-      on view, `agreements` editable on edit — with the two money tables gated
-- [ ] Replace the `car_id` Select with explicit options: cars without an active agreement
-- [ ] Section the form; make `type` `live()`; move bank details into a gated section
-- [ ] Add the type / active / has-active-agreement / wilaya filters and a default sort
-- [ ] Collapse the two name columns into one searchable column
-- [ ] Add a gated, toggleable outstanding-balance column from `ReportService`
-- [ ] Reconsider `DeleteBulkAction`
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add `canAccess()` once a fleet permission exists
-- [ ] Freeze `type` once an agreement exists
-- [ ] Decide whether `national_id` should be unique
+- [x] Add the four relation managers — `CarsRelationManager`, `PaymentsRelationManager`,
+      `InstallmentsRelationManager` read-only on view, `AgreementsRelationManager` editable on
+      edit — with the two money tables gated on `reports.view_financials`
+- [x] Replace the `car_id` Select with explicit options: cars without an active agreement
+- [x] Section the form (Identity, Contact, Payment Details gated, Status); make `type` `live()`;
+      move bank details into a gated section
+- [x] Add the type / is-active / has-active-agreement / wilaya filters and `defaultSort('created_at', 'desc')`
+- [x] Collapse the two name columns into one `full_name` column searchable across both fields
+- [x] Add a gated, toggleable `outstanding_balance` column from account-2200 ledger aggregation
+- [x] Remove `DeleteBulkAction`; keep single `DeleteAction` hidden while cars or agreements exist
+- [x] `->actions(` → `->recordActions(`
+- [x] Add `canAccess()` with `fleet.view` / `fleet.manage`
+- [x] Freeze `type` on edit once an agreement exists
+- [ ] Decide whether `national_id` should be unique — deferred, needs migration
 
 ## Verification
 
