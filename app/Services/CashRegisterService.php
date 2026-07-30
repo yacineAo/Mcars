@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\CashSessionStatus;
+use App\Enums\NormalBalance;
 use App\Enums\TransactionType;
 use App\Models\CashSession;
+use App\Models\ChartOfAccount;
 use App\Models\FinancialAccount;
 use App\Models\Transaction;
 use App\Models\User;
@@ -34,6 +36,59 @@ class CashRegisterService
             $asOf?->format('Y-m-d'),
             $account->branch_id,
         );
+    }
+
+    /**
+     * Return current balances for many accounts in a single query.
+     *
+     * @param Collection<int, FinancialAccount> $accounts
+     * @return array<int, string> keyed by FinancialAccount id
+     */
+    public function balancesBatch(Collection $accounts): array
+    {
+        if ($accounts->isEmpty()) {
+            return [];
+        }
+
+        /** @var array<int, int> $ledgerIds */
+        $ledgerIds = $accounts->pluck('ledger_account_id')->unique()->filter()->toArray();
+
+        if ($ledgerIds === []) {
+            return $accounts->mapWithKeys(fn (FinancialAccount $account): array => [(int) $account->id => '0.00'])->all();
+        }
+
+        /** @var Collection<int, string> $debits */
+        $debits = Transaction::query()
+            ->whereIn('debit_account_id', $ledgerIds)
+            ->groupBy('debit_account_id')
+            ->selectRaw('debit_account_id AS ledger_id, SUM(amount) AS total')
+            ->pluck('total', 'ledger_id');
+
+        /** @var Collection<int, string> $credits */
+        $credits = Transaction::query()
+            ->whereIn('credit_account_id', $ledgerIds)
+            ->groupBy('credit_account_id')
+            ->selectRaw('credit_account_id AS ledger_id, SUM(amount) AS total')
+            ->pluck('total', 'ledger_id');
+
+        /** @var Collection<int, NormalBalance> $normalBalances */
+        $normalBalances = ChartOfAccount::whereIn('id', $ledgerIds)
+            ->pluck('normal_balance', 'id');
+
+        $result = [];
+        foreach ($accounts as $account) {
+            $ledgerId = $account->ledger_account_id;
+            $drTotal = (float) ($debits[$ledgerId] ?? 0);
+            $crTotal = (float) ($credits[$ledgerId] ?? 0);
+            $nb = 'debit';
+            if (isset($normalBalances[$ledgerId])) {
+                $nb = $normalBalances[$ledgerId]->value;
+            }
+            $balance = $nb === 'debit' ? $drTotal - $crTotal : $crTotal - $drTotal;
+            $result[(int) $account->id] = number_format(max(0, $balance), 2, '.', '');
+        }
+
+        return $result;
     }
 
     /**
@@ -141,7 +196,9 @@ class CashRegisterService
 
     public function calculateExpected(CashSession $session): string
     {
-        $accountId = $session->financialAccount->ledger_account_id;
+        $account = $session->financialAccount;
+        assert($account !== null);
+        $accountId = $account->ledger_account_id;
 
         $debits = Transaction::query()
             ->where('cash_session_id', $session->id)
