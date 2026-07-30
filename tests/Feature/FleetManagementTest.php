@@ -5,14 +5,20 @@ declare(strict_types=1);
 use App\Enums\AgreementStatus;
 use App\Enums\CarDocumentType;
 use App\Enums\CarStatus;
+use App\Enums\MaintenanceStatus;
+use App\Enums\MaintenanceType;
+use App\Models\Branch;
 use App\Models\Car;
 use App\Models\CarCategory;
 use App\Models\CarDocument;
 use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
+use App\Models\MaintenanceSchedule;
 use App\Models\Vendor;
+use App\Services\Fleet\LogMaintenanceService;
 use App\Services\FleetStatusService;
 use App\Services\OwnerAgreementService;
+use Carbon\CarbonImmutable;
 use Database\Seeders\CarCategorySeeder;
 use Database\Seeders\VendorSeeder;
 use Illuminate\Database\QueryException;
@@ -173,4 +179,121 @@ it('provides allowed transitions for a given status', function () {
     $allowed = $this->service->allowedTransitions($car);
     expect($allowed)->toContain('reserved', 'maintenance', 'out_of_service', 'sold', 'returned_to_owner');
     expect($allowed)->not->toContain('rented');
+});
+
+// ---------------------------------------------------------------------------
+// LogMaintenanceService
+// ---------------------------------------------------------------------------
+
+it('logs a maintenance service from a schedule', function () {
+    $schedule = MaintenanceSchedule::create([
+        'car_id' => $this->car->id,
+        'task_type' => MaintenanceType::OilChange,
+        'interval_km' => 10_000,
+        'is_active' => true,
+    ]);
+
+    $log = app(LogMaintenanceService::class)->log(
+        schedule: $schedule,
+        scheduledFor: CarbonImmutable::tomorrow(),
+    );
+
+    expect($log->car_id)->toBe($this->car->id)
+        ->and($log->type)->toBe(MaintenanceType::OilChange)
+        ->and($log->status)->toBe(MaintenanceStatus::Scheduled)
+        ->and($log->branch_id)->toBe($this->car->branch_id);
+});
+
+it('refuses to create a duplicate open log for the same car and task', function () {
+    $schedule = MaintenanceSchedule::create([
+        'car_id' => $this->car->id,
+        'task_type' => MaintenanceType::OilChange,
+        'interval_km' => 10_000,
+        'is_active' => true,
+    ]);
+
+    app(LogMaintenanceService::class)->log(
+        schedule: $schedule,
+        scheduledFor: CarbonImmutable::tomorrow(),
+    );
+
+    expect(fn () => app(LogMaintenanceService::class)->log(
+        schedule: $schedule,
+        scheduledFor: CarbonImmutable::tomorrow()->addDay(),
+    ))->toThrow(RuntimeException::class, 'open');
+});
+
+it('refuses to log a service for a category-level schedule with no car_id', function () {
+    $category = CarCategory::factory()->create();
+
+    $schedule = MaintenanceSchedule::create([
+        'car_category_id' => $category->id,
+        'task_type' => MaintenanceType::OilChange,
+        'interval_km' => 10_000,
+        'is_active' => true,
+    ]);
+
+    expect(fn () => app(LogMaintenanceService::class)->log(
+        schedule: $schedule,
+        scheduledFor: CarbonImmutable::tomorrow(),
+    ))->toThrow(RuntimeException::class, 'category-level');
+});
+
+it('sets branch_id from the car, not null', function () {
+    $branch = Branch::factory()->create(['code' => 'ORAN', 'is_default' => false]);
+    $car = Car::factory()->create(['status' => CarStatus::Available, 'branch_id' => $branch->id]);
+
+    $schedule = MaintenanceSchedule::create([
+        'car_id' => $car->id,
+        'task_type' => MaintenanceType::TireChange,
+        'interval_km' => 20_000,
+        'is_active' => true,
+    ]);
+
+    $log = app(LogMaintenanceService::class)->log(
+        schedule: $schedule,
+        scheduledFor: CarbonImmutable::tomorrow(),
+    );
+
+    expect($log->branch_id)->toBe($branch->id);
+});
+
+// ---------------------------------------------------------------------------
+// Unique constraint on (car_id, task_type)
+// ---------------------------------------------------------------------------
+
+it('prevents duplicate active schedules for the same car and task', function () {
+    MaintenanceSchedule::create([
+        'car_id' => $this->car->id,
+        'task_type' => MaintenanceType::OilChange,
+        'interval_km' => 10_000,
+        'is_active' => true,
+    ]);
+
+    expect(fn () => MaintenanceSchedule::create([
+        'car_id' => $this->car->id,
+        'task_type' => MaintenanceType::OilChange,
+        'interval_km' => 5_000,
+        'is_active' => true,
+    ]))->toThrow(QueryException::class);
+});
+
+it('allows the same task for different cars', function () {
+    $car2 = Car::factory()->create(['status' => CarStatus::Available]);
+
+    MaintenanceSchedule::create([
+        'car_id' => $this->car->id,
+        'task_type' => MaintenanceType::OilChange,
+        'interval_km' => 10_000,
+        'is_active' => true,
+    ]);
+
+    $result = MaintenanceSchedule::create([
+        'car_id' => $car2->id,
+        'task_type' => MaintenanceType::OilChange,
+        'interval_km' => 10_000,
+        'is_active' => true,
+    ]);
+
+    expect($result->exists)->toBeTrue();
 });
