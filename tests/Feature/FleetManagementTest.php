@@ -13,9 +13,12 @@ use App\Models\CarCategory;
 use App\Models\CarDocument;
 use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
+use App\Models\MaintenanceLog;
 use App\Models\MaintenanceSchedule;
 use App\Models\Vendor;
+use App\Services\Fleet\CancelMaintenanceService;
 use App\Services\Fleet\LogMaintenanceService;
+use App\Services\Fleet\StartMaintenanceService;
 use App\Services\FleetStatusService;
 use App\Services\OwnerAgreementService;
 use Carbon\CarbonImmutable;
@@ -296,4 +299,118 @@ it('allows the same task for different cars', function () {
     ]);
 
     expect($result->exists)->toBeTrue();
+});
+
+// ---------------------------------------------------------------------------
+// StartMaintenanceService
+// ---------------------------------------------------------------------------
+
+it('starts a scheduled maintenance service and transitions the car to maintenance', function () {
+    $log = MaintenanceLog::create([
+        'car_id' => $this->car->id,
+        'branch_id' => $this->car->branch_id,
+        'type' => MaintenanceType::OilChange,
+        'status' => MaintenanceStatus::Scheduled,
+        'scheduled_for' => CarbonImmutable::today(),
+    ]);
+
+    $result = app(StartMaintenanceService::class)->start($log);
+
+    expect($result->status)->toBe(MaintenanceStatus::InProgress)
+        ->and($result->started_at)->not->toBeNull()
+        ->and($this->car->fresh()->status)->toBe(CarStatus::Maintenance);
+});
+
+it('refuses to start a non-scheduled maintenance log', function () {
+    $log = MaintenanceLog::create([
+        'car_id' => $this->car->id,
+        'branch_id' => $this->car->branch_id,
+        'type' => MaintenanceType::Repair,
+        'status' => MaintenanceStatus::InProgress,
+        'scheduled_for' => CarbonImmutable::today(),
+    ]);
+
+    expect(fn () => app(StartMaintenanceService::class)->start($log))
+        ->toThrow(RuntimeException::class, 'cannot be started');
+});
+
+it('does not transition a rented car when starting maintenance', function () {
+    $this->car->update(['status' => CarStatus::Rented]);
+
+    $log = MaintenanceLog::create([
+        'car_id' => $this->car->id,
+        'branch_id' => $this->car->branch_id,
+        'type' => MaintenanceType::OilChange,
+        'status' => MaintenanceStatus::Scheduled,
+        'scheduled_for' => CarbonImmutable::today(),
+    ]);
+
+    $result = app(StartMaintenanceService::class)->start($log);
+
+    expect($result->status)->toBe(MaintenanceStatus::InProgress)
+        ->and($this->car->fresh()->status)->toBe(CarStatus::Rented);
+});
+
+// ---------------------------------------------------------------------------
+// CancelMaintenanceService
+// ---------------------------------------------------------------------------
+
+it('cancels a scheduled maintenance log', function () {
+    $log = MaintenanceLog::create([
+        'car_id' => $this->car->id,
+        'branch_id' => $this->car->branch_id,
+        'type' => MaintenanceType::OilChange,
+        'status' => MaintenanceStatus::Scheduled,
+        'scheduled_for' => CarbonImmutable::today(),
+    ]);
+
+    $result = app(CancelMaintenanceService::class)->cancel($log);
+
+    expect($result->status)->toBe(MaintenanceStatus::Cancelled);
+});
+
+it('cancels an in-progress maintenance log and returns the car to available', function () {
+    $log = MaintenanceLog::create([
+        'car_id' => $this->car->id,
+        'branch_id' => $this->car->branch_id,
+        'type' => MaintenanceType::OilChange,
+        'status' => MaintenanceStatus::InProgress,
+        'started_at' => CarbonImmutable::now(),
+        'scheduled_for' => CarbonImmutable::today(),
+    ]);
+
+    // Put the car in maintenance as start_service would.
+    $this->car->update(['status' => CarStatus::Maintenance]);
+
+    $result = app(CancelMaintenanceService::class)->cancel($log);
+
+    expect($result->status)->toBe(MaintenanceStatus::Cancelled)
+        ->and($this->car->fresh()->status)->toBe(CarStatus::Available);
+});
+
+it('refuses to cancel a completed maintenance log', function () {
+    $log = MaintenanceLog::create([
+        'car_id' => $this->car->id,
+        'branch_id' => $this->car->branch_id,
+        'type' => MaintenanceType::OilChange,
+        'status' => MaintenanceStatus::Completed,
+        'completed_at' => CarbonImmutable::yesterday(),
+        'scheduled_for' => CarbonImmutable::yesterday()->subDay(),
+    ]);
+
+    expect(fn () => app(CancelMaintenanceService::class)->cancel($log))
+        ->toThrow(RuntimeException::class, 'cannot be cancelled');
+});
+
+it('refuses to cancel an already-cancelled maintenance log', function () {
+    $log = MaintenanceLog::create([
+        'car_id' => $this->car->id,
+        'branch_id' => $this->car->branch_id,
+        'type' => MaintenanceType::OilChange,
+        'status' => MaintenanceStatus::Cancelled,
+        'scheduled_for' => CarbonImmutable::yesterday(),
+    ]);
+
+    expect(fn () => app(CancelMaintenanceService::class)->cancel($log))
+        ->toThrow(RuntimeException::class, 'cannot be cancelled');
 });

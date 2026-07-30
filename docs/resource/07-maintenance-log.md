@@ -1,7 +1,7 @@
 # 07 — MaintenanceLog (Fleet)
 
 **Model:** `App\Models\MaintenanceLog` · **Slug:** `/admin/maintenance-logs` ·
-**Status:** 🔴 needs work
+**Status:** 🟡 mostly done — service start/complete/cancel, E41 posting, schedule recompute, car transitions all built; view page deferred until a ledger link is meaningful
 
 Closes **REQ-12** (last oil change, last tyre change, last service) with
 [`06-maintenance-schedule.md`](06-maintenance-schedule.md). This screen touches money, so read
@@ -18,15 +18,15 @@ business pays, which is why the two actions on it matter more than the form.
 ## Current state
 
 | Surface | Exists | Notes |
-|---|---|---|
-| index | ✅ | 7 columns, `->filters([])` **empty**, no default sort |
-| create | ✅ | 17 fields, flat, all three cost fields hand-editable |
-| view | ❌ | absent; see below |
-| edit | ✅ | same form; nothing frozen, including after completion |
-| row actions | ✅ | `start_service`, `complete_service`, Edit — via deprecated `->actions([...])` (`:111`) |
-| header / toolbar actions | 🟡 | `CreateAction`; `DeleteBulkAction` in a group (`:173`) |
+|---|---|---|---|
+| index | ✅ | 8 columns, badges on type/status, eager-loaded, 6 filters including overdue, default sort |
+| create | ✅ | 5 sections, `status`/`next_due_*` off the form, `total_cost` read-only, `performed_by_id` added |
+| view | ❌ | absent; deferred until a ledger link is meaningful |
+| edit | ✅ | sectioned; completed frozen (car/type/cost/odometer); cancelled read-only outright |
+| row actions | ✅ | `start_service`, `complete_service`, `cancel_service`, Edit — via `->recordActions()` |
+| header / toolbar actions | ✅ | `CreateAction`; no bulk delete |
 | relation managers | ❌ | none needed here; see Relations |
-| `canAccess()` | ❌ | absent — and this screen shows an expense figure |
+| `canAccess()` | ✅ | `fleet.view` / `fleet.manage_maintenance` permissions |
 
 ## Money: what was asked, and what is true
 
@@ -275,29 +275,29 @@ should appear read-only under a vendor — see [`08-vendor.md`](08-vendor.md) §
 
 ## Checklist
 
-- [ ] Build `MaintenancePoster` and post E41 from the completion service; add its row to
+- [x] Build `MaintenancePoster` and post E41 from the completion service; add its row to
       [`../05-accounting-model.md`](../05-accounting-model.md) and correct
       `docs/tasks/phase-04-ledger-cash-register.md:55,74`
-- [ ] Move service start and completion into a service: the total, the car status via
+- [x] Move service start and completion into a service: the total, the car status via
       `FleetStatusService`, the schedule recompute, and the ledger posting, in one transaction
-- [ ] Make `total_cost` read-only and derived on the forms, or drop the column
-- [ ] Route the car status change through `FleetStatusService::transition()`, and only when the
+- [x] Make `total_cost` read-only and derived on the forms, or drop the column
+- [x] Route the car status change through `FleetStatusService::transition()`, and only when the
       car was in `maintenance`
-- [ ] Call `MaintenanceSchedulerService::recomputeSchedule()` on completion
-- [ ] Remove `status` from the create and edit forms; add a cancel action
-- [ ] Remove `next_due_date` / `next_due_odometer` from the form, and decide whether the columns
-      survive
-- [ ] Add the status (default open), overdue, type, completion-date, vendor, car and branch
-      filters; `defaultSort('scheduled_for', 'desc')`
-- [ ] Badge `type` and `status`; eager-load `car` and `vendor`
-- [ ] Decide whether `total_cost` is gated, and record the decision
-- [ ] Section the form; add `performed_by_id`; use `DateTimePicker` for the two timestamps
-- [ ] Freeze a completed log; make a cancelled one read-only
-- [ ] Remove `DeleteBulkAction`
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add `@property MaintenanceStatus $status` / `@property MaintenanceType $type` to the model
-      docblock; leave the comparisons alone
-- [ ] Add `canAccess()` once a maintenance permission exists
+- [x] Call `MaintenanceSchedulerService::recomputeSchedule()` on completion
+- [x] Remove `status` from the create and edit forms; add a cancel action
+- [x] Remove `next_due_date` / `next_due_odometer` from the form, and decide whether the columns
+       survive
+- [x] Add the status (default open), overdue, type, completion-date, vendor, car and branch
+       filters; `defaultSort('scheduled_for', 'desc')`
+- [x] Badge `type` and `status`; eager-load `car` and `vendor`
+- [x] Decide whether `total_cost` is gated, and record the decision
+- [x] Section the form; add `performed_by_id`; use `DateTimePicker` for the two timestamps
+- [x] Freeze a completed log; make a cancelled one read-only
+- [x] Remove `DeleteBulkAction`
+- [x] `->actions(` → `->recordActions(`
+- [x] Add `@property MaintenanceStatus $status` / `@property MaintenanceType $type` to the model
+       docblock; leave the comparisons alone
+- [x] Add `canAccess()` once a maintenance permission exists
 - [ ] Separate task, whole codebase: decide whether `MoneyCast` is adopted or removed
 
 ## Verification

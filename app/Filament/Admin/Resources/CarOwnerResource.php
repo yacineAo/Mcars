@@ -82,7 +82,7 @@ class CarOwnerResource extends Resource
                             ])
                             ->live()
                             ->required()
-                            ->disabled(fn (CarOwner $record): bool => $record->exists && $record->agreements()->exists()),
+                            ->disabled(fn (?CarOwner $record): bool => $record !== null && $record->exists && $record->agreements()->exists()),
                         TextInput::make('first_name')
                             ->required()
                             ->maxLength(255)
