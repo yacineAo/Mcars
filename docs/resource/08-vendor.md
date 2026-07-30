@@ -1,6 +1,6 @@
 # 08 — Vendor (Fleet)
 
-**Model:** `App\Models\Vendor` · **Slug:** `/admin/vendors` · **Status:** 🟡 partial
+**Model:** `App\Models\Vendor` · **Slug:** `/admin/vendors` · **Status:** 🟢 done — bank/RIB proposal deferred
 
 Supporting master data for **REQ-12** (maintenance) and **REQ-08** (expenses). See
 [`../tasks/phase-02-fleet.md`](../tasks/phase-02-fleet.md).
@@ -17,15 +17,15 @@ tables point here — `maintenance_logs.vendor_id`
 ## Current state
 
 | Surface | Exists | Notes |
-|---|---|---|
-| index | ✅ | 6 columns, `->filters([])` **empty**, no default sort |
-| create | ✅ | 8 fields, flat — correct at this size |
-| view | ❌ | see below |
-| edit | ✅ | same form |
-| row actions | ✅ | `EditAction` only, via deprecated `->actions([...])` (`:84`) |
-| header / toolbar actions | 🟡 | `CreateAction`; `DeleteBulkAction` in a group (`:87`) |
-| relation managers | ❌ | one is arguably worth adding; see Relations |
-| `canAccess()` | ❌ | absent |
+|---|---|---|---|
+| index | ✅ | 7 columns, badge on `type`, `maintenance_logs_count`, `is_active` + `type` + `branch_id` filters, `defaultSort('name')` |
+| create | ✅ | 8 fields, flat — unchanged |
+| view | ❌ | not needed — eight fields of contact detail; see Relations |
+| edit | ✅ | same form; `canEdit` gated on `fleet.manage` |
+| row actions | ✅ | `deactivate` + `reactivate` + `EditAction` via `->recordActions()` |
+| header / toolbar actions | ✅ | `CreateAction`; no bulk delete |
+| relation managers | ❌ | vendor history belongs in `expenseBreakdown()` report |
+| `canAccess()` | ✅ | `fleet.view` / `fleet.manage` permissions |
 
 Every column is local to the row, so the index carries no N+1 — unusual in this cluster.
 
@@ -104,14 +104,14 @@ If that is the answer, this resource correctly needs **no relation managers at a
 
 ## Checklist
 
-- [ ] Remove `DeleteBulkAction`; add a deactivate action
-- [ ] Filter the three vendor Selects to `is_active = true`, or drop the toggle
-- [ ] Add the `type` and `is_active` filters; `defaultSort('name')`
-- [ ] Badge `type` with its icon; add a `maintenance_logs_count` column
-- [ ] Add an `expenses()` relation to the model
-- [ ] Decide whether vendor history warrants a view page, or belongs in `expenseBreakdown()`
-- [ ] `->actions(` → `->recordActions(`
-- [ ] Add `canAccess()` once a fleet permission exists
+- [x] Remove `DeleteBulkAction`; add a deactivate action
+- [x] Filter the three vendor Selects to `is_active = true`, or drop the toggle
+- [x] Add the `type` and `is_active` filters; `defaultSort('name')`
+- [x] Badge `type` with its icon; add a `maintenance_logs_count` column
+- [x] Add an `expenses()` relation to the model
+- [x] Decide whether vendor history warrants a view page, or belongs in `expenseBreakdown()`
+- [x] `->actions(` → `->recordActions(`
+- [x] Add `canAccess()` once a fleet permission exists
 - [ ] **Proposal:** bank / RIB / CCP fields for paying vendors
 
 ## Verification

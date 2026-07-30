@@ -11,18 +11,23 @@ use App\Filament\Admin\Resources\VendorResource\Pages\EditVendor;
 use App\Filament\Admin\Resources\VendorResource\Pages\ListVendors;
 use App\Models\Vendor;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class VendorResource extends Resource
@@ -34,6 +39,26 @@ class VendorResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-storefront';
 
     protected static string|UnitEnum|null $navigationGroup = 'Fleet';
+
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->can('fleet.view') ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return Auth::user()?->can('fleet.manage') ?? false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -65,11 +90,14 @@ class VendorResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query
+                ->withCount('maintenanceLogs'))
             ->columns([
                 TextColumn::make('name')
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('type')
+                    ->badge()
                     ->sortable(),
                 TextColumn::make('contact_name')
                     ->searchable(),
@@ -77,18 +105,62 @@ class VendorResource extends Resource
                     ->searchable(),
                 TextColumn::make('email')
                     ->searchable(),
+                TextColumn::make('maintenance_logs_count')
+                    ->label('Services')
+                    ->sortable(),
                 IconColumn::make('is_active')
                     ->boolean(),
             ])
-            ->filters([])
-            ->actions([
-                EditAction::make(),
+            ->filters([
+                SelectFilter::make('type')
+                    ->options(VendorType::options()),
+                TernaryFilter::make('is_active')
+                    ->default(true),
+                SelectFilter::make('branch_id')
+                    ->label(__('Branch'))
+                    ->relationship('branch', 'name')
+                    ->searchable()
+                    ->visible(fn (): bool => Auth::user()?->can('branches.view_all') ?? false),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->defaultSort('name')
+            ->headerActions([])
+            ->recordActions([
+                Action::make('deactivate')
+                    ->label(__('Deactivate'))
+                    ->icon('heroicon-o-x-circle')
+                    ->color('gray')
+                    ->visible(fn (Vendor $record): bool => $record->is_active
+                        && (Auth::user()?->can('fleet.manage') ?? false))
+                    ->requiresConfirmation()
+                    ->action(function (Vendor $record): void {
+                        $record->update(['is_active' => false]);
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('Vendor deactivated'))
+                            ->send();
+                    }),
+
+                Action::make('reactivate')
+                    ->label(__('Reactivate'))
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn (Vendor $record): bool => ! $record->is_active
+                        && (Auth::user()?->can('fleet.manage') ?? false))
+                    ->requiresConfirmation()
+                    ->action(function (Vendor $record): void {
+                        $record->update(['is_active' => true]);
+
+                        Notification::make()
+                            ->success()
+                            ->title(__('Vendor reactivated'))
+                            ->send();
+                    }),
+
+                EditAction::make()
+                    ->visible(fn (): bool => Auth::user()?->can('fleet.manage') ?? false),
+            ])
+            ->toolbarActions([]);
     }
 
     public static function getPages(): array

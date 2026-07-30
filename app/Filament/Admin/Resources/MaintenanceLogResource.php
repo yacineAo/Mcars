@@ -103,7 +103,7 @@ class MaintenanceLogResource extends Resource
                 Section::make(__('Assignment'))
                     ->schema([
                         Select::make('vendor_id')
-                            ->relationship('vendor', 'name')
+                            ->relationship('vendor', 'name', fn (Builder $query): Builder => $query->where('is_active', true))
                             ->searchable()
                             ->nullable()
                             ->disabled($frozen),

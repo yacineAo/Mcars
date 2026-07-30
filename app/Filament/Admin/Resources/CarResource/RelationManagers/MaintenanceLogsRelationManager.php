@@ -69,7 +69,7 @@ class MaintenanceLogsRelationManager extends RelationManager
         return $schema
             ->schema([
                 Select::make('vendor_id')
-                    ->relationship('vendor', 'name')
+                    ->relationship('vendor', 'name', fn (Builder $query): Builder => $query->where('is_active', true))
                     ->searchable()
                     ->nullable(),
                 Select::make('type')

@@ -42,4 +42,10 @@ class Vendor extends Model
     {
         return $this->hasMany(MaintenanceLog::class);
     }
+
+    /** @return HasMany<Expense> */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
 }

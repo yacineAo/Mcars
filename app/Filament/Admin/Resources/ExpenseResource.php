@@ -32,6 +32,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use UnitEnum;
@@ -68,7 +69,7 @@ class ExpenseResource extends Resource
                     ->searchable()
                     ->nullable(),
                 Select::make('vendor_id')
-                    ->relationship('vendor', 'name')
+                    ->relationship('vendor', 'name', fn (Builder $query): Builder => $query->where('is_active', true))
                     ->searchable()
                     ->nullable(),
                 TextInput::make('amount')
