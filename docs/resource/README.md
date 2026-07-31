@@ -28,7 +28,7 @@ that each piece stays reviewable on its own.
 | [09](09-customer.md) | **Customer** | CRM | 🔴 audited — needs work |
 | [10](10-chart-of-account.md) | **ChartOfAccount** | Accounting | 🔴 audited — needs work |
 | [11](11-financial-account.md) | **FinancialAccount** | Accounting | 🟡 audited — partial |
-| [12](12-expense-category.md) | **ExpenseCategory** | Accounting | 🟡 audited — partial |
+| [12](12-expense-category.md) | **ExpenseCategory** | Accounting | ✅ audited — fine |
 | [13](13-transaction.md) | **Transaction** | Accounting | 🟡 audited — partly fixed |
 | [14](14-cash-session.md) | **CashSession** | Accounting | 🔴 audited — needs work |
 | [15](15-expense.md) | **Expense** | Accounting | 🔴 audited — needs work |
@@ -82,8 +82,8 @@ All 38 resources audited.
 | | Count |
 |---|---|---|
 | 🔴 needs work | 22 |
-| 🟡 partial | 15 |
-| ✅ fine | 1 — [31 Report](31-report.md), the newest and the only one built to these conventions |
+| 🟡 partial | 14 |
+| ✅ fine | 2 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md) |
 
 Four themes account for most of it, and each is one sweep rather than 38 fixes:
 

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class ExpenseCategory extends Model
 {
@@ -50,5 +51,22 @@ class ExpenseCategory extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
+    }
+
+    /** @return HasMany<Expense, $this> */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'expense_category_id');
+    }
+
+    public function hasExpenses(): bool
+    {
+        // Soft-deleted expenses keep their ledger postings, so they must keep the category frozen.
+        return $this->expenses()->exists();
+    }
+
+    public static function slugFromName(string $name): string
+    {
+        return (string) Str::of($name)->slug('-');
     }
 }
