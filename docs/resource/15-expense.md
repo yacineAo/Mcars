@@ -1,6 +1,6 @@
 # 15 — Expense (Accounting)
 
-**Model:** `App\Models\Expense` · **Slug:** `/admin/expenses` · **Status:** 🔴 needs work
+**Model:** `App\Models\Expense` · **Slug:** `/admin/expenses` · **Status:** ✅ audited — fine
 
 Closes **REQ-10**. Read [`../05-accounting-model.md`](../05-accounting-model.md) — the
 expense postings are in the matrix.
@@ -15,131 +15,81 @@ counterweight to revenue in the P&L, so a mis-recorded expense shows up directly
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | `->filters([])` **empty** |
-| create | ✅ | includes the comment "No tax is charged, so the total simply mirrors the amount" (line 79) |
-| view | ✅ | present |
-| edit | ✅ | nothing frozen — editable after posting |
-| row actions | ✅ | `approve`, `pay`, View, Edit — deprecated `->actions([...])` |
-| header / toolbar actions | 🟡 | `CreateAction`; **`DeleteBulkAction`** |
-| relation managers | ❌ | none |
-| `canAccess()` | ❌ | **absent** |
+| index | ✅ | status (default pending queue), date range, category, vendor, car, branch filters |
+| create | ✅ | `car_id` conditional + required on `is_car_related` categories |
+| view | ✅ | header actions delegate to `ExpenseService`; postings relation group |
+| edit | ✅ | frozen once `Paid`, except notes and receipts |
+| row actions | ✅ | `approve`, `pay`, View, Edit — `->recordActions([...])`, no bulk delete |
+| header / toolbar actions | ✅ | submit, approve, reject, pay — each gated by permission and status |
+| relation managers | ✅ | read-only `transactions` (posting + reversals), gated on `reports.view_financials` |
+| `canAccess()` | ✅ | `expenses.record` \| `expenses.approve` \| `expenses.pay` |
 
-Confirmed correct: **no tax anywhere.** The form comments that the total mirrors the amount
-(`ExpenseResource.php:79`), consistent with the scope decision that this system charges no
-tax — `expenses.tax_amount`, posting E03, `TransactionType::Tax` and account 2400 do not
-exist. Also correct: the `pay` action posts through `ExpensePoster` → `AccountingService::post()`
-rather than writing to `transactions` itself.
+Confirmed correct: **no tax anywhere.** The form comments that the total mirrors the amount,
+consistent with the scope decision that this system charges no tax — `expenses.tax_amount`,
+posting E03, `TransactionType::Tax` and account 2400 do not exist. Payment posts through
+`ExpenseService::pay()` → `ExpensePoster` → `AccountingService::post()` rather than writing to
+`transactions` itself.
 
-## Should be
+## Design decisions
 
-### Index
-The empty filter list is the biggest usability gap. An expense list is read by period and by
-category, and neither is filterable. Add:
+### Permissions — three separate grants
 
-- `SelectFilter` on `status` (`ExpenseStatus`) — with **pending approval** as the default view,
-  since that is the queue a manager works.
-- Date range on `incurred_on`.
-- `SelectFilter` on `expense_category_id`, on `vendor_id`, and on `car_id`.
-- Branch filter with `branches.view_all`.
+- `expenses.record` — SuperAdmin, Manager, Accountant, Receptionist. Broad on purpose: the
+  counter clerk who watched the fuel go in is the one who records it. Recording alone grants
+  nothing else — the clerk can neither approve nor pay.
+- `expenses.approve` — SuperAdmin, Manager. The pending queue is a manager's worklist, and
+  only the manager can sign an entry off. Not granted to the accountant, so recording is
+  never enough to push an entry through to the ledger — an accountant who recorded an
+  expense must still have it approved.
+- `expenses.pay` — SuperAdmin, Manager, Accountant. The accountant answers for the books,
+  so they may pay entries others recorded — including, if they recorded them, their own:
+  the approval gate is the control that keeps a recorder from moving money through the
+  ledger unchecked, not the payment one.
 
-Columns should show category, vendor, amount, `incurred_on`, status badge, and the car when
-`is_car_related`. Total amount is money — the whole resource arguably belongs behind
-`reports.view_financials` (see gap 1).
+Anyone holding one of the three may read expenses; a supervisor holds none and is denied.
 
-### Create
-Reasonable. `car_id` should appear only when the chosen category is `is_car_related`, and be
-required when it is — an expense that should attribute to a car but has no `car_id` silently
-drops out of per-car profitability, which is the failure this screen can cause that nobody
-notices.
+### Service owns every transition
 
-### View
-Keep. Add the ledger postings (see Relations) so an accountant can see both legs of what this
-expense produced without leaving the record.
+`App\Services\ExpenseService` is the only writer of statuses:
 
-### Edit
-**Freeze once paid.** Today the edit form remains fully open after the `pay` action has posted
-to the append-only ledger. Editing `amount` afterwards leaves `transactions` holding the old
-figure while the expense row shows the new one — the two disagree permanently, and the
-expense's own `transaction_id` points at the contradiction. Once `status = Paid`, only `notes`
-and attachments should be editable; a wrong amount is corrected by reversing the posting.
+- `submitForApproval($expense, $by)` — `Draft` only.
+- `approve($expense, $by)` — `Draft` or `PendingApproval`; writes `approved_by_id`/`approved_at`.
+- `reject($expense, $reason, $by)` — `Draft` or `PendingApproval`; records the reason.
+- `pay($expense, $method, $account, $by)` — `Approved` only; inside a `DB::transaction` with
+  `lockForUpdate()` on the row, posts E39 via the Poster, then records `financial_account_id`,
+  `paid_at`, `transaction_id` and status `Paid`.
 
-### Relations
+Status violations throw `RuntimeException`; the guards are invariants, not button visibility.
+The row lock makes a second pay in a stale tab a refused transition, not a duplicate posting.
 
-| Relation | Where | Read-only | Gate | Columns |
-|---|---|---|---|---|
-| `transactions` (via `transaction_id`, and any reversals) | **view** | **yes, strictly** | `reports.view_financials` | reference, date, debit, credit, amount, is_reversal |
+### Delete
 
-One expense produces one posting today (`transaction_id` is a single column), but a reversal
-adds a second row referencing it — so the table should show the posting *and* anything that
-reverses it, or a reversed expense will look paid and correct. Strictly read-only (ADR-003).
+`DeleteBulkAction` removed. Single delete is allowed only while `transaction_id === null` — a
+posted expense is ledger history, and the correct correction is a reversal.
 
-Attachments (receipts) belong on the edit page if Media Library is wired here — worth
-checking, since a expense without a receipt is the one an accountant will query.
+### Freeze once paid
 
-### Actions
+Every money and status field is disabled when `status = Paid`; only `notes` and receipts
+(Media Library, private disk) stay editable. A wrong amount is corrected by reversing the
+posting, so `transactions` and the expense row can never disagree.
 
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| `approve` | row | `Draft` or `PendingApproval` | **nothing** | raw `update()` — should be a service | writes the approval trail inline — gap 5 |
-| `pay` | row | `status === Approved` | **nothing** | `ExpensePoster` + `AccountingService::post()` | **opens `DB::transaction` in the closure** — gap 2 |
-| `ViewAction` | row | always | **nothing** | — | keep |
-| `EditAction` | row | always | **nothing** | — | must freeze once paid — gap 6 |
-| `DeleteBulkAction` | toolbar | always | **nothing** | — | **remove** — gap 4 |
+### Postings relation manager
 
-## Gaps and risks
-
-1. **🔴 No `canAccess()`.** Any staff role can create, approve, pay and bulk-delete expenses.
-   **Approval and payment are the same person's click as creation**, which removes the only
-   control the flow has. At minimum: create is broad, `approve` and `pay` require a
-   permission, and the two should not be the same one.
-2. **🔴 The `pay` action is a service in disguise.** `ExpenseResource.php:177-191` opens a
-   `DB::transaction`, resolves a `FinancialAccount`, calls the Poster, calls
-   `AccountingService::post()`, then updates five columns on the expense — all inside a
-   Filament closure. Per ADR-013 the **transaction boundary and orchestration belong in a
-   service**; the resource should call `ExpenseService::pay($expense, $method, $account, $by)`.
-   As written, any second caller (an import, a scheduled recurring expense, a test) must
-   duplicate the sequence, and there is no single place to add the guard in gap 3.
-3. **🔴 Nothing prevents paying twice.** `pay` is `visible()` only for `Approved`, and it sets
-   `Paid` — so the UI guards it, but the guard is presentation, not invariant. A double
-   submit, a stale tab, or a second caller posts a second transaction and overwrites
-   `transaction_id`, orphaning the first posting in an append-only ledger. The service in
-   gap 2 should refuse to pay a non-approved or already-paid expense.
-4. **🔴 `DeleteBulkAction` on posted expenses.** Same shape as elsewhere: the ledger rows
-   survive, the expense does not, and the P&L stops reconciling to anything you can open.
-5. **🟡 `approve` holds business rules.** `ExpenseResource.php:150-155` sets status, approver
-   and timestamp with a raw `update()`. Small, but it is the approval audit trail being
-   written by the UI layer.
-6. **🟡 Nothing frozen after payment** — see Edit.
-7. **🟡 No filters**, including no pending-approval queue — see Index.
-8. **🟡 Deprecated `->actions([...])`.**
-9. **🔵 `car_id` not conditional on the category** — see Create.
-
-## Checklist
-
-- [ ] Add `canAccess()`; separate create from approve from pay
-- [ ] Extract `ExpenseService::pay()` — transaction boundary and orchestration out of the action
-- [ ] Make the service refuse to pay a non-approved or already-paid expense; add a test
-- [ ] Move `approve` into the service too
-- [ ] Remove `DeleteBulkAction`; guard single delete on having a posting
-- [ ] Freeze all fields except notes/attachments once `Paid`
-- [ ] Add status / date-range / category / vendor / car / branch filters; default to pending approval
-- [ ] Show `car_id` only for `is_car_related` categories, and require it there
-- [ ] Add a read-only, gated postings table to the view page, including reversals
-- [ ] Confirm receipts are attachable via Media Library on a private disk
-- [ ] `->actions(` → `->recordActions(`
+One expense produces one posting (`transaction_id` is a single column), but a reversal adds a
+second row referencing it — the read-only `transactions` table shows the posting *and*
+anything that reverses it, gated on `reports.view_financials`, so a reversed expense cannot
+look paid and correct.
 
 ## Verification
 
 ```bash
 docker compose exec app ./vendor/bin/pest tests/Feature/AccountingLedgerTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/ExpenseResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/LedgerWiringTest.php
-docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
 ```
 
-A posting-matrix test asserting both legs and the sign of an expense payment is required
-before touching the posting path.
-
-By hand: approve and pay an expense, confirm one transaction appears with the expected debit
-and credit. Then try to pay it again from a second browser tab and confirm it is refused
-rather than posting twice. Confirm the expense breakdown report at `/admin/reports` moves by
-the same amount.
+`ExpenseResourceTest` covers the access matrix (receptionist records but neither approves nor
+pays; accountant pays but does not approve; manager approves and pays; supervisor denied),
+the full service lifecycle with the E39 legs asserted, the double-pay refusal, the reject
+reason, `car_id` conditional validation, the freeze once paid, the delete guard, the pending
+queue default, branch pinning, and the postings table showing the posting and its reversal.

@@ -15,10 +15,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Expense extends Model
+class Expense extends Model implements HasMedia
 {
-    use BelongsToBranch, HasAuditColumns, HasFactory, HasLedgerPostings, LogsActivity, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, HasFactory, HasLedgerPostings, InteractsWithMedia, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'reference',
@@ -104,5 +106,16 @@ class Expense extends Model
     public function parentExpense(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_expense_id');
+    }
+
+    /**
+     * Receipts are attachments, never part of the ledger — they live on a
+     * private disk and are served through an authorized download, not the web
+     * root (ADR-009).
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('receipts')
+            ->useDisk('private');
     }
 }

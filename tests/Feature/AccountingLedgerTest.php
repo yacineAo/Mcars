@@ -17,6 +17,7 @@ use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\ExpensePoster;
 use App\Services\Accounting\TransactionDraft;
 use App\Services\CashRegisterService;
+use App\Services\ExpenseService;
 use Database\Seeders\ChartOfAccountSeeder;
 use Database\Seeders\ExpenseCategorySeeder;
 use Illuminate\Database\QueryException;
@@ -278,33 +279,26 @@ it('creates an expense through draft → approve → pay flow', function () {
         'payment_method' => PaymentMethod::Cash,
     ]);
 
-    expect($expense->status)->toBe(ExpenseStatus::Draft);
+    $service = app(ExpenseService::class);
 
     // Submit for approval
-    $expense->status = ExpenseStatus::PendingApproval;
-    $expense->save();
-    expect($expense->fresh()->status)->toBe(ExpenseStatus::PendingApproval);
+    $pending = $service->submitForApproval($expense, $this->user);
+    expect($pending->status)->toBe(ExpenseStatus::PendingApproval);
 
     // Approve
-    $expense->status = ExpenseStatus::Approved;
-    $expense->approved_by_id = $this->user->id;
-    $expense->approved_at = now();
-    $expense->save();
-    expect($expense->fresh()->status)->toBe(ExpenseStatus::Approved);
+    $approved = $service->approve($pending, $this->user);
+    expect($approved->status)->toBe(ExpenseStatus::Approved)
+        ->and($approved->approved_by_id)->toBe($this->user->id);
 
-    // Pay — this posts to the ledger
-    $poster = app(ExpensePoster::class);
-    $draft = $poster->postImmediateExpense($expense, $account, $this->user->id);
-    $transaction = $this->service->post($draft);
+    // Pay — the service posts to the ledger and records the transaction link
+    $paid = $service->pay($approved, PaymentMethod::Cash, $account, $this->user);
 
-    $expense->status = ExpenseStatus::Paid;
-    $expense->financial_account_id = $account->id;
-    $expense->paid_at = now();
-    $expense->transaction_id = $transaction->id;
-    $expense->save();
+    expect($paid->status)->toBe(ExpenseStatus::Paid)
+        ->and($paid->financial_account_id)->toBe($account->id)
+        ->and($paid->transaction_id)->not->toBeNull();
 
-    expect($expense->fresh()->status)->toBe(ExpenseStatus::Paid)
-        ->and($transaction->debit_account_id)->toBe($category->ledger_account_id)
+    $transaction = $paid->transaction;
+    expect($transaction->debit_account_id)->toBe($category->ledger_account_id)
         ->and($transaction->credit_account_id)->toBe(account('1010')->id);
 
     // Debit balance on the expense account matches the expense

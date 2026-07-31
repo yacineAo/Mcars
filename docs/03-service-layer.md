@@ -311,6 +311,24 @@ verifyLatest(): BackupHealth
 A backup that has never been restored is a hypothesis. `verifyLatest()` restores the newest dump into
 a scratch database and asserts row counts, on a schedule.
 
+## 16. `ExpenseService` — REQ-10
+
+Owns the expense lifecycle — record → submit → approve → pay. The record step is a plain form save;
+every *transition* lives here so status guards are invariants, not button visibility.
+
+```
+submitForApproval(Expense $e, User $by): Expense      // Draft only
+approve(Expense $e, User $by): Expense               // Draft or PendingApproval
+reject(Expense $e, string $reason, User $by): Expense // Draft or PendingApproval
+pay(Expense $e, PaymentMethod $m, FinancialAccount $a, User $by): Expense  // Approved only
+```
+
+`pay()` is the only step that touches the ledger: inside a DB transaction under a `lockForUpdate()`
+row lock it posts E39 through `ExpensePoster` → `AccountingService::post()`, then records
+`financial_account_id`, `paid_at`, `transaction_id` and status `Paid`. The lock means a second pay
+in a stale tab is a refused transition, not a duplicate posting. The paying account must belong to
+the expense's branch (ADR-004).
+
 ---
 
 ## Events

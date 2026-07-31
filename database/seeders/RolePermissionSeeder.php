@@ -113,6 +113,35 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Manager,
                 UserRole::Receptionist,
             ],
+            // Recording expenses — create, edit, submit for approval, delete an
+            // unposted draft. Broad on purpose: the counter clerk who watched the
+            // fuel go in is the one who records it (Finance row of the visibility
+            // matrix: receptionist handles cash). Recording alone grants nothing
+            // else: the clerk can neither approve nor pay.
+            'expenses.record' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+                UserRole::Receptionist,
+            ],
+            // Approval is the manager's control over what reaches the ledger: the
+            // pending queue is a manager's worklist. Deliberately not granted to
+            // the accountant, so recording is never enough to push an entry
+            // through — only the manager (or super admin) can sign it off, and an
+            // accountant who recorded an expense must still have it approved.
+            'expenses.approve' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
+            // Paying posts E39 to the ledger. The accountant answers for the
+            // books, so they may pay entries others recorded — including, if they
+            // recorded them, their own: the approval gate above is the control
+            // that keeps a recorder from moving money through the ledger unchecked.
+            'expenses.pay' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+            ],
         ];
 
         foreach ($grants as $permissionName => $roles) {

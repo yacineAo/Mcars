@@ -31,7 +31,7 @@ that each piece stays reviewable on its own.
 | [12](12-expense-category.md) | **ExpenseCategory** | Accounting | ✅ audited — fine |
 | [13](13-transaction.md) | **Transaction** | Accounting | ✅ audited — fine |
 | [14](14-cash-session.md) | **CashSession** | Accounting | ✅ audited — fine |
-| [15](15-expense.md) | **Expense** | Accounting | 🔴 audited — needs work |
+| [15](15-expense.md) | **Expense** | Accounting | ✅ audited — fine |
 | [16](16-extra.md) | **Extra** | Bookings | 🟡 audited — partial |
 | [17](17-contract-template.md) | **ContractTemplate** | Bookings | 🟡 audited — partial |
 | [18](18-booking.md) | **Booking** | Bookings | 🟡 audited — partial |
@@ -83,7 +83,7 @@ All 38 resources audited.
 |---|---|---|
 | 🔴 needs work | 22 |
 | 🟡 partial | 13 |
-| ✅ fine | 3 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md) |
+| ✅ fine | 4 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md), [15 Expense](15-expense.md) |
 
 Four themes account for most of it, and each is one sweep rather than 38 fixes:
 
