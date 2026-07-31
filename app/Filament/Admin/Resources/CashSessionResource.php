@@ -9,20 +9,25 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\CreateCashSession;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\EditCashSession;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\ListCashSessions;
+use App\Filament\Admin\Resources\CashSessionResource\Pages\ViewCashSession;
 use App\Models\CashSession;
-use App\Services\CashRegisterService;
+use App\Support\Money;
 use BackedEnum;
-use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class CashSessionResource extends Resource
@@ -35,12 +40,63 @@ class CashSessionResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Accounting';
 
+    /**
+     * The till is operated by receptionists and managers; the variance and the
+     * postings are read by whoever can see the financials. A supervisor has
+     * neither and therefore does not see the resource at all.
+     */
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && (
+            $user->can('cash_sessions.operate')
+            || $user->can('reports.view_financials')
+        );
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('cash_sessions.operate') ?? false;
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return $record instanceof CashSession && self::userCanReachBranch($record->branch_id);
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return (auth()->user()?->can('cash_sessions.operate') ?? false)
+            && $record instanceof CashSession
+            && self::userCanReachBranch($record->branch_id);
+    }
+
+    /**
+     * A user without branches.view_all is pinned to their own branch, server-side
+     * — the list query, the form's account options and every record-gated page
+     * all go through this, so a receptionist can neither see nor operate another
+     * branch's till regardless of what they submit.
+     */
+    public static function userCanReachBranch(?int $branchId): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && (
+            $user->can('branches.view_all')
+            || $user->branch_id === $branchId
+        );
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema
             ->schema([
                 Select::make('financial_account_id')
-                    ->relationship('financialAccount', 'name')
+                    ->relationship('financialAccount', 'name', fn (Builder $query): Builder => $query->when(
+                        ! (Auth::user()?->can('branches.view_all') ?? false),
+                        fn (Builder $q): Builder => $q->where('branch_id', Auth::user()?->branch_id),
+                    ))
                     ->searchable()
                     ->required(),
                 TextInput::make('opening_float')
@@ -68,6 +124,23 @@ class CashSessionResource extends Resource
                     ->money('DZD'),
                 TextColumn::make('counted_amount')
                     ->money('DZD'),
+                TextColumn::make('expected')
+                    ->label('Expected')
+                    ->money('DZD')
+                    ->visible(fn (): bool => Auth::user()?->can('reports.view_financials') ?? false)
+                    ->state(fn (CashSession $record, ListCashSessions $livewire): string => $livewire->getReconciliations()[(int) $record->id]['expected']),
+                TextColumn::make('variance')
+                    ->label('Variance')
+                    ->money('DZD')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => Auth::user()?->can('reports.view_financials') ?? false)
+                    ->state(fn (CashSession $record, ListCashSessions $livewire): ?string => $livewire->getReconciliations()[(int) $record->id]['variance'])
+                    ->color(fn (?string $state): string => match (true) {
+                        $state === null => 'success',
+                        Money::of($state)->isNegative() => 'danger',
+                        Money::of($state)->isPositive() => 'warning',
+                        default => 'success',
+                    }),
                 TextColumn::make('openedBy.name')
                     ->label('Opened By'),
                 TextColumn::make('opened_at')
@@ -75,34 +148,52 @@ class CashSessionResource extends Resource
                     ->sortable(),
                 TextColumn::make('closed_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->placeholder('—'),
             ])
             ->defaultSort('id', 'desc')
-            ->filters([])
-            ->actions([
-                Action::make('close_session')
-                    ->label('Close & Reconcile')
-                    ->icon('heroicon-o-lock-closed')
-                    ->color('warning')
+            ->filters([
+                SelectFilter::make('status')
+                    ->translateLabel()
+                    ->options(CashSessionStatus::options())
+                    // A session left open overnight is the one thing a manager
+                    // needs to spot; closed history is one click away.
+                    ->default(CashSessionStatus::Open->value),
+                Filter::make('opened_at')
+                    ->translateLabel()
                     ->form([
-                        TextInput::make('counted_amount')
-                            ->label('Actual Counted Cash (DZD)')
-                            ->numeric()
-                            ->required(),
-                        Textarea::make('closing_notes')
-                            ->label('Closing Notes'),
+                        DatePicker::make('from')
+                            ->label('From'),
+                        DatePicker::make('to')
+                            ->label('To'),
                     ])
-                    ->action(function (CashSession $record, array $data, CashRegisterService $service): void {
-                        $service->closeSession($record, (string) $data['counted_amount'], auth()->user());
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['from'] ?? null, fn (Builder $q): Builder => $q->whereDate('opened_at', '>=', (string) $data['from']))
+                            ->when($data['to'] ?? null, fn (Builder $q): Builder => $q->whereDate('opened_at', '<=', (string) $data['to']));
+                    }),
+                SelectFilter::make('financial_account_id')
+                    ->label('Account')
+                    ->translateLabel()
+                    ->relationship('financialAccount', 'name')
+                    ->searchable(),
+                SelectFilter::make('branch_id')
+                    ->label('Branch')
+                    ->translateLabel()
+                    ->relationship('branch', 'name')
+                    ->visible(fn (): bool => Auth::user()?->can('branches.view_all') ?? false),
+            ])
+            ->modifyQueryUsing(function (Builder $query): Builder {
+                $query->with(['financialAccount', 'openedBy', 'closedBy', 'branch']);
 
-                        Notification::make()
-                            ->success()
-                            ->title('Cash session closed and reconciled')
-                            ->body('Variance has been posted to the ledger.')
-                            ->send();
-                    })
-                    ->visible(fn (CashSession $record): bool => $record->status === CashSessionStatus::Open),
+                $user = auth()->user();
+                if ($user !== null && ! $user->can('branches.view_all')) {
+                    $query->where('cash_sessions.branch_id', $user->branch_id);
+                }
 
+                return $query;
+            })
+            ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
             ])
@@ -114,6 +205,7 @@ class CashSessionResource extends Resource
         return [
             'index' => ListCashSessions::route('/'),
             'create' => CreateCashSession::route('/create'),
+            'view' => ViewCashSession::route('/{record}'),
             'edit' => EditCashSession::route('/{record}/edit'),
         ];
     }

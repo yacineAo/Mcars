@@ -1,6 +1,6 @@
 # 14 — CashSession (Accounting)
 
-**Model:** `App\Models\CashSession` · **Slug:** `/admin/cash-sessions` · **Status:** 🔴 needs work
+**Model:** `App\Models\CashSession` · **Slug:** `/admin/cash-sessions` · **Status:** ✅ complete
 
 Closes **REQ-09** (cash register). See
 [`../tasks/phase-04-ledger-cash-register.md`](../tasks/phase-04-ledger-cash-register.md)
@@ -17,19 +17,46 @@ missing cash is found the same day rather than at month end.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 8 columns, `defaultSort('id','desc')`, `->filters([])` **empty** |
-| create | ✅ | 3 fields: account, opening float, notes |
-| view | ❌ | absent |
-| edit | ✅ | `EditCashSession` — also carries a close action and a `DeleteAction` |
-| row actions | ✅ | `close_session`, View, Edit — but `ViewAction` has no view page to open |
-| header / toolbar actions | 🟡 | `CreateAction`; `->bulkActions([])` — correctly empty |
-| relation managers | ❌ | none, though `CashSession hasMany transactions` |
-| `canAccess()` | ❌ | absent |
+| index | ✅ | expected + variance columns, status/open/date/account/branch filters |
+| create | ✅ | 3 fields: account, opening float, notes; second-open refused as a validation error |
+| view | ✅ | infolist + single close action + read-only postings relation manager |
+| edit | ✅ | notes only; no close, no delete |
+| row actions | ✅ | View, Edit (both gated) |
+| header / toolbar actions | 🟡 | `CreateAction` (gated on `cash_sessions.operate`); `->bulkActions([])` — correctly empty |
+| relation managers | ✅ | `transactions`, read-only, gated on `reports.view_financials` |
+| `canAccess()` | ✅ | `cash_sessions.operate` OR `reports.view_financials` |
 
-The close action is correctly built: it delegates to
-`CashRegisterService::closeSession()` (`CashSessionResource.php:95-96`) and tells the user
-the variance was posted to the ledger. Nothing about the reconciliation is computed in the
-resource, which is right.
+The close action is built on the view page and delegates to
+`CashRegisterService::closeSession()`, telling the user the variance was posted to the
+ledger. Nothing about the reconciliation is computed in the resource, which is right.
+
+### Access split (decided here)
+
+| Permission | Holders | Can do |
+|---|---|---|
+| `cash_sessions.operate` | SuperAdmin, Manager, Receptionist | open, close, edit notes |
+| `reports.view_financials` | SuperAdmin, Manager, Accountant | see expected/counted/variance and the session's postings |
+
+An operator who lacks `reports.view_financials` (receptionist) sees the session but not the
+reconciliation figures; an Accountant operates no till. Supervisor has neither.
+
+Beyond the split, a user without `branches.view_all` is **pinned to their own branch,
+server-side**: the index query, the create form's account options and the view/edit gates all
+refuse another branch's sessions, so a receptionist can neither see nor open a till in a
+branch they do not belong to.
+
+### Fixed while completing this resource
+
+- `expectedCashBalance()` and `CashRegisterService::calculateExpected()` **double-counted
+  the opening float** (the float itself is posted as E64 inside the session, and both sums
+  added it again) and included the session's own E68/E69 variance postings, which made
+  "expected == counted, variance 0" for every closed session. Both now exclude
+  CashOver/CashShort and no longer add the float a second time; the report service and the
+  closing screen deliberately mirror each other.
+- `cashSessionAudit()` used `dateBounds()`, which collapses to date strings — fine for
+  `date` columns but it dropped every session opened after midnight on the last day of the
+  range. It now uses full start-of-day / end-of-day bounds.
+- `closeSession()` now appends closing notes to the session instead of discarding them.
 
 ## Should be
 
@@ -142,19 +169,19 @@ table to `occurred_on` then `id` so it reads in posting order.
 
 ## Checklist
 
-- [ ] Add a view page: float, opened/closed by, expected vs counted vs variance, notes
-- [ ] Add the `transactions` relation manager to it, strictly read-only and gated
-- [ ] Add expected and variance columns to the index, sourced from `CashRegisterService`
-- [ ] Add open/status/date/account filters; surface `Disputed`
-- [ ] Restrict or remove `DeleteAction`
-- [ ] Reduce the edit page to `notes`, or remove it
-- [ ] Keep one close action, not two
-- [ ] Add `canAccess()`; decide operate-the-till versus see-the-variance
-- [ ] Verify or remove the `ViewAction` until a view page exists
-- [ ] Eager-load `financialAccount` and `openedBy`
-- [ ] Add `@property CashSessionStatus $status` to the model
-- [ ] Prevent a second open session on the same account, in `CashRegisterService`
-- [ ] `->actions(` → `->recordActions(`
+- [x] Add a view page: float, opened/closed by, expected vs counted vs variance, notes
+- [x] Add the `transactions` relation manager to it, strictly read-only and gated
+- [x] Add expected and variance columns to the index, sourced from `CashRegisterService`
+- [x] Add open/status/date/account filters; surface `Disputed`
+- [x] Restrict or remove `DeleteAction`
+- [x] Reduce the edit page to `notes`, or remove it
+- [x] Keep one close action, not two
+- [x] Add `canAccess()`; decide operate-the-till versus see-the-variance
+- [x] Verify or remove the `ViewAction` until a view page exists
+- [x] Eager-load `financialAccount` and `openedBy`
+- [x] Add `@property CashSessionStatus $status` to the model
+- [x] Prevent a second open session on the same account, in `CashRegisterService`
+- [x] `->actions(` → `->recordActions(`
 
 ## Verification
 

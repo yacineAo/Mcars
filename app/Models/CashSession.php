@@ -13,6 +13,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * `status` is declared here because static analysis reads column types from the schema,
+ * not from casts() — without it `$session->status` looks like a string and the strict
+ * `=== CashSessionStatus::Open` guards on the close actions read as dead code.
+ *
+ * @property CashSessionStatus $status
+ */
 class CashSession extends Model
 {
     use BelongsToBranch, HasFactory, HasLedgerPostings, LogsActivity;

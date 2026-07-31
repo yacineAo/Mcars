@@ -160,29 +160,36 @@ class CashRegisterService
         });
     }
 
-    public function closeSession(CashSession $session, string|int|float $counted, User $by): CashSession
+    public function closeSession(CashSession $session, string|int|float $counted, User $by, ?string $notes = null): CashSession
     {
         if ($session->status !== CashSessionStatus::Open) {
             throw new RuntimeException('Session is not open.');
         }
 
-        return $this->db->transaction(function () use ($session, $counted, $by): CashSession {
+        return $this->db->transaction(function () use ($session, $counted, $by, $notes): CashSession {
             $expected = $this->calculateExpected($session);
-            $countedDecimal = (float) $counted;
-            $expectedDecimal = (float) $expected;
-            $variance = $countedDecimal - $expectedDecimal;
+            $variance = Money::of((string) $counted)->minus(Money::of($expected));
+            $isExact = $variance->isZero();
 
             $session->closed_by_id = $by->id;
             $session->closed_at = now();
             $session->counted_amount = $counted;
-            $session->status = abs($variance) < 0.01
+
+            if ($notes !== null && trim((string) $notes) !== '') {
+                $existing = trim((string) $session->notes);
+                $session->notes = $existing === ''
+                    ? trim((string) $notes)
+                    : $existing."\n".trim((string) $notes);
+            }
+
+            $session->status = $isExact
                 ? CashSessionStatus::Closed
                 : CashSessionStatus::Disputed;
             $session->save();
 
-            if (abs($variance) >= 0.01) {
-                $varianceAbs = number_format(abs($variance), 2, '.', '');
-                if ($variance > 0) {
+            if (! $isExact) {
+                $varianceAbs = $variance->absolute()->toDecimal();
+                if ($variance->isPositive()) {
                     $draft = $this->cashSessionPoster->postCashOver($session, $varianceAbs, $by->id);
                 } else {
                     $draft = $this->cashSessionPoster->postCashShort($session, $varianceAbs, $by->id);
@@ -200,19 +207,120 @@ class CashRegisterService
         assert($account !== null);
         $accountId = $account->ledger_account_id;
 
+        // The session's own close-time variance postings (E68/E69) are excluded:
+        // they were written to make the ledger match the counted amount, so
+        // including them would always show "expected == counted, variance 0"
+        // for a closed session and hide the very figure this exists to report.
         $debits = Transaction::query()
             ->where('cash_session_id', $session->id)
             ->where('debit_account_id', $accountId)
+            ->whereNotIn('type', [TransactionType::CashOver, TransactionType::CashShort])
             ->sum('amount');
 
         $credits = Transaction::query()
             ->where('cash_session_id', $session->id)
             ->where('credit_account_id', $accountId)
+            ->whereNotIn('type', [TransactionType::CashOver, TransactionType::CashShort])
             ->sum('amount');
 
         // The opening float is already captured as a debit to this account,
         // so the expected cash is simply debits minus credits.
-        return number_format($debits - $credits, 2, '.', '');
+        return Money::of((string) $debits)
+            ->minus(Money::of((string) $credits))
+            ->toDecimal();
+    }
+
+    /**
+     * Expected and variance for one session, in one place.
+     *
+     * This is the same arithmetic `closeSession()` performs — the figure the
+     * business cares about — so screens show exactly what the close posted.
+     * Variance is null while the session is still open (nothing counted yet).
+     *
+     * @return array{expected: string, variance: ?string}
+     */
+    public function reconciliation(CashSession $session): array
+    {
+        $expected = $this->calculateExpected($session);
+
+        $counted = $session->counted_amount;
+        $variance = $counted === null
+            ? null
+            : Money::of($counted)->minus(Money::of($expected))->toDecimal();
+
+        return ['expected' => $expected, 'variance' => $variance];
+    }
+
+    /**
+     * Expected and variance for many sessions in one pass.
+     *
+     * The index table renders one row at a time, so calling `reconciliation()`
+     * per row would cost two aggregate queries per visible row. This runs the
+     * same arithmetic (same joins, same exclusions) as a single grouped query
+     * for the whole collection.
+     *
+     * @param Collection<int, CashSession> $sessions
+     * @return array<int, array{expected: string, variance: ?string}> keyed by session id
+     */
+    public function reconciliations(Collection $sessions): array
+    {
+        if ($sessions->isEmpty()) {
+            return [];
+        }
+
+        /** @var array<int, int> $ids */
+        $ids = $sessions->pluck('id')->map(fn (int $id): int => $id)->all();
+
+        $debits = $this->sessionTotals($ids, 'debit_account_id');
+        $credits = $this->sessionTotals($ids, 'credit_account_id');
+
+        $result = [];
+        foreach ($sessions as $session) {
+            $id = (int) $session->id;
+
+            $expected = Money::of($debits[$id] ?? '0')
+                ->minus(Money::of($credits[$id] ?? '0'))
+                ->toDecimal();
+
+            $counted = $session->counted_amount;
+
+            $result[$id] = [
+                'expected' => $expected,
+                'variance' => $counted === null
+                    ? null
+                    : Money::of($counted)->minus(Money::of($expected))->toDecimal(),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Total postings of one side for many sessions, restricted to each
+     * session's own ledger account. Mirrors `calculateExpected()`: the joins
+     * are exactly the per-session query's, so the two never disagree.
+     *
+     * @param array<int, int> $ids
+     * @return array<int, string> keyed by session id
+     */
+    private function sessionTotals(array $ids, string $column): array
+    {
+        $rows = Transaction::query()
+            ->join('cash_sessions', 'cash_sessions.id', '=', 'transactions.cash_session_id')
+            ->join('financial_accounts', 'financial_accounts.id', '=', 'cash_sessions.financial_account_id')
+            ->whereIn('transactions.cash_session_id', $ids)
+            ->whereColumn('transactions.'.$column, 'financial_accounts.ledger_account_id')
+            ->whereNotIn('transactions.type', [TransactionType::CashOver, TransactionType::CashShort])
+            ->groupBy('transactions.cash_session_id')
+            ->selectRaw('transactions.cash_session_id AS session_id, SUM(transactions.amount) AS total')
+            ->pluck('total', 'session_id');
+
+        $totals = [];
+        foreach ($rows as $sessionId => $total) {
+            $totals[(int) $sessionId] = (string) $total;
+        }
+
+        return $totals;
     }
 
     public function transfer(

@@ -363,6 +363,38 @@ it('opens and closes a cash session with a variance posting', function () {
     expect($balance->toDecimal())->toBe('80500.00');
 });
 
+it('appends closing notes to the session when closing', function () {
+    $register = app(CashRegisterService::class);
+    $account = FinancialAccount::factory()->create([
+        'branch_id' => $this->branch->id,
+        'ledger_account_id' => account('1010')->id,
+        'is_active' => true,
+    ]);
+
+    $session = $register->openSession($account, '10000.00', $this->user);
+
+    $closed = $register->closeSession($session, '10000.00', $this->user, 'Counted twice, short a hundred the first time.');
+
+    expect((string) $closed->notes)->toBe('Counted twice, short a hundred the first time.');
+});
+
+it('appends closing notes to existing opening notes', function () {
+    $register = app(CashRegisterService::class);
+    $account = FinancialAccount::factory()->create([
+        'branch_id' => $this->branch->id,
+        'ledger_account_id' => account('1010')->id,
+        'is_active' => true,
+    ]);
+
+    $session = $register->openSession($account, '10000.00', $this->user);
+    $session->notes = 'Float taken from the safe.';
+    $session->save();
+
+    $closed = $register->closeSession($session, '10000.00', $this->user, 'Counted twice.');
+
+    expect((string) $closed->notes)->toBe("Float taken from the safe.\nCounted twice.");
+});
+
 it('prevents opening two concurrent sessions for the same account', function () {
     $register = app(CashRegisterService::class);
     $account = FinancialAccount::factory()->create([

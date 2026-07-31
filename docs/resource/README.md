@@ -30,7 +30,7 @@ that each piece stays reviewable on its own.
 | [11](11-financial-account.md) | **FinancialAccount** | Accounting | 🟡 audited — partial |
 | [12](12-expense-category.md) | **ExpenseCategory** | Accounting | ✅ audited — fine |
 | [13](13-transaction.md) | **Transaction** | Accounting | ✅ audited — fine |
-| [14](14-cash-session.md) | **CashSession** | Accounting | 🔴 audited — needs work |
+| [14](14-cash-session.md) | **CashSession** | Accounting | ✅ audited — fine |
 | [15](15-expense.md) | **Expense** | Accounting | 🔴 audited — needs work |
 | [16](16-extra.md) | **Extra** | Bookings | 🟡 audited — partial |
 | [17](17-contract-template.md) | **ContractTemplate** | Bookings | 🟡 audited — partial |

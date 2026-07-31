@@ -101,6 +101,18 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Manager,
                 UserRole::MaintenanceOfficer,
             ],
+            // Operating the till — opening and closing a cash session. The matrix gives
+            // the receptionist "payments + cash only" on Finance, and closing posts a
+            // variance to the ledger, so the two halves of the feature are split:
+            // operate the till here, see the variance under reports.view_financials.
+            // An accountant audits but does not operate a till, mirroring the
+            // reverse_transaction reasoning — the role that answers for the books does
+            // not touch the drawer.
+            'cash_sessions.operate' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Receptionist,
+            ],
         ];
 
         foreach ($grants as $permissionName => $roles) {

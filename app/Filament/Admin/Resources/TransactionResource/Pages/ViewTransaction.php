@@ -164,7 +164,7 @@ class ViewTransaction extends ViewRecord
                             ->label('Cash Session')
                             ->visible(fn (Transaction $record): bool => $record->cash_session_id !== null)
                             ->state(fn (Transaction $record): ?string => $record->cash_session_id === null ? null : sprintf('#%s', $record->cash_session_id))
-                            ->url(fn (Transaction $record): ?string => $record->cash_session_id === null ? null : CashSessionResource::getUrl('edit', ['record' => $record->cash_session_id])),
+                            ->url(fn (Transaction $record): ?string => $record->cash_session_id === null ? null : CashSessionResource::getUrl('view', ['record' => $record->cash_session_id])),
                         TextEntry::make('expense_category.name')
                             ->label('Expense Category')
                             ->visible(fn (Transaction $record): bool => $record->expense_category_id !== null)

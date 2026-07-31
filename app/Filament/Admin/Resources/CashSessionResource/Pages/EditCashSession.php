@@ -4,49 +4,31 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources\CashSessionResource\Pages;
 
-use App\Enums\CashSessionStatus;
 use App\Filament\Admin\Resources\CashSessionResource;
-use App\Models\CashSession;
-use App\Services\CashRegisterService;
-use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Schemas\Schema;
 
 class EditCashSession extends EditRecord
 {
     protected static string $resource = CashSessionResource::class;
 
+    /**
+     * A session's identity is its account, its float and when it opened —
+     * changing any of them after cash has moved silently changes the expected
+     * balance and therefore the variance. Notes are the only editable field.
+     */
+    public function form(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Textarea::make('notes')
+                    ->maxLength(65535),
+            ]);
+    }
+
     protected function getHeaderActions(): array
     {
-        return [
-            Action::make('close')
-                ->label('Close Session')
-                ->icon('heroicon-o-lock-closed')
-                ->color('warning')
-                ->requiresConfirmation()
-                ->form([
-                    TextInput::make('counted_amount')
-                        ->label('Counted Amount')
-                        ->numeric()
-                        ->prefix('DZD')
-                        ->required(),
-                    Textarea::make('notes'),
-                ])
-                ->action(function (CashSession $record, array $data, CashRegisterService $service): void {
-                    $service->closeSession($record, (string) $data['counted_amount'], auth()->user());
-
-                    Notification::make()
-                        ->success()
-                        ->title('Session closed')
-                        ->body('Variance has been posted to the ledger.')
-                        ->send();
-                })
-                ->visible(fn (CashSession $record): bool => $record->status === CashSessionStatus::Open),
-
-            DeleteAction::make(),
-        ];
+        return [];
     }
 }

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\BookingStatus;
 use App\Enums\CarStatus;
+use App\Enums\TransactionType;
 use App\Models\Booking;
 use App\Models\Car;
 use App\Models\CarOwner;
@@ -14,6 +15,7 @@ use App\Models\Customer;
 use App\Models\Deposit;
 use App\Models\Fine;
 use App\Models\OwnerInstallment;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Closure;
 use DateTimeInterface;
@@ -554,11 +556,17 @@ class ReportService
      */
     public function cashSessionAudit(DateTimeInterface $from, DateTimeInterface $to, ?int $branchId = null): array
     {
+        // opened_at is a timestamp, not a date — use full day bounds so sessions
+        // opened after midnight on the last day are not dropped (dateBounds is
+        // only correct for `date` columns).
+        $from = CarbonImmutable::parse($from)->startOfDay();
+        $to = CarbonImmutable::parse($to)->endOfDay();
+
         $query = $this->db->table('cash_sessions')
             ->leftJoin('users as opened', 'opened.id', '=', 'cash_sessions.opened_by_id')
             ->leftJoin('users as closed', 'closed.id', '=', 'cash_sessions.closed_by_id')
             ->leftJoin('financial_accounts', 'financial_accounts.id', '=', 'cash_sessions.financial_account_id')
-            ->whereBetween('cash_sessions.opened_at', $this->dateBounds($from, $to))
+            ->whereBetween('cash_sessions.opened_at', [$from, $to])
             ->when($branchId !== null, fn ($q) => $q->where('cash_sessions.branch_id', $branchId));
 
         $rows = $query->selectRaw('
@@ -578,7 +586,8 @@ class ReportService
 
         $sessions = [];
         foreach ($rows as $row) {
-            $expected = $this->expectedCashBalance((int) $row->id, $row->opening_float);
+            $expected = $this->expectedCashBalance((int) $row->id);
+            $counted = $row->counted_amount === null ? null : Money::of((string) $row->counted_amount)->toDecimal();
 
             $sessions[] = [
                 'id' => (int) $row->id,
@@ -587,10 +596,12 @@ class ReportService
                 'opened_by' => $row->opened_by_name,
                 'closed_by' => $row->closed_by_name,
                 'account_name' => $row->account_name,
-                'opening_float' => round((float) $row->opening_float, 2),
-                'expected' => round($expected, 2),
-                'counted' => round((float) ($row->counted_amount ?? 0), 2),
-                'variance' => round((float) ($row->counted_amount ?? 0) - $expected, 2),
+                'opening_float' => Money::of((string) $row->opening_float)->toDecimal(),
+                'expected' => $expected,
+                'counted' => $counted,
+                // Nothing counted yet while the session is still open, so the
+                // variance is null — the same convention the closing screen uses.
+                'variance' => $counted === null ? null : Money::of($counted)->minus(Money::of($expected))->toDecimal(),
                 'status' => $row->status,
                 'notes' => $row->notes,
             ];
@@ -600,21 +611,30 @@ class ReportService
     }
 
     /**
-     * Expected cash balance for a session: opening float + net movements.
+     * Expected cash balance for a session.
+     *
+     * The opening float is itself posted to the ledger as a transaction (E64,
+     * carrying `cash_session_id`), so the net of the session's own movements
+     * already includes it — adding `opening_float` again would double-count it.
+     * The session's own close-time variance postings (E68/E69) are excluded so
+     * the figure matches what the close computed. This deliberately mirrors
+     * `CashRegisterService::calculateExpected()` so the audit report and the
+     * screen that closes a session always agree.
      */
-    private function expectedCashBalance(int $sessionId, mixed $openingFloat): float
+    private function expectedCashBalance(int $sessionId): string
     {
-        $net = (float) $this->db->table('transactions')
-            ->where('cash_session_id', $sessionId)
+        $expected = $this->db->table('transactions')
+            ->join('cash_sessions', 'cash_sessions.id', '=', 'transactions.cash_session_id')
+            ->join('financial_accounts', 'financial_accounts.id', '=', 'cash_sessions.financial_account_id')
+            ->where('transactions.cash_session_id', $sessionId)
+            ->whereNotIn('transactions.type', [TransactionType::CashOver->value, TransactionType::CashShort->value])
             ->selectRaw('
-                COALESCE(SUM(CASE WHEN dr.is_cash_equivalent THEN transactions.amount ELSE 0 END), 0)
-              - COALESCE(SUM(CASE WHEN cr.is_cash_equivalent THEN transactions.amount ELSE 0 END), 0) AS net
+                COALESCE(SUM(CASE WHEN transactions.debit_account_id = financial_accounts.ledger_account_id THEN transactions.amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN transactions.credit_account_id = financial_accounts.ledger_account_id THEN transactions.amount ELSE 0 END), 0) AS expected
             ')
-            ->join('chart_of_accounts as dr', 'dr.id', '=', 'transactions.debit_account_id')
-            ->join('chart_of_accounts as cr', 'cr.id', '=', 'transactions.credit_account_id')
-            ->value('net');
+            ->value('expected');
 
-        return (float) $openingFloat + $net;
+        return Money::of((string) $expected)->toDecimal();
     }
 
     /**

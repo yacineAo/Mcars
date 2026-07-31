@@ -11,10 +11,12 @@ use App\Jobs\ExportJob;
 use App\Models\Branch;
 use App\Models\CarOwner;
 use App\Models\ChartOfAccount;
+use App\Models\FinancialAccount;
 use App\Models\PendingExport;
 use App\Models\User;
 use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\TransactionDraft;
+use App\Services\CashRegisterService;
 use App\Services\ReportService;
 use Carbon\CarbonImmutable;
 use Database\Seeders\ChartOfAccountSeeder;
@@ -149,6 +151,45 @@ it('computes cash session audit', function () {
     $result = $this->reportService->cashSessionAudit($from, $to, $this->branch->id);
 
     expect($result)->toBeArray();
+});
+
+it('does not double count the opening float in the cash session audit', function () {
+    $register = app(CashRegisterService::class);
+    $financialAccount = FinancialAccount::factory()->create([
+        'branch_id' => $this->branch->id,
+        'ledger_account_id' => ChartOfAccount::where('code', '1010')->value('id'),
+        'is_active' => true,
+    ]);
+
+    $session = $register->openSession($financialAccount, '50000.00', $this->user);
+
+    $this->accounting->post(new TransactionDraft(
+        debitAccountId: ChartOfAccount::where('code', '1010')->value('id'),
+        creditAccountId: ChartOfAccount::where('code', '4010')->value('id'),
+        amount: '30000.00',
+        type: TransactionType::RentalRevenue,
+        occurredOn: new DateTimeImmutable,
+        description: 'Customer payment',
+        createdById: $this->user->id,
+        cashSessionId: $session->id,
+        branchId: $session->branch_id,
+    ));
+
+    $register->closeSession($session, '80000.00', $this->user);
+
+    $from = CarbonImmutable::now()->startOfDay();
+    $to = CarbonImmutable::now()->endOfDay();
+
+    $result = $this->reportService->cashSessionAudit($from, $to, $this->branch->id);
+
+    expect($result)->toHaveCount(1);
+    // Expected must equal what the close computed (float 50000 + 30000 receipts),
+    // not float + net-with-float (which would double count to 130000). Money
+    // leaves the report as fixed-point strings, never floats.
+    expect($result[0]['opening_float'])->toBe('50000.00');
+    expect($result[0]['expected'])->toBe('80000.00');
+    expect($result[0]['counted'])->toBe('80000.00');
+    expect($result[0]['variance'])->toBe('0.00');
 });
 
 it('excludes inter-branch clearing account 2600 from company-wide P&L', function () {
