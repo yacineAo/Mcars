@@ -101,6 +101,23 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Manager,
                 UserRole::MaintenanceOfficer,
             ],
+            // The bookings catalogue (extras, contract templates). Every staff role
+            // reads it except the maintenance officer, whose Bookings row in the
+            // visibility matrix is scoped to blocks only — a receptionist must see
+            // the extras list while quoting, and an accountant audits the prices.
+            // Writing it changes what customers are charged, so that is the
+            // manager's call alone.
+            'bookings.view' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+                UserRole::Receptionist,
+                UserRole::Supervisor,
+            ],
+            'bookings.manage' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
             // Operating the till — opening and closing a cash session. The matrix gives
             // the receptionist "payments + cash only" on Finance, and closing posts a
             // variance to the ledger, so the two halves of the feature are split:
