@@ -297,9 +297,11 @@ count, and the difference is a visible, attributable, alertable entry rather tha
 *and* by a Postgres trigger.
 
 A mistake is corrected by `AccountingService::reverse()`, which posts a new row with the debit and
-credit accounts swapped, the same amount and dimensions, `is_reversal = true`, a link in both
-directions (`reverses_transaction_id` / `reversed_by_transaction_id`), and a **mandatory reason**. The
-correct entry is then posted normally.
+credit accounts swapped, the same amount and dimensions, `is_reversal = true`, a forward link
+(`reverses_transaction_id`) to the row it corrects, and a **mandatory reason**. The service does not
+write the inverse column (`reversed_by_transaction_id` is never set): the original's reversal is
+derived by querying reversals that point at it (`Transaction::reversal()`), so the two sides cannot
+disagree. The correct entry is then posted normally.
 
 Why: an editable ledger is not evidence. If a figure can be changed after the fact, no report derived
 from it can be defended to an owner, an auditor or a tax inspector — and every reconciliation becomes

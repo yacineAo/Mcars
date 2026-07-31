@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -98,53 +99,69 @@ class Transaction extends Model
         ];
     }
 
+    /** @return BelongsTo<ChartOfAccount, $this> */
     public function debitAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'debit_account_id');
     }
 
+    /** @return BelongsTo<ChartOfAccount, $this> */
     public function creditAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'credit_account_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<CarOwner, $this> */
     public function carOwner(): BelongsTo
     {
         return $this->belongsTo(CarOwner::class, 'car_owner_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
+    /** @return BelongsTo<CashSession, $this> */
     public function cashSession(): BelongsTo
     {
         return $this->belongsTo(CashSession::class);
     }
 
+    /** @return BelongsTo<Transaction, $this> */
     public function reversesTransaction(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_transaction_id');
     }
 
+    /** @return BelongsTo<Transaction, $this> */
     public function reversedByTransaction(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reversed_by_transaction_id');
+    }
+
+    /** @return HasOne<Transaction, $this> */
+    public function reversal(): HasOne
+    {
+        return $this->hasOne(self::class, 'reverses_transaction_id');
     }
 }

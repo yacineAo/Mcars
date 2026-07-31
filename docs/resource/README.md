@@ -29,7 +29,7 @@ that each piece stays reviewable on its own.
 | [10](10-chart-of-account.md) | **ChartOfAccount** | Accounting | 🔴 audited — needs work |
 | [11](11-financial-account.md) | **FinancialAccount** | Accounting | 🟡 audited — partial |
 | [12](12-expense-category.md) | **ExpenseCategory** | Accounting | ✅ audited — fine |
-| [13](13-transaction.md) | **Transaction** | Accounting | 🟡 audited — partly fixed |
+| [13](13-transaction.md) | **Transaction** | Accounting | ✅ audited — fine |
 | [14](14-cash-session.md) | **CashSession** | Accounting | 🔴 audited — needs work |
 | [15](15-expense.md) | **Expense** | Accounting | 🔴 audited — needs work |
 | [16](16-extra.md) | **Extra** | Bookings | 🟡 audited — partial |
@@ -82,8 +82,8 @@ All 38 resources audited.
 | | Count |
 |---|---|---|
 | 🔴 needs work | 22 |
-| 🟡 partial | 14 |
-| ✅ fine | 2 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md) |
+| 🟡 partial | 13 |
+| ✅ fine | 3 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md) |
 
 Four themes account for most of it, and each is one sweep rather than 38 fixes:
 
@@ -165,7 +165,7 @@ fixing them 38 times, so they are recorded here rather than repeated in every fi
    `tests/Feature/ResourcePagesRenderTest.php`, which exists because of it.
 7. **Empty `->filters([])`** appears on tables that grow without bound — including
    `transactions`, which becomes the largest table in the database and currently cannot be
-   narrowed at all.
+   narrowed at all. (✅ `transactions` since fixed — see [13](13-transaction.md).)
 8. **One permission is gated on but never seeded: `reverse_transaction`.** It guards the
    only correction path for the append-only ledger, and no user — including super_admin —
    can see the action. See [13](13-transaction.md) gap 1.

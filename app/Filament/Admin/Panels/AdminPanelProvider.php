@@ -28,6 +28,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
 use Filament\Tables\Columns\Column;
+use Filament\Tables\Filters\BaseFilter;
 use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -54,17 +55,19 @@ class AdminPanelProvider extends PanelProvider
      * Panel-wide presentation defaults.
      *
      * `translateLabel()` is the whole i18n strategy for this panel. Filament generates a
-     * field/column/entry label from the attribute name and, when this flag is on, passes
-     * it through `__()`. Turning it on globally means one shared dictionary
+     * field/column/entry/filter label from the attribute name and, when this flag is
+     * on, passes it through `__()`. Turning it on globally means one shared dictionary
      * (lang/{ar,fr}.json) translates every resource, instead of 38 resources each
      * carrying their own translation keys. A missing entry falls back to the English
-     * key, so this can never blank a label.
+     * key, so this can never blank a label. Ternary option labels come from Filament
+     * core keys and are already translated.
      */
     public function boot(): void
     {
         Field::configureUsing(fn (Field $field): Field => $field->translateLabel());
         Column::configureUsing(fn (Column $column): Column => $column->translateLabel());
         Entry::configureUsing(fn (Entry $entry): Entry => $entry->translateLabel());
+        BaseFilter::configureUsing(fn (BaseFilter $filter): BaseFilter => $filter->translateLabel());
 
         // Section headings are literal strings rather than derived from an attribute, so
         // they need translating explicitly. make() sets the heading before configure()
