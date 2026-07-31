@@ -77,6 +77,8 @@ it('constrains the enum columns that have a backing enum', function () {
         'fines' => ['type', 'liability', 'status'],
         'owner_installments' => ['status'],
         'payroll_runs' => ['status'],
+        'users' => ['locale'],
+        'contract_templates' => ['locale'],
     ];
 
     $unconstrained = [];

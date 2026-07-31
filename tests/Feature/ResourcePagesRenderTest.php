@@ -22,6 +22,7 @@ use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
 use App\Models\CashSession;
 use App\Models\Contract;
+use App\Models\ContractTemplate;
 use App\Models\Customer;
 use App\Models\Deposit;
 use App\Models\Employee;
@@ -101,6 +102,16 @@ beforeEach(function () {
         'status' => ContractStatus::Active,
         'content_snapshot' => ['rendered' => true],
         'has_damages' => false,
+    ]);
+
+    ContractTemplate::create([
+        'branch_id' => $branch->id,
+        'name' => 'Render template',
+        'locale' => 'fr',
+        'body' => "Rental agreement\n\n{{customer_name}}",
+        'terms_version' => '1.0',
+        'is_active' => true,
+        'is_default' => true,
     ]);
 
     Payment::create([

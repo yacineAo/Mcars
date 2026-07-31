@@ -12,6 +12,7 @@ use App\Models\ContractTemplate;
 use App\Models\User;
 use App\Support\Sequences\SequenceGenerator;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -29,20 +30,7 @@ class ContractService
             throw new RuntimeException('A contract already exists for this booking.');
         }
 
-        if ($template === null) {
-            $template = ContractTemplate::query()
-                ->where('locale', $locale)
-                ->where('is_active', true)
-                ->where('is_default', true)
-                ->first();
-
-            if ($template === null) {
-                $template = ContractTemplate::query()
-                    ->where('locale', $locale)
-                    ->where('is_active', true)
-                    ->first();
-            }
-        }
+        $template ??= $this->resolveTemplate($locale, $booking->branch_id);
 
         return $this->db->transaction(function () use ($booking, $template): Contract {
             $contractNumber = $this->sequences->next('contract', $booking->branch_id);
@@ -65,6 +53,64 @@ class ContractService
             ]);
 
             return $contract;
+        });
+    }
+
+    /**
+     * Which template a contract in this locale renders from.
+     *
+     * `contract_templates.branch_id` is nullable, and null means "available to every
+     * branch" (docs/01-database-schema.md) — so a branch sees its own templates plus
+     * the global ones. An explicit default wins; between two defaults the branch's own
+     * beats the global one; `id` breaks the remaining tie so the choice is never
+     * arbitrary. Returns null when the locale has no active template at all, which
+     * `generate()` handles by falling back to a bare snapshot.
+     */
+    public function resolveTemplate(string $locale, ?int $branchId): ?ContractTemplate
+    {
+        return ContractTemplate::query()
+            ->where('locale', $locale)
+            ->where('is_active', true)
+            ->where(function (Builder $query) use ($branchId): void {
+                $query->whereNull('branch_id');
+
+                if ($branchId !== null) {
+                    $query->orWhere('branch_id', $branchId);
+                }
+            })
+            ->orderByDesc('is_default')
+            ->orderByRaw('branch_id IS NULL')
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Make this template the sole default for its branch and locale.
+     *
+     * The exclusivity rule lives here rather than in the Filament pages that trigger
+     * it: it is a business rule, and three copies of it in the panel is how the edit
+     * page came to clear the wrong locale. Scoped by branch as well as locale, because
+     * a template carries a `branch_id` and one branch must not silently strip another
+     * branch's default.
+     */
+    public function setDefaultTemplate(ContractTemplate $template): ContractTemplate
+    {
+        return $this->db->transaction(function () use ($template): ContractTemplate {
+            ContractTemplate::query()
+                ->where('locale', $template->locale->value)
+                ->where(function (Builder $query) use ($template): void {
+                    $template->branch_id === null
+                        ? $query->whereNull('branch_id')
+                        : $query->where('branch_id', $template->branch_id);
+                })
+                ->whereKeyNot($template->getKey())
+                ->update(['is_default' => false]);
+
+            if (! $template->is_default) {
+                $template->forceFill(['is_default' => true])->save();
+            }
+
+            return $template;
         });
     }
 

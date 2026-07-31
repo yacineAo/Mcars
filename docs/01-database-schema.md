@@ -302,9 +302,14 @@ Photos via Media Library.
 **M-1** → `bookings`. Basis for deposit deductions (`deposit_deductions`) and damage-recovery revenue.
 
 ### `contract_templates` — REQ-06
-`id`, `branch_id` (nullable = global), `name`, `locale` (`ar | fr | en`), `body` (Blade/HTML with
-placeholders), `terms_version`, `is_active`, `is_default`.
+`id`, `branch_id` (nullable = global), `name`, `locale` (`ar | fr | en`, check-constrained),
+`body` (**plain text** with `{{placeholder}}` tokens — it is escaped wherever it is displayed,
+never rendered as markup), `terms_version`, `is_active`, `is_default`.
 **1-M** → `contracts`.
+
+`is_default` is exclusive per **branch + locale**, enforced in
+`ContractService::setDefaultTemplate()`. Selection is `ContractService::resolveTemplate()` —
+see [`docs/resource/17-contract-template.md`](resource/17-contract-template.md).
 
 ### `contracts` — REQ-06, ADV-02
 `id`, `uuid`, `contract_number` (unique, sequential per branch+year via `sequences`), `branch_id`,
