@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\CashSessionStatus;
+use App\Filament\Admin\Concerns\ChecksBranchAccess;
 use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\CreateCashSession;
 use App\Filament\Admin\Resources\CashSessionResource\Pages\EditCashSession;
@@ -32,7 +33,7 @@ use UnitEnum;
 
 class CashSessionResource extends Resource
 {
-    use TranslatesModelLabel;
+    use ChecksBranchAccess, TranslatesModelLabel;
 
     protected static ?string $model = CashSession::class;
 
@@ -78,16 +79,6 @@ class CashSessionResource extends Resource
      * all go through this, so a receptionist can neither see nor operate another
      * branch's till regardless of what they submit.
      */
-    public static function userCanReachBranch(?int $branchId): bool
-    {
-        $user = auth()->user();
-
-        return $user !== null && (
-            $user->can('branches.view_all')
-            || $user->branch_id === $branchId
-        );
-    }
-
     public static function form(Schema $schema): Schema
     {
         return $schema

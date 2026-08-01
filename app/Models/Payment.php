@@ -64,11 +64,18 @@ class Payment extends Model
         ];
     }
 
+    /**
+     * The domain document the payment was taken against — a Booking, an
+     * Expense, an OwnerInstallment, and so on.
+     *
+     * @return MorphTo<Model, $this>
+     */
     public function payable(): MorphTo
     {
         return $this->morphTo();
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
@@ -100,6 +107,7 @@ class Payment extends Model
      * PaymentResource already selects on this relation; its absence broke the
      * whole create-payment page.
      */
+    /** @return BelongsTo<FinancialAccount, $this> */
     public function financialAccount(): BelongsTo
     {
         return $this->belongsTo(FinancialAccount::class);

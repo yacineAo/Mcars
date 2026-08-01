@@ -1,6 +1,6 @@
 # 22 — Payment (Payments)
 
-**Model:** `App\Models\Payment` · **Slug:** `/admin/payments` · **Status:** 🔴 needs work
+**Model:** `App\Models\Payment` · **Slug:** `/admin/payments` · **Status:** ✅ audited — fine
 
 Closes **REQ-07**. Read [`../05-accounting-model.md`](../05-accounting-model.md).
 
@@ -11,102 +11,86 @@ that caused it. A receptionist records cash at the counter (usually from the boo
 not here); an accountant comes here to find a payment, check it reached the ledger, and post
 it if it did not.
 
-## Current state
+## State after audit
 
-| Surface | Exists | Notes |
+| Surface | State | Notes |
 |---|---|---|
-| index | ✅ | has filters (unlike most of the panel) |
-| create | ✅ | |
-| view | ❌ | see Relations |
-| edit | ✅ | nothing frozen after posting |
-| row actions | ✅ | `post_to_ledger`, View, Edit — deprecated `->actions([...])` |
-| header / toolbar actions | 🟡 | `CreateAction`; **`DeleteBulkAction`** |
-| relation managers | ❌ | none |
-| `canAccess()` | ❌ | **absent** |
+| index | ✅ | date-range on `paid_at`, `method`, `direction`, `status`, branch (`branches.view_all`), and the **not-yet-posted** toggle — the accountant's queue |
+| posted indicator | ✅ | `ledger_transactions_exists` badge, selected once per query via `withExists` — never per-row |
+| create | ✅ | posts to the ledger in `afterCreate()`; failure surfaces as a persistent notification with the `post_to_ledger` retry path |
+| view | ✅ | infolist with the payable link and ledger postings — the reconciliation screen |
+| edit | ✅ | frozen once posted |
+| row actions | ✅ | `post_to_ledger`, View, Edit — `->recordActions([...])` |
+| header / toolbar actions | ✅ | `CreateAction`; **no bulk actions** |
+| relation managers | ✅ | `TransactionsRelationManager` — read-only, gated `reports.view_financials` |
+| `canAccess()` | ✅ | `cash_sessions.operate` **or** `reports.view_financials` |
+| branch pinning | ✅ | both halves go through `ChecksBranchAccess`: `getEloquentQuery()` pins the list, `canView`/`canEdit` re-check the record, and an empty accessible set **fails closed** |
 
-`post_to_ledger` is correctly built: it delegates to `PaymentService::recordPayment()` and is
-`visible()` only while `! $record->isPostedToLedger()` (`PaymentResource.php:78-91`). The
-resource does not write to `transactions` itself.
+## What changed
 
-## Should be
+1. **`canAccess()` added** — `cash_sessions.operate || reports.view_financials`, deliberately
+   wider than [Deposit's](23-deposit.md) gate on `reports.view_financials` alone: the role
+   matrix ([`../02-filament-panels.md`](../02-filament-panels.md)) gives the receptionist
+   "payments + cash only" on Finance, and a receptionist who cannot open the payments screen
+   cannot retry a payment whose posting failed. Mirrors `CashSessionResource`'s two-gate split:
+   the till operator sees the cash side, the financial reader sees the books.
+2. **`DeleteBulkAction` removed, `canDelete()` returns false unconditionally.** A payment row
+   is money-movement evidence: unposted payments are completed through `post_to_ledger`, never
+   deleted; posted payments are ledger history and the append-only rule says reverse, don't
+   delete. The postings would survive a delete and cash-flow would reconcile to rows you could
+   not open.
+3. **Edit freezes once posted.** `reference` (a document number) is always disabled on edit;
+   `amount`, `method`, `paid_at`, `direction`, `status`, `customer_id` and
+   `financial_account_id` become disabled once `isPostedToLedger()`. The ledger rows are
+   append-only (ADR-003), so editing the payment afterwards would make the two disagree with no
+   trace. `status` freezes with the posting even though nothing posts on it — a flip to
+   `bounced`/`refunded` would assert money movement the ledger never recorded. Notes and
+   `external_reference` stay editable — the row's own paperwork.
+4. **Method-specific fields shown conditionally.** `external_reference` relabels by method
+   (RIB / CCP account / BaridiMob number / cheque number / card reference) and shows only for
+   the methods that carry one; `cheque_due_date` shows only for `cheque`. Both freeze once
+   posted.
+5. **Not-yet-posted filter added** — a toggle that filters to `whereDoesntHave('ledgerTransactions')`,
+   the queue the `post_to_ledger` action exists to clear.
+6. **Posted indicator column** — `withExists('ledgerTransactions')` in `getEloquentQuery()`
+   feeds a badge column; one EXISTS in the query, never one query per row.
+7. **View page** — infolist (identity, money, payable link, notes) plus the gated postings
+   relation manager, mirroring `ExpenseResource`. The payable morph resolves to a link only
+   when the viewer can open the target resource — a dead link into a 403 is worse than plain
+   text.
+8. **`->actions([...])` → `->recordActions([...])`** and enum-backed options
+   (`PaymentDirection::options()`, `PaymentStatus::options()`) replace the hardcoded subsets —
+   the poster already handles every enum case, so the form no longer hides them.
 
-### Index
-Already has filters — extend rather than build. Wanted: date range on `paid_at`, `method`,
-`direction` (inbound/outbound), and **"not yet posted"**, which is the accountant's real
-queue and the reason the `post_to_ledger` action exists. Branch with `branches.view_all`.
+## Invariants held
 
-Add a column showing whether the payment has reached the ledger. Right now the only way to
-know is that the action is still offered.
-
-### Create
-Payment methods are Algerian — cash, CCP, BaridiMob, bank transfer — and the
-method-specific fields (RIB, CCP account, BaridiMob number) should show conditionally on
-`method`, not all at once.
-
-Creating a payment here, detached from what it pays for, should be the exception: `payable_type`
-/ `payable_id` is a morph, and a payment with no payable cannot be reconciled to anything.
-Either require a payable or make the "unallocated payment" case explicit and reportable.
-
-### View
-Worth adding: the payment, its payable (booking / expense / installment) as a link, and its
-ledger postings. That is the reconciliation question this resource exists to answer.
-
-### Edit
-**Freeze once posted.** `amount`, `method`, `paid_at`, `financial_account_id` and the payable
-must all become read-only once `isPostedToLedger()` — the ledger rows are append-only, so
-editing the payment afterwards makes the two disagree with no trace. Notes only, after that.
-
-### Relations
-
-| Relation | Where | Read-only | Gate | Columns |
-|---|---|---|---|---|
-| `transactions` | **view** | **yes, strictly** | `reports.view_financials` | reference, date, debit, credit, amount, is_reversal |
-
-Include reversals, or a reversed payment looks settled.
-
-### Actions
-
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| `post_to_ledger` | row | `! isPostedToLedger()` | **nothing** | `PaymentService::recordPayment()` | correctly delegated |
-| `ViewAction` | row | always | **nothing** | — | no view page yet |
-| `EditAction` | row | always | **nothing** | — | must freeze once posted — gap 3 |
-| `DeleteBulkAction` | toolbar | always | **nothing** | — | **remove** — gap 2 |
-
-## Gaps and risks
-
-1. **🔴 No `canAccess()`.** Any staff role can create, edit, post and bulk-delete payments.
-   Compare [`23-deposit.md`](23-deposit.md), which correctly gates on
-   `reports.view_financials` — the inconsistency inside one navigation group is the tell that
-   this was an oversight rather than a decision.
-2. **🔴 `DeleteBulkAction` on posted payments.** The postings survive the payment. Cash-flow
-   and receivables then reconcile to rows you cannot open.
-3. **🔴 Nothing frozen after posting** — see Edit. This is the same defect as
-   [`15-expense.md`](15-expense.md) gap 6 and worth fixing as one pattern across the group.
-4. **🟡 No "unposted" filter** despite an action that exists purely to clear that queue.
-5. **🟡 No ledger-posted indicator** in the table.
-6. **🟡 Method-specific fields shown unconditionally.**
-7. **🟡 Deprecated `->actions([...])`.**
-
-## Checklist
-
-- [ ] Add `canAccess()`, matching DepositResource's gate unless there is a reason to differ
-- [ ] Remove `DeleteBulkAction`; guard single delete on being posted
-- [ ] Freeze amount / method / paid_at / account / payable once posted
-- [ ] Add an "unposted" filter and a posted indicator column
-- [ ] Add date-range, method, direction and branch filters
-- [ ] Show method-specific fields conditionally
-- [ ] Add a view page with the payable link and a read-only, gated postings table
-- [ ] `->actions(` → `->recordActions(`
+- **The resource never writes to `transactions`.** `afterCreate()` and `post_to_ledger` both
+  delegate to `PaymentService::recordPayment()`, the only writer (`AccountingService`).
+- **`post_to_ledger` is the retry path, not a double-post.** It is `visible()` only while
+  `! $record->isPostedToLedger()`; after a successful create-posting it is never offered.
+- **Freeze is the edit guard, not the only guard.** Even an unposted payment cannot be deleted,
+  and branch pinning is server-side in the query, not a filter the user can clear.
+- **Branch scoping fails closed.** `ChecksBranchAccess` (`app/Filament/Admin/Concerns/`) owns both
+  halves — the query constraint and the record check — because they were written separately three
+  times (Payment, Expense, CashSession) and had drifted: the query asked `accessibleBranchIds()`,
+  which honours the `branch_user` pivot, while the record check compared `users.branch_id`, so a
+  pivot-granted branch showed rows the view page then refused. An empty accessible set now yields
+  `1 = 0` rather than an unconstrained query — an unconfigured user sees nothing, not everything.
+- **The split at the receivable (E10–E14 / E19) is unchanged** — `PaymentPoster` reads the
+  outstanding receivable through `ReportService`; no sum moved into this resource.
 
 ## Verification
 
 ```bash
+docker compose exec app ./vendor/bin/pest tests/Feature/PaymentResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/Phase6Test.php
 docker compose exec app ./vendor/bin/pest tests/Feature/LedgerWiringTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/AccountingLedgerTest.php
 ```
 
-By hand: record a payment without posting, confirm it appears in the unposted filter, post it,
-confirm the filter empties and the postings show on the view page. Then attempt to edit the
-amount and confirm it is refused.
+`PaymentResourceTest` (18 tests): the two-gate access split, branch pinning (including the
+fail-closed empty set and pivot-granted branches), the posted
+indicator, the not-yet-posted queue, method/direction/status/date filters, auto-posting on
+create, conditional method fields, the post-posting freeze (including a refused amount edit),
+the `post_to_ledger` retry, the payable link on the view page, and the
+`reports.view_financials` gate on the postings relation manager.

@@ -35,10 +35,18 @@ class CreatePayment extends CreateRecord
             // The payment row is already committed. Surfacing the failure loudly
             // beats a silent half-state — the operator can retry with the
             // "Post to ledger" action once the cause is fixed.
+            //
+            // Reported as well as shown: a posting that fails at the counter is an
+            // operations problem, and nobody would learn of it from a notification
+            // the receptionist dismisses. The driver's own message stays in the log
+            // rather than on screen — it is addressed to whoever fixes the cause,
+            // not to the person holding the customer's cash.
+            report($e);
+
             Notification::make()
                 ->danger()
                 ->title(__('payments.notifications.post_failed'))
-                ->body($e->getMessage())
+                ->body(__('payments.notifications.post_failed_body'))
                 ->persistent()
                 ->send();
 

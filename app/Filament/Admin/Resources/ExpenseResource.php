@@ -6,6 +6,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\ExpenseStatus;
 use App\Enums\PaymentMethod;
+use App\Filament\Admin\Concerns\ChecksBranchAccess;
 use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\CreateExpense;
 use App\Filament\Admin\Resources\ExpenseResource\Pages\EditExpense;
@@ -41,7 +42,7 @@ use UnitEnum;
 
 class ExpenseResource extends Resource
 {
-    use TranslatesModelLabel;
+    use ChecksBranchAccess, TranslatesModelLabel;
 
     protected static ?string $model = Expense::class;
 
@@ -99,16 +100,6 @@ class ExpenseResource extends Resource
      * A user without branches.view_all is pinned to their own branch, server-side
      * — the list query and every record-gated page go through this.
      */
-    public static function userCanReachBranch(?int $branchId): bool
-    {
-        $user = auth()->user();
-
-        return $user !== null && (
-            $user->can('branches.view_all')
-            || $user->branch_id === $branchId
-        );
-    }
-
     public static function form(Schema $schema): Schema
     {
         $frozenOncePaid = fn (?Expense $record): bool => $record !== null && $record->status === ExpenseStatus::Paid;

@@ -55,7 +55,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 |---|---|
 | **`TransactionResource`** | **View-only.** No create, edit or delete action exists on this resource at all — not hidden, not permission-gated, *absent*. The ledger is written by `AccountingService` only. Filters: date range, account, type, car, customer, owner, branch. Row action: "Reverse" (creates a compensating entry with a mandatory reason). |
 | ~~`CashRegisterPage`~~ | **Not built.** Shifts are opened and closed from `CashSessionResource`, which does post the variance. |
-| `PaymentResource` | Records receipts and disbursements; posts via `AccountingService` |
+| `PaymentResource` | Records receipts and disbursements; posts via `AccountingService`. Gates: `cash_sessions.operate` or `reports.view_financials`. Posting freezes the money fields; the not-yet-posted queue and a posted indicator track the ledger; view page links the payable and its postings. No bulk or single delete — money rows are never deleted. |
 | `PaymentScheduleResource` | Instalment plans, overdue filter |
 | `ExpenseResource` | Draft → approval → paid workflow, recurring templates |
 | `ExpenseCategoryResource` | Each mapped to a COA account |

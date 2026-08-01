@@ -38,7 +38,7 @@ that each piece stays reviewable on its own.
 | [19](19-contract.md) | **Contract** | Bookings | ✅ audited — fine |
 | [20](20-condition-report.md) | **ConditionReport** | Bookings | ✅ audited — fine |
 | [21](21-car-block.md) | **CarBlock** | Bookings | ✅ audited — fine |
-| [22](22-payment.md) | **Payment** | Payments | 🔴 audited — needs work |
+| [22](22-payment.md) | **Payment** | Payments | ✅ audited — fine |
 | [23](23-deposit.md) | **Deposit** | Payments | 🟡 audited — partial |
 | [24](24-payment-schedule.md) | **PaymentSchedule** | Payments | 🔴 audited — needs work |
 | [25](25-owner-installment.md) | **OwnerInstallment** | Payments | 🟡 audited — partial |
@@ -81,9 +81,9 @@ All 38 resources audited.
 
 | | Count |
 |---|---|---|
-| 🔴 needs work | 22 |
+| 🔴 needs work | 21 |
 | 🟡 partial | 12 |
-| ✅ fine | 5 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md), [15 Expense](15-expense.md), [16 Extra](16-extra.md) |
+| ✅ fine | 6 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md), [15 Expense](15-expense.md), [16 Extra](16-extra.md), [22 Payment](22-payment.md) |
 
 Four themes account for most of it, and each is one sweep rather than 38 fixes:
 
@@ -93,9 +93,10 @@ Four themes account for most of it, and each is one sweep rather than 38 fixes:
    and approve and pay payroll ([30](30-payroll-run.md)).
 2. **`DeleteBulkAction` is nearly universal** — flagged in 27 of 38 files (FinancialAccount now uses `->bulkActions([])`), including on posted money
    records, the chart of accounts, and condition reports that justify charges already in the ledger.
-3. **Records stay editable after they post.** Payment, Expense, Deposit, Fine, OwnerInstallment and
+3. **Records stay editable after they post.** Expense, Deposit, Fine, OwnerInstallment and
    Booking all keep a fully open edit form after posting to an append-only ledger, so a figure can
-   change while the row that recorded it cannot.
+   change while the row that recorded it cannot. Payment now freezes its money fields once posted
+   ([22](22-payment.md)) — the pattern each of the rest should be swept to.
 4. **Several services exist but are called from nowhere.** The Fleet audit found
    `FleetStatusService`, `MaintenanceSchedulerService::recomputeSchedule()` and
    `OwnerStatementService::generateMonthlyInstallments()` each referenced only by a test or not at

@@ -65,26 +65,40 @@ class User extends Authenticatable implements FilamentUser
         return $this->can('branches.view_all');
     }
 
+    /**
+     * Memoised for the lifetime of the instance: Filament evaluates record-level
+     * authorization once per row, so an un-cached lookup here turns a table page
+     * into one query per row per action. Branch membership does not change
+     * mid-request, so the cache cannot go stale within one.
+     *
+     * @var list<int>|null
+     */
+    private ?array $accessibleBranchIds = null;
+
     /** @return list<int> */
     public function accessibleBranchIds(): array
     {
+        if ($this->accessibleBranchIds !== null) {
+            return $this->accessibleBranchIds;
+        }
+
         if ($this->can('branches.view_all')) {
-            return Branch::query()->pluck('id')->all();
+            return $this->accessibleBranchIds = Branch::query()->pluck('id')->all();
         }
 
         $pivotIds = $this->branchUsers()->pluck('branches.id')->all();
 
         if ($pivotIds !== []) {
-            return $pivotIds;
+            return $this->accessibleBranchIds = $pivotIds;
         }
 
         if ($this->branch_id !== null) {
-            return [$this->branch_id];
+            return $this->accessibleBranchIds = [$this->branch_id];
         }
 
         report('User #'.$this->id.' ('.$this->email.') has no branch access configured.');
 
-        return [];
+        return $this->accessibleBranchIds = [];
     }
 
     /**
