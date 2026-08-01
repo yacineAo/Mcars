@@ -294,11 +294,14 @@ cross-wilaya permission.
 **M-M** between bookings and extras with payload.
 
 ### `condition_reports` — ADV-07
-`id`, `booking_id`, `type` (`checkout | checkin`), `performed_at`, `performed_by_id`,
-`odometer`, `fuel_level`, `is_clean`,
+`id`, `booking_id`, `type` (`checkout | checkin`, check-constrained), `performed_at`, `performed_by_id`,
+`odometer`, `fuel_level` (check-constrained), `is_clean`,
 `damage_points` (jsonb — coordinates on the car diagram + severity + note per point),
 `customer_signature` (media), `notes`.
 Photos via Media Library.
+**Unique `(booking_id, type)`** — one inspection of each direction per rental, enforced at the DB
+(`2026_08_10_000000_add_condition_reports_guard_constraints.php`) so not even a concurrent
+double-submit can leave two check-in reports (the closeout charge basis would be ambiguous).
 **M-1** → `bookings`. Basis for deposit deductions (`deposit_deductions`) and damage-recovery revenue.
 
 ### `contract_templates` — REQ-06

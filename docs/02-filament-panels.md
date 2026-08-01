@@ -46,7 +46,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 | `BookingResource` | Table view for search/filtering; wizard form for creation |
 | `ContractResource` | View page renders the stored document (sanitised, RTL-aware); index defaults to the awaiting-signature queue; generate PDF, send, sign (`contracts.sign`), close from the check-in report; terms freeze once signed |
 | `ContractTemplateResource` | Per-locale templates (ar/fr/en) |
-| `ConditionReportResource` | Usually reached from a booking, listed for audit |
+| `ConditionReportResource` | View page shows the readings with the paired report side by side and the photo gallery (private disk); no delete path — evidence; readings freeze once the booking is closed; one report per type per booking |
 | `ExtraResource` | Services catalogue |
 | `CarBlockResource` | |
 

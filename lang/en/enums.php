@@ -172,4 +172,15 @@ return [
         'fr' => 'Français',
         'en' => 'English',
     ],
+    'condition_report_type' => [
+        'checkout' => 'Checkout',
+        'checkin' => 'Check-in',
+    ],
+    'fuel_level' => [
+        'empty' => 'Empty',
+        'quarter' => 'Quarter',
+        'half' => 'Half',
+        'three_quarters' => 'Three quarters',
+        'full' => 'Full',
+    ],
 ];

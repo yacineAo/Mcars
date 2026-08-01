@@ -21,6 +21,7 @@ use App\Models\Car;
 use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
 use App\Models\CashSession;
+use App\Models\ConditionReport;
 use App\Models\Contract;
 use App\Models\ContractTemplate;
 use App\Models\Customer;
@@ -210,6 +211,16 @@ beforeEach(function () {
         'status' => MaintenanceStatus::Completed,
         'completed_at' => now()->subDay(),
         'total_cost' => '8000.00',
+    ]);
+
+    ConditionReport::create([
+        'booking_id' => $booking->id,
+        'type' => 'checkin',
+        'performed_at' => now(),
+        'performed_by_id' => $this->admin->id,
+        'odometer' => 50000,
+        'is_clean' => true,
+        'damage_points' => [],
     ]);
 
     unset($employee);

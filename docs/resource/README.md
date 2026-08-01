@@ -36,7 +36,7 @@ that each piece stays reviewable on its own.
 | [17](17-contract-template.md) | **ContractTemplate** | Bookings | ✅ audited — fine |
 | [18](18-booking.md) | **Booking** | Bookings | ✅ audited — fine |
 | [19](19-contract.md) | **Contract** | Bookings | ✅ audited — fine |
-| [20](20-condition-report.md) | **ConditionReport** | Bookings | 🔴 audited — needs work |
+| [20](20-condition-report.md) | **ConditionReport** | Bookings | ✅ audited — fine |
 | [21](21-car-block.md) | **CarBlock** | Bookings | 🟡 audited — partial |
 | [22](22-payment.md) | **Payment** | Payments | 🔴 audited — needs work |
 | [23](23-deposit.md) | **Deposit** | Payments | 🟡 audited — partial |

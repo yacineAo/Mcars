@@ -172,4 +172,15 @@ return [
         'fr' => 'Français',
         'en' => 'English',
     ],
+    'condition_report_type' => [
+        'checkout' => 'تسليم',
+        'checkin' => 'استلام',
+    ],
+    'fuel_level' => [
+        'empty' => 'فارغ',
+        'quarter' => 'ربع',
+        'half' => 'نصف',
+        'three_quarters' => 'ثلاثة أرباع',
+        'full' => 'ممتلئ',
+    ],
 ];
