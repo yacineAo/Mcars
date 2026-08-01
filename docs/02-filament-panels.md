@@ -60,7 +60,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 | `ExpenseResource` | Draft → approval → paid workflow, recurring templates |
 | `ExpenseCategoryResource` | Each mapped to a COA account |
 | `DepositResource` | Hold / deduct / refund, with deduction line items. Gates on `reports.view_financials`. Defaults to outstanding deposits with a derived remaining-balance column; view page shows the deduction history and ledger postings; the edit form freezes once posted; no delete of any kind — a deposit is a liability in 2100, never revenue. |
-| `OwnerInstallmentResource` | Generation, due, paid, overdue |
+| `OwnerInstallmentResource` | Monthly owner rent accrual (E32) and payouts. Gates on `reports.view_financials`; unaccrued/overdue/period/owner/car filters; derived paid column (via `ReportService` batch) and accrued indicator; edit freezes once accrued; single delete only before accrual — never a bulk sweep. View page links the E32 posting and payments against 2200, both read-only. |
 | `FinancialAccountResource` | Cash boxes, bank, CCP, BaridiMob, POS. Index has derived `current_balance` column gated on `reports.view_financials` (batched via `CashRegisterService::balancesBatch()`), filters by type/is_active/branch. View page with account details, bank details (conditional on type), and two read-only relation managers: Transactions (both legs) and CashSessions. |
 | `ChartOfAccountResource` | Accountant + super_admin only |
 | `CashSessionResource` | Shift history and variance audit |

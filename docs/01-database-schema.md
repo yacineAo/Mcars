@@ -543,7 +543,8 @@ Only one `open` session per `financial_account_id` — partial unique index.
 
 ### `owner_installments` — REQ-03
 `id`, `car_ownership_agreement_id`, `car_owner_id`, `car_id`, `branch_id`,
-`sequence_number`, `total_installments`,
+`sequence_number`, `total_installments` (nullable — **null means open-ended**; the old 999
+sentinel for "indefinite" was removed by `2026_08_13_000000_..._nullable`),
 `period_month` (`date`, first of month), `due_date`, `amount_due`,
 `status` (`pending | partially_paid | paid | overdue | waived | cancelled`),
 `accrual_transaction_id` (the Dr expense / Cr payable posting),

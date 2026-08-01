@@ -41,7 +41,7 @@ that each piece stays reviewable on its own.
 | [22](22-payment.md) | **Payment** | Payments | ✅ audited — fine |
 | [23](23-deposit.md) | **Deposit** | Payments | ✅ audited — fine |
 | [24](24-payment-schedule.md) | **PaymentSchedule** | Payments | 🔴 audited — needs work |
-| [25](25-owner-installment.md) | **OwnerInstallment** | Payments | 🟡 audited — partial |
+| [25](25-owner-installment.md) | **OwnerInstallment** | Payments | ✅ audited — fine |
 | [26](26-fine.md) | **Fine** | Operations | 🟡 audited — partial |
 | [27](27-employee.md) | **Employee** | HR | 🔴 audited — needs work |
 | [28](28-employee-advance.md) | **EmployeeAdvance** | HR | 🔴 audited — needs work |

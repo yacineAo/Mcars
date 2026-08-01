@@ -64,7 +64,11 @@ class InstallmentsRelationManager extends RelationManager
                     ->label('#')
                     ->formatStateUsing(fn (?int $state, $record): string => $state === null
                         ? '—'
-                        : $state.'/'.($record->total_installments ?? '?')),
+                        // A null total means the agreement is open-ended — there
+                        // is no count to show, only the sequence number.
+                        : ($record->total_installments !== null
+                            ? $state.'/'.$record->total_installments
+                            : (string) $state)),
                 TextColumn::make('amount_due')
                     ->label('Amount')
                     ->money('DZD')

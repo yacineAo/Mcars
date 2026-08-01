@@ -33,21 +33,25 @@ class OwnerInstallment extends Model
         ];
     }
 
+    /** @return BelongsTo<CarOwnershipAgreement, $this> */
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(CarOwnershipAgreement::class, 'car_ownership_agreement_id');
     }
 
+    /** @return BelongsTo<CarOwner, $this> */
     public function carOwner(): BelongsTo
     {
         return $this->belongsTo(CarOwner::class);
     }
 
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /** @return BelongsTo<Transaction, $this> */
     public function accrualTransaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class, 'accrual_transaction_id');

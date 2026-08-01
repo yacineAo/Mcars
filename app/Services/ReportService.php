@@ -798,8 +798,12 @@ class ReportService
 
     /**
      * Paid amount for an installment, derived from the ledger.
+     *
+     * Public because the OwnerInstallment view page shows the paid figure for a
+     * single record. The index table uses the batch form below, never a per-row
+     * sum.
      */
-    private function installmentPaidAmount(int $installmentId): float
+    public function installmentPaidAmount(int $installmentId): float
     {
         return (float) $this->db->table('transactions')
             ->where('source_type', 'owner_installment')
@@ -808,6 +812,35 @@ class ReportService
                 $q->select('id')->from('chart_of_accounts')->where('code', '2200');
             })
             ->sum('amount');
+    }
+
+    /**
+     * Paid amounts for a set of instalments, in one grouped query.
+     *
+     * The OwnerInstallment index column reads its figure from this map: one
+     * query per request instead of one per row, and the predicate lives here
+     * (the single home for ledger aggregations) rather than in a widget query.
+     *
+     * @param array<int> $installmentIds
+     * @return array<int, string> keyed by instalment id, decimal strings
+     */
+    public function installmentsPaidAmounts(array $installmentIds): array
+    {
+        if ($installmentIds === []) {
+            return [];
+        }
+
+        return $this->db->table('transactions')
+            ->where('source_type', 'owner_installment')
+            ->whereIn('source_id', $installmentIds)
+            ->where('debit_account_id', function ($q) {
+                $q->select('id')->from('chart_of_accounts')->where('code', '2200');
+            })
+            ->groupBy('source_id')
+            ->selectRaw('source_id, SUM(amount) AS paid')
+            ->pluck('paid', 'source_id')
+            ->map(fn (mixed $paid): string => (string) $paid)
+            ->all();
     }
 
     /**

@@ -74,6 +74,16 @@ class OwnerStatementService
         return $generated;
     }
 
+    /**
+     * The generator's own numbering rule, shared with the manual correction
+     * path (CreateOwnerInstallment) so the document run cannot diverge.
+     */
+    public function nextSequenceNumber(int $agreementId): int
+    {
+        return (int) (OwnerInstallment::where('car_ownership_agreement_id', $agreementId)
+            ->max('sequence_number') ?? 0) + 1;
+    }
+
     private function generateOneInstallment(CarOwnershipAgreement $agreement, Carbon $periodMonth, int $userId): bool
     {
         $startOfMonth = $periodMonth->copy()->startOfMonth();
@@ -86,8 +96,7 @@ class OwnerStatementService
             return false;
         }
 
-        $sequenceNumber = (OwnerInstallment::where('car_ownership_agreement_id', $agreement->id)
-            ->max('sequence_number') ?? 0) + 1;
+        $sequenceNumber = $this->nextSequenceNumber($agreement->id);
 
         $paymentDay = $agreement->payment_day_of_month ?? 5;
         $dueDate = $startOfMonth->copy()->addDays($paymentDay - 1);
@@ -105,20 +114,27 @@ class OwnerStatementService
             'car_id' => $agreement->car_id,
             'branch_id' => $agreement->branch_id,
             'sequence_number' => $sequenceNumber,
-            'total_installments' => $agreement->installments_count ?? 999,
+            // NULL means the agreement is open-ended — owner rent is a monthly
+            // accrual that runs until the agreement ends, so there is no count.
+            // The old 999 sentinel leaked into every screen as "3 of 999".
+            'total_installments' => $agreement->installments_count,
             'period_month' => $startOfMonth->format('Y-m-d'),
             'due_date' => $dueDate->format('Y-m-d'),
             'amount_due' => $amountDue,
             'status' => 'pending',
         ]);
 
-        $transactions = $this->accounting->postMany(
-            $this->poster->postAccrual($installment, $userId),
-        );
+        // The accrual and the pointer stamp are one step: a crash between them
+        // would leave E32 on the ledger while the row still reads unaccrued.
+        $this->db->transaction(function () use ($installment, $userId): void {
+            $transactions = $this->accounting->postMany(
+                $this->poster->postAccrual($installment, $userId),
+            );
 
-        $installment->update([
-            'accrual_transaction_id' => $transactions->first()?->id,
-        ]);
+            $installment->update([
+                'accrual_transaction_id' => $transactions->first()?->id,
+            ]);
+        });
 
         return true;
     }

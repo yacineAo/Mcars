@@ -117,9 +117,25 @@ class PaymentService
 
     public function accrueOwnerInstallment(OwnerInstallment $installment, int $userId): Collection
     {
-        return $this->accounting->postMany(
-            $this->installmentPoster->postAccrual($installment, $userId),
-        );
+        // The pointer stamp is part of the accrual, not a follow-up: posted
+        // without it, a crash between the commit and the update would leave E32
+        // on the ledger while the row still reads as unaccrued. One transaction
+        // keeps the posting and the pointer atomic (postMany nests safely).
+        return $this->db->transaction(function () use ($installment, $userId): Collection {
+            $transactions = $this->accounting->postMany(
+                $this->installmentPoster->postAccrual($installment, $userId),
+            );
+
+            // E32 is the row the "unaccrued" queue and the accrued indicator
+            // read: `accrual_transaction_id IS NULL` means "still to accrue".
+            if ($installment->accrual_transaction_id === null) {
+                $installment->update([
+                    'accrual_transaction_id' => $transactions->first()?->id,
+                ]);
+            }
+
+            return $transactions;
+        });
     }
 
     public function assignFine(Fine $fine, int $userId): Collection
