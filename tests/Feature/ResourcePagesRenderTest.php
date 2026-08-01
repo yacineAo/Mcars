@@ -268,3 +268,33 @@ it('renders the create page of every resource that has one', function () {
 
     expect($failures)->toBe([]);
 });
+
+it('renders the view page of every resource that has one, with a row in it', function () {
+    $this->actingAs($this->admin);
+
+    $failures = [];
+
+    foreach (Filament::getPanel('admin')->getResources() as $resource) {
+        if (! isset($resource::getPages()['view'])) {
+            continue;
+        }
+
+        $record = $resource::getModel()::query()->first();
+
+        if ($record === null) {
+            continue;
+        }
+
+        try {
+            $status = $this->get($resource::getUrl('view', ['record' => $record], panel: 'admin'))->getStatusCode();
+
+            if ($status >= 400) {
+                $failures[] = class_basename($resource).' → HTTP '.$status;
+            }
+        } catch (\Throwable $e) {
+            $failures[] = class_basename($resource).' → '.mb_substr($e->getMessage(), 0, 140);
+        }
+    }
+
+    expect($failures)->toBe([]);
+});

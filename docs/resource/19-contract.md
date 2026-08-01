@@ -1,6 +1,6 @@
 # 19 — Contract (Bookings)
 
-**Model:** `App\Models\Contract` · **Slug:** `/admin/contracts` · **Status:** 🔴 needs work
+**Model:** `App\Models\Contract` · **Slug:** `/admin/contracts` · **Status:** ✅ audited — fine
 
 Closes **REQ-06**, **ADV-01** (e-signature). See
 [`../tasks/phase-05-bookings-contracts.md`](../tasks/phase-05-bookings-contracts.md).
@@ -16,113 +16,90 @@ real consequences.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | has filters |
-| create | ✅ | |
-| view | ❌ | **absent** — the document itself cannot be viewed in the panel |
-| edit | ✅ | nothing frozen after signing |
-| row actions | ✅ | `render_pdf`, `send`, `sign`, `close` — deprecated `->actions([...])` |
-| header / toolbar actions | 🟡 | `CreateAction` |
-| relation managers | ❌ | none, though it has `signatures`, `childContracts`, `deposits`, `fines` |
-| `canAccess()` | ❌ | absent |
+| index | ✅ | status filter **defaulting to awaiting signature**, customer filter, generated date range |
+| create | ✅ | **generated** from booking + template via `ContractService::generate()` — never typed |
+| view | ✅ | renders the stored `content_snapshot` (sanitised, `dir` from the snapshot's locale) + identity, signatures, amendments, deposits, fines, condition reports |
+| edit | ✅ | every term field disabled once signed (ADR-005); only `closing_notes` stays writable |
+| row actions | ✅ | `render_pdf`, `send`, `sign`, `close`, Edit, Delete — `->recordActions([...])`, all gated |
+| header / toolbar actions | ✅ | `CreateAction` |
+| relation managers | ✅ | 5, money ones gated |
+| `canAccess()` | ✅ | `bookings.view` |
 
-`render_pdf`, `send` and `close` all delegate to `ContractService`, which is right. `sign` does
-not — see gap 2.
+## Gaps found and fixed
 
-## Should be
+1. **No view page.** Added `ViewContract`: the stored document (template body + identity, car,
+   period and pricing tables) rendered from `content_snapshot` — the frozen text actually
+   agreed, never a re-render from the current template. The snapshot HTML is **sanitised**
+   before rendering: a DOM whitelist drops every attribute and any tag outside a fixed set, so
+   a template edit cannot smuggle a script or an event handler onto the panel. Direction comes
+   from `Contract::direction()` (`content_snapshot['locale'] === 'ar'` → `rtl`), so an Arabic
+   contract stays RTL when a French-speaking manager opens it. The `document_hash` shown
+   against the document ties the screen to the stored PDF.
+2. **`sign` bypassed the service and wrote no signature row.** Now
+   `ContractService::markSigned($contract, $signerRole, $signerName, $by, ?Model $signer)`:
+   refuses `Signed`/`Closed`/`Cancelled`, creates the `ContractSignature` row
+   (`method: InPersonPaper`, name snapshot, `document_hash`, `signed_at`) and only then moves
+   the status. ADV-01's audit trail is real: a `Signed` contract always records who signed it,
+   how, and **who at the desk witnessed it** (`signed_by_id` — null for OTP signatures, where
+   nobody vouches). The witness write and the status flip happen in one transaction with the
+   contract row locked, so two desks cannot record two signatures for the same contract.
+3. **No `canAccess()`, nothing gated.** Access gates on `bookings.view` (the accountant reads
+   contracts but never freezes one). `canCreate`/`canEdit`/`render_pdf`/`send`/`close` gate on
+   `bookings.operate`. **Signing is its own permission** — `contracts.sign` — because a
+   signature locks a price into a legal document: an accountant who can read must never be the
+   one who signs. Delete is `bookings.manage` **and** only a `Draft`, mirroring the booking
+   rule. `contracts.sign` ships as a migration
+   (`2026_08_01_000002_seed_contracts_sign_permission.php`), not just a seeder entry, so an
+   existing deployment does not lose the action until it is seeded (same guarantee as
+   `bookings.operate`).
+4. **Nothing frozen after signing.** `Contract::isLocked()` — false only for
+   `Draft`/`AwaitingSignature` — disables every term field on edit. Amendments are child
+   contracts via `ContractService::amend()`, which the `childContracts` relation surfaces.
+5. **No awaiting-signature queue.** Status filter defaults to `AwaitingSignature`; customer
+   and generated-date-range filters added (half-open bounds, Africa/Algiers).
+6. **Deprecated `->actions([...])`.** Migrated to `->recordActions([...])`.
+7. **PHPStan `is()` / null-comparison warnings.** Fixed the model as the audit prescribed:
+   `@property ContractStatus $status` and `@property array|null $content_snapshot` docblocks
+   on `Contract`.
 
-### Index
-Extend the filters with a status filter defaulting to **awaiting signature** — the queue the
-office chases — plus a date range and a customer filter. Show the contract number, customer,
-car, status badge, and `signed_at`.
+### Decisions taken while fixing
 
-### Create
-A contract is generated from a booking and a template, not typed. Creating one detached from a
-booking should be the exception; `content_snapshot` is the rendered document and must come from
-`ContractService`, never from a form field.
+- **`close` needs the check-in report.** `ContractService::close($contract, $checkin, $by)`
+  was already report-based, but the action typed notes into the void. The action now requires
+  picking the booking's check-in `ConditionReport`; `closing_notes` and `has_damages` come
+  **from the report**, not from what the operator types — the close-out is evidence, and the
+  two can no longer disagree. The pairing is enforced in the service: a report that belongs to
+  another booking is refused with a `RuntimeException` (the UI select constrains it, but a
+  crafted request must not close one booking on another's report). `close` now also accepts
+  `Signed` contracts (a signed contract can be closed on return), while `markSigned` still
+  refuses anything past `AwaitingSignature`.
+- **`send` has a visible guard.** `content_snapshot !== null` (unchanged) plus
+  `Draft|AwaitingSignature`, so a sent contract is not re-sent into the void.
+- **The booking is immutable once pinned.** The create form's booking picker only offers
+  bookings without a contract (the service throws otherwise), and the field disables on edit:
+  re-pointing a contract at another booking would desync the document from the booking it
+  quotes.
+- **`conditionReports` via `hasManyThrough`.** The relation manager surfaces the booking's
+  condition reports through `Contract::conditionReports()` (a `hasManyThrough` — read-only
+  list only), because the out/in pair is what a dispute turns on.
 
-### View
-**Add one, and make it show the document.** A contract resource where you cannot read the
-contract is the defect here. The view page should render `content_snapshot` — the frozen text
-that was actually agreed, not a re-render from the current template — alongside status,
-signature history and the related deposits and fines.
+## Permission map
 
-Rendering stored HTML needs care: `content_snapshot` is generated from a template that an
-admin edits, so it must be rendered as trusted-but-sanitised markup, and the page must set
-direction from the contract's locale rather than the viewer's. Contracts are archival — an
-Arabic contract stays RTL when a French-speaking manager opens it.
-
-### Edit
-**Freeze once signed.** `content_snapshot`, `terms_version` and `signed_at` are the evidence of
-what was agreed; a signed contract that can still be edited is not evidence of anything. After
-`Signed`, only `closing_notes` should be writable. Amendments are child contracts — the
-`childContracts` relation already exists for exactly that.
-
-### Relations
-
-| Relation | Where | Read-only | Gate | Columns |
-|---|---|---|---|---|
-| `signatures` | **view** | yes | — | signatory, signed at, method, IP |
-| `childContracts` | **view** | yes | — | number, status, created at (amendments) |
-| `deposits` | **view** | yes | `reports.view_financials` | amount, status, held at |
-| `fines` | **view** | yes | — | notice number, violation date, amount, liability |
-| condition reports (via booking) | **view** | yes | — | direction, odometer, fuel, damages |
-
-Condition reports hang off the booking rather than the contract, but the out/in pair is what a
-dispute turns on, so surfacing them here is worth the indirection.
-
-### Actions
-
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| `render_pdf` | row | `! status->is(Draft)` | **nothing** | `ContractService::renderPdf()` | correct |
-| `send` | row | `content_snapshot !== null` | **nothing** | `ContractService::send()` | correct |
-| `sign` | row | `Draft` \| `AwaitingSignature` | **nothing** | raw `update()` — should be a service | **writes no signature row** — gap 2 |
-| `close` | row | see resource | **nothing** | `ContractService` | correct |
-| `EditAction` | row | always | **nothing** | — | must freeze once signed |
-
-## Gaps and risks
-
-1. **🔴 No view page.** See View. The document is unreadable in the panel; `render_pdf` produces
-   a file, which is not the same as being able to look at what was signed.
-2. **🔴 `sign` writes the status transition inline** (`ContractResource.php:96-107`):
-   `$record->update(['status' => ContractStatus::Signed, 'signed_at' => now()])`. Every sibling
-   action delegates to `ContractService`; this one encodes the signing semantics in the UI. It
-   also creates **no signature record**, so `signatures` stays empty and ADV-01's audit trail is
-   bypassed entirely — a contract can reach `Signed` with nothing recording who signed it or
-   how. Move it to `ContractService::markSigned()` and have it write a signature row.
-3. **🔴 No `canAccess()`.** Any staff role can render, send, sign and close contracts.
-   Marking a contract signed is a legal assertion and should not be available to every role.
-4. **🟡 Nothing frozen after signing** — see Edit.
-5. **🟡 No status filter defaulting to the awaiting-signature queue.**
-6. **🟡 Deprecated `->actions([...])`.**
-7. **🔵 Two PHPStan warnings here are false positives — do not "fix" the code.**
-   PHPStan reports "Cannot call method `is()` on string" at `ContractResource.php:82` and a
-   strict comparison against null at `:89`. I verified `Contract::casts()` includes
-   `'status' => ContractStatus::class` (`Contract.php:52`), so `$record->status->is(...)` is
-   correct at runtime, and `content_snapshot` is nullable JSON rather than a non-null string.
-   Both are larastan reading column types from the schema instead of `casts()`. Fix with
-   `@property ContractStatus $status` and `@property ?array $content_snapshot` docblocks on the
-   model — the same remedy applied to `User::$locale` and proposed for
-   [`14-cash-session.md`](14-cash-session.md) gap 9. Changing the comparisons would break
-   working code.
-
-## Checklist
-
-- [ ] Add a view page rendering `content_snapshot`, with direction from the contract's locale
-- [ ] Move `sign` into `ContractService::markSigned()` and write a `signatures` row
-- [ ] Add `canAccess()`; restrict sign and close
-- [ ] Freeze `content_snapshot` / `terms_version` / `signed_at` once signed
-- [ ] Add the 5 relation managers, money ones gated
-- [ ] Add a status filter defaulting to awaiting signature; add date and customer filters
-- [ ] Add `@property` docblocks for `status` and `content_snapshot`
-- [ ] `->actions(` → `->recordActions(`
+| Permission | Guards |
+|---|---|
+| `bookings.view` | resource access, View page |
+| `bookings.operate` | create, edit, `render_pdf`, `send`, `close` |
+| `contracts.sign` | the `sign` action — `SignatureService` OTP verification is unchanged |
+| `bookings.manage` | delete (draft only) |
+| `reports.view_financials` | the deposits relation manager |
 
 ## Verification
 
 ```bash
-docker compose exec app ./vendor/bin/pest tests/Feature/BookingTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/ContractResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
-docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/ContractResource.php app/Models/Contract.php
+docker compose exec app ./vendor/bin/pest tests/Feature/ContractTemplateResourceTest.php
+docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/ContractResource.php app/Models/Contract.php app/Services/Booking/ContractService.php
 ```
 
 By hand: render a contract in Arabic and confirm the view page and the PDF are both RTL, and

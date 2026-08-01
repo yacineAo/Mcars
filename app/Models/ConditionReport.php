@@ -8,9 +8,13 @@ use App\Enums\ConditionReportType;
 use App\Enums\FuelLevel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property Carbon|null $performed_at
+ */
 class ConditionReport extends Model implements HasMedia
 {
     use InteractsWithMedia;

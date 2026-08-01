@@ -131,6 +131,17 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Receptionist,
                 UserRole::Supervisor,
             ],
+            // Affixing a signature to a rental contract and freezing its terms. The
+            // document embeds prices, so the signature is the moment the customer
+            // accepts them — it follows the operating spread rather than the
+            // catalogue's manager-only one, mirroring bookings.operate. The
+            // accountant signs nothing and audits the signed record.
+            'contracts.sign' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Receptionist,
+                UserRole::Supervisor,
+            ],
             // Operating the till — opening and closing a cash session. The matrix gives
             // the receptionist "payments + cash only" on Finance, and closing posts a
             // variance to the ledger, so the two halves of the feature are split:

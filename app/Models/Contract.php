@@ -11,8 +11,41 @@ use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
+/**
+ * @property string|null $uuid
+ * @property string|null $contract_number
+ * @property int|null $branch_id
+ * @property int|null $booking_id
+ * @property int|null $car_id
+ * @property int|null $customer_id
+ * @property int|null $contract_template_id
+ * @property ContractStatus $status
+ * @property array<string, mixed>|null $content_snapshot
+ * @property string|null $terms_version
+ * @property InsuranceType|null $insurance_type
+ * @property string|null $franchise_amount
+ * @property Carbon|null $generated_at
+ * @property string|null $pdf_disk
+ * @property string|null $pdf_path
+ * @property string|null $document_hash
+ * @property Carbon|null $sent_at
+ * @property string|null $sent_channel
+ * @property string|null $sent_to
+ * @property Carbon|null $signed_at
+ * @property Carbon|null $closed_at
+ * @property int|null $closed_by_id
+ * @property string|null $closing_notes
+ * @property bool|null $has_damages
+ * @property int|null $parent_contract_id
+ * @property-read Booking|null $booking
+ * @property-read Car|null $car
+ * @property-read Customer|null $customer
+ * @property-read ContractTemplate|null $template
+ */
 class Contract extends Model
 {
     use BelongsToBranch, LogsActivity;
@@ -115,6 +148,23 @@ class Contract extends Model
         return $this->hasMany(Fine::class);
     }
 
+    /**
+     * The booking's condition reports — the records that open and close the rental.
+     *
+     * @return HasManyThrough<ConditionReport>
+     */
+    public function conditionReports(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            ConditionReport::class,
+            Booking::class,
+            'id',
+            'booking_id',
+            'booking_id',
+            'id',
+        );
+    }
+
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by_id');
@@ -123,5 +173,22 @@ class Contract extends Model
     public function scopeActive($query): void
     {
         $query->whereIn('status', [ContractStatus::Active, ContractStatus::Signed]);
+    }
+
+    /**
+     * Once signed, the terms it embeds are immutable — ADR-005 freezes the document.
+     */
+    public function isLocked(): bool
+    {
+        return ! $this->status->is(ContractStatus::Draft, ContractStatus::AwaitingSignature);
+    }
+
+    /**
+     * Text direction of the embedded document, from the locale the snapshot was
+     * rendered in — Arabic snapshots render right-to-left even in an LTR panel.
+     */
+    public function direction(): string
+    {
+        return ($this->content_snapshot['locale'] ?? 'fr') === 'ar' ? 'rtl' : 'ltr';
     }
 }

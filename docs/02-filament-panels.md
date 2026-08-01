@@ -44,7 +44,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 |---|---|
 | ~~`BookingCalendarPage`~~ | **Not built.** Bookings are worked from the table view; `BookingAvailabilityService::calendarFeed()` exists for when it is. |
 | `BookingResource` | Table view for search/filtering; wizard form for creation |
-| `ContractResource` | Generate PDF, send, signature status, close-out |
+| `ContractResource` | View page renders the stored document (sanitised, RTL-aware); index defaults to the awaiting-signature queue; generate PDF, send, sign (`contracts.sign`), close from the check-in report; terms freeze once signed |
 | `ContractTemplateResource` | Per-locale templates (ar/fr/en) |
 | `ConditionReportResource` | Usually reached from a booking, listed for audit |
 | `ExtraResource` | Services catalogue |

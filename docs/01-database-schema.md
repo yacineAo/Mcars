@@ -336,6 +336,8 @@ price list changes or the template is edited. See ADR-005.
 `signer_role` (`customer | additional_driver | company_representative | guarantor`),
 `signer_type` + `signer_id` (polymorphic → Customer / User / AdditionalDriver),
 `signer_name_snapshot`,
+`signed_by_id` (nullable **M-1** → `users`) — the staff member at the desk who witnessed the
+signature in person. Null for `otp` signatures: the customer signs remotely and nobody vouches.
 `method` (`drawn | otp | uploaded_scan | in_person_paper`),
 `signature_image` (media),
 `otp_code_hash`, `otp_sent_to`, `otp_sent_at`, `otp_verified_at`, `otp_attempts`,

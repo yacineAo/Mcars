@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Booking;
 
 use App\Enums\ContractStatus;
+use App\Enums\SignatureMethod;
+use App\Enums\SignerRole;
 use App\Models\Booking;
 use App\Models\ConditionReport;
 use App\Models\Contract;
@@ -13,6 +15,7 @@ use App\Models\User;
 use App\Support\Sequences\SequenceGenerator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -141,8 +144,12 @@ class ContractService
 
     public function close(Contract $contract, ConditionReport $checkin, User $by): Contract
     {
-        if ($contract->status !== ContractStatus::Active) {
-            throw new RuntimeException('Only active contracts can be closed.');
+        if (! $contract->status->is(ContractStatus::Active, ContractStatus::Signed)) {
+            throw new RuntimeException('Only active or signed contracts can be closed.');
+        }
+
+        if ($checkin->booking_id !== $contract->booking_id) {
+            throw new RuntimeException('The check-in report does not belong to this contract\'s booking.');
         }
 
         $contract->status = ContractStatus::Closed;
@@ -153,6 +160,49 @@ class ContractService
         $contract->save();
 
         return $contract;
+    }
+
+    /**
+     * Record an in-person signature and freeze the contract.
+     *
+     * The signing staff member vouches for the signer's identity, so the signature is
+     * recorded with the signer's name from the document itself and the witness's id —
+     * the audit trail must answer *who* vouched, not just *whose* signature went on
+     * (ADR-001). The terms were already frozen by the snapshot; marking it signed is
+     * what locks the document against editing (ADR-005).
+     *
+     * Both writes — the signature row and the status transition — run in one
+     * transaction with the contract row locked, so two desks signing at once cannot
+     * record two signatures for one contract.
+     *
+     * @throws RuntimeException when the contract is already signed, closed or cancelled.
+     */
+    public function markSigned(Contract $contract, SignerRole $signerRole, string $signerName, User $by, ?Model $signer = null): Contract
+    {
+        return $this->db->transaction(function () use ($contract, $signerRole, $signerName, $by, $signer): Contract {
+            $contract = Contract::query()->lockForUpdate()->findOrFail($contract->getKey());
+
+            if ($contract->status->is(ContractStatus::Signed, ContractStatus::Closed, ContractStatus::Cancelled)) {
+                throw new RuntimeException('Only draft or awaiting-signature contracts can be signed.');
+            }
+
+            $contract->signatures()->create([
+                'signed_by_id' => $by->id,
+                'signer_role' => $signerRole,
+                'signer_type' => $signer?->getMorphClass(),
+                'signer_id' => $signer?->getKey(),
+                'signer_name_snapshot' => $signerName,
+                'method' => SignatureMethod::InPersonPaper,
+                'document_hash' => $contract->document_hash,
+                'signed_at' => now(),
+            ]);
+
+            $contract->status = ContractStatus::Signed;
+            $contract->signed_at = now();
+            $contract->save();
+
+            return $contract;
+        });
     }
 
     public function amend(Contract $contract, array $changes): Contract

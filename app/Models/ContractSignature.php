@@ -9,11 +9,18 @@ use App\Enums\SignerRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int|null $signed_by_id
+ * @property Carbon|null $signed_at
+ * @property-read User|null $signedBy
+ */
 class ContractSignature extends Model
 {
     protected $fillable = [
         'contract_id',
+        'signed_by_id',
         'signer_role',
         'signer_type',
         'signer_id',
@@ -47,6 +54,16 @@ class ContractSignature extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    /**
+     * The staff member who witnessed the signature.
+     *
+     * Null for OTP signatures — the customer signs remotely, nobody at the desk vouches.
+     */
+    public function signedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'signed_by_id');
     }
 
     public function signer(): MorphTo
