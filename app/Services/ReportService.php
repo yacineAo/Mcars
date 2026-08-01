@@ -57,6 +57,26 @@ class ReportService
     /** Receivable control accounts: customers + fines. */
     private const RECEIVABLE_CODES = ['1110', '1120'];
 
+    /**
+     * The rental receivable alone — the account `PaymentPoster` credits.
+     *
+     * Separate from `RECEIVABLE_CODES` on purpose. Reporting spans both control
+     * accounts because a customer owes their fines as well as their rentals; deciding
+     * how much of a payment clears the receivable must not, because the credit leg only
+     * ever lands on 1110.
+     */
+    private const CUSTOMER_RECEIVABLE_CODES = ['1110'];
+
+    /**
+     * Customer credit balances (2500) — money held that no invoice has claimed yet.
+     *
+     * A payment taken before the rental is invoiced has no receivable to clear, so it
+     * lands here (E19). It is still money the customer handed over, so every figure
+     * that answers "what has been paid" or "what is still owed" has to net it: without
+     * that, a customer who prepaid in full reads as owing the whole rental.
+     */
+    private const CUSTOMER_CREDIT_CODES = ['2500'];
+
     private const CACHE_TTL = 600;
 
     public function __construct(
@@ -271,6 +291,10 @@ class ReportService
      * `owed` is positive when the customer owes the company, negative for a credit
      * balance. Deposits sit in 2100 and are reported separately — never as revenue.
      *
+     * Both `owed` and `paid` net the customer credit balance (2500) for the reason
+     * given on `bookingSettlement()`: a payment taken before its rental is invoiced has
+     * no receivable to clear, and money in hand must not read as money still owed.
+     *
      * @return array<string, mixed>
      */
     public function customerStatement(int $customerId): array
@@ -284,10 +308,13 @@ class ReportService
             ->selectRaw(
                 $this->revenueExpenseSelect().',
                 COALESCE(SUM(CASE WHEN transactions.debit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0)
-              - COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0) AS owed,
-                COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0) AS settled',
+              - COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0) AS ar_movement,
+                COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ('.$receivableIds.') AND transactions.source_type = \'payment\' THEN transactions.amount ELSE 0 END), 0) AS settled,
+                '.$this->heldCreditSelect(),
             )
             ->first();
+
+        $heldCredit = (float) ($ledger->held_credit ?? 0);
 
         $depositsHeld = (float) Deposit::query()
             ->where('customer_id', $customerId)
@@ -297,14 +324,123 @@ class ReportService
         return [
             'customer_id' => $customerId,
             'invoiced' => round((float) ($ledger->revenue ?? 0), 2),
-            'paid' => round((float) ($ledger->settled ?? 0), 2),
-            'owed' => round((float) ($ledger->owed ?? 0), 2),
+            'paid' => round((float) ($ledger->settled ?? 0) + $heldCredit, 2),
+            'owed' => round((float) ($ledger->ar_movement ?? 0) - $heldCredit, 2),
             'deposits_held' => round($depositsHeld, 2),
             'active_fines_count' => Fine::query()
                 ->where('customer_id', $customerId)
                 ->where('status', 'pending')
                 ->count(),
         ];
+    }
+
+    /**
+     * What one booking was invoiced, what has been paid against it, and what is left.
+     *
+     * Derived from the ledger every time — there is no `bookings.paid_amount` and there
+     * must never be one. `invoiced` is the revenue posted for the booking (E02 at
+     * pickup plus any closeout charges E04–E08), `paid` is the receivable cleared by
+     * payments (E10–E14), and `outstanding` is the receivable balance still standing.
+     *
+     * `paid` counts only rows `PaymentPoster` wrote (source_type `payment`), never every
+     * credit on the receivable account: a correcting reversal of an E02 row also credits
+     * the receivable, and counting it as payment would double-report the customer as
+     * having paid money they never handed over.
+     *
+     * `outstanding` is the authoritative figure: it is the AR movement for this booking
+     * *less the credit balance held against it*, so a refund or a correcting reversal
+     * shows up in it without any special casing here.
+     *
+     * The credit term is what makes a prepayment come out right. Money taken before the
+     * rental is invoiced has no receivable to clear, so it sits on 2500 (E19); counting
+     * only the receivable would report a customer who paid in full up front as still
+     * owing the whole rental, while the payments list on the same screen showed their
+     * money. `paid` and `outstanding` both net it, so the two agree.
+     *
+     * All three depend on `transactions.booking_id` being stamped — revenue rows carry
+     * it from `BookingPoster`, payment and credit rows from `PaymentPoster`.
+     *
+     * @return array{booking_id: int, invoiced: float, paid: float, outstanding: float}
+     */
+    public function bookingSettlement(int $bookingId): array
+    {
+        $receivableIds = $this->receivableAccountIds();
+
+        $ledger = $this->ledgerBase()
+            ->where('transactions.booking_id', $bookingId)
+            ->selectRaw(
+                $this->revenueExpenseSelect().',
+                COALESCE(SUM(CASE WHEN transactions.debit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0) AS ar_movement,
+                COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ('.$receivableIds.') AND transactions.source_type = \'payment\' THEN transactions.amount ELSE 0 END), 0) AS ar_settled,
+                '.$this->heldCreditSelect(),
+            )
+            ->first();
+
+        $heldCredit = (float) ($ledger->held_credit ?? 0);
+
+        return [
+            'booking_id' => $bookingId,
+            'invoiced' => round((float) ($ledger->revenue ?? 0), 2),
+            'paid' => round((float) ($ledger->ar_settled ?? 0) + $heldCredit, 2),
+            'outstanding' => round((float) ($ledger->ar_movement ?? 0) - $heldCredit, 2),
+        ];
+    }
+
+    /**
+     * The receivable a payment can still clear on a booking, as an exact amount.
+     *
+     * Deliberately *not* `bookingSettlement()['outstanding']`: that answers "what does
+     * the customer still owe", netting any credit already on account. This answers the
+     * narrower question `PaymentPoster` asks — "how much receivable is standing for this
+     * money to settle" — because nothing applies a credit balance automatically, so an
+     * invoice stays open until a payment or a compensation entry clears it.
+     *
+     * Measured on 1110 alone, **not** `RECEIVABLE_CODES`. The split decides how much the
+     * payment's credit leg posts to 1110, so it has to be measured against that same
+     * account: counting the fines receivable (1120) here would let a customer paying off
+     * a traffic fine credit 1110 instead, driving the rental receivable negative while
+     * the fine stayed open on 1120. The reporting figures deliberately span both — a
+     * customer does owe their fines — but this is not a reporting figure.
+     */
+    public function openReceivableForBooking(int $bookingId): Money
+    {
+        return $this->openReceivable(fn (Builder $query): Builder => $query->where('transactions.booking_id', $bookingId));
+    }
+
+    /** As `openReceivableForBooking()`, for an unallocated customer payment. */
+    public function openReceivableForCustomer(int $customerId): Money
+    {
+        return $this->openReceivable(fn (Builder $query): Builder => $query->where('transactions.customer_id', $customerId));
+    }
+
+    /**
+     * Intentionally **not** branch-scoped, unlike every reporting method on this class.
+     *
+     * Phase 10 adds a branch scope; it must leave this alone. The figure decides how a
+     * posting splits, not what a user is allowed to see, and the two are different
+     * questions. Filtering it to the operator's branch would under-report the receivable
+     * on any booking whose revenue and payment rows landed on different branches — a car
+     * picked up at one office and paid for at another — and the shortfall would silently
+     * become a credit balance on 2500 instead of clearing the invoice. Authorisation is
+     * enforced where the record is fetched (`BookingResource::getEloquentQuery()`); by the
+     * time a payment is being posted, the question is arithmetic, not permission.
+     *
+     * @param Closure(Builder): Builder $scope
+     */
+    private function openReceivable(Closure $scope): Money
+    {
+        $receivableIds = $this->accountIdsFor(self::CUSTOMER_RECEIVABLE_CODES);
+
+        $row = $scope($this->db->table('transactions'))
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN transactions.debit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0) AS debits,
+                 COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ('.$receivableIds.') THEN transactions.amount ELSE 0 END), 0) AS credits',
+            )
+            ->first();
+
+        return Money::of((string) ($row->debits ?? '0'))
+            ->minus(Money::of((string) ($row->credits ?? '0')));
     }
 
     /**
@@ -427,21 +563,30 @@ class ReportService
      * settled invoice leaves the ageing entirely. Summing debits alone would leave
      * every invoice ever raised sitting in a bucket forever.
      *
+     * A credit balance (2500) counts as available credit for the same reason it does in
+     * `customerStatement()`: a customer who paid before their rental was invoiced has
+     * handed the money over, and must not be chased for it.
+     *
      * @return array{'0_30': float, '31_60': float, '61_90': float, '90_plus': float}
      */
     public function receivablesAgeing(?int $branchId = null): array
     {
         return $this->remember('receivables_ageing', $branchId, [], function () use ($branchId) {
             $receivableIds = $this->receivableAccountIds();
+            $creditIds = $this->customerCreditAccountIds();
 
             $rows = $this->db->table('transactions')
-                ->whereRaw("(debit_account_id IN ({$receivableIds}) OR credit_account_id IN ({$receivableIds}))")
+                ->whereRaw(
+                    "(debit_account_id IN ({$receivableIds}) OR credit_account_id IN ({$receivableIds})
+                      OR ((debit_account_id IN ({$creditIds}) OR credit_account_id IN ({$creditIds})) AND source_type = 'payment'))",
+                )
                 ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
                 ->orderBy('occurred_on')
                 ->orderBy('id')
-                ->get(['id', 'customer_id', 'occurred_on', 'amount', 'debit_account_id', 'credit_account_id']);
+                ->get(['id', 'customer_id', 'occurred_on', 'amount', 'debit_account_id', 'credit_account_id', 'source_type']);
 
             $ids = explode(',', $receivableIds);
+            $credits = explode(',', $creditIds);
             $buckets = ['0_30' => 0.0, '31_60' => 0.0, '61_90' => 0.0, '90_plus' => 0.0];
             $today = CarbonImmutable::today();
 
@@ -456,6 +601,20 @@ class ReportService
                         $open[] = ['date' => $row->occurred_on, 'amount' => $amount];
                     } elseif (in_array((string) $row->credit_account_id, $ids, true)) {
                         $credit += $amount;
+                    }
+
+                    // Both legs are examined, not one branch of the chain above: a
+                    // `compensation` payment applying a credit is Dr 2500 / Cr 1110, and
+                    // it must add credit on one leg and remove it on the other — net
+                    // zero, because applying a credit changes nothing about what is owed.
+                    if ($row->source_type !== 'payment') {
+                        continue;
+                    }
+
+                    if (in_array((string) $row->credit_account_id, $credits, true)) {
+                        $credit += $amount;
+                    } elseif (in_array((string) $row->debit_account_id, $credits, true)) {
+                        $credit -= $amount;
                     }
                 }
 
@@ -822,13 +981,44 @@ class ReportService
      */
     private function receivableAccountIds(): string
     {
+        return $this->accountIdsFor(self::RECEIVABLE_CODES);
+    }
+
+    /** Comma-joined customer-credit account ids. Same interpolation guarantee. */
+    private function customerCreditAccountIds(): string
+    {
+        return $this->accountIdsFor(self::CUSTOMER_CREDIT_CODES);
+    }
+
+    /**
+     * @param list<string> $codes
+     */
+    private function accountIdsFor(array $codes): string
+    {
         $ids = ChartOfAccount::query()
-            ->whereIn('code', self::RECEIVABLE_CODES)
+            ->whereIn('code', $codes)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
 
         return $ids === [] ? '0' : implode(',', $ids);
+    }
+
+    /**
+     * SQL fragment: the credit balance standing on a dimension, from payment rows only.
+     *
+     * Credits to 2500 put money on account (E19); debits take it off again when it is
+     * applied to an invoice (a `compensation` payment, Dr 2500 / Cr 1110). Restricted
+     * to `source_type = 'payment'` because only `PaymentPoster` moves this account.
+     */
+    private function heldCreditSelect(): string
+    {
+        $creditIds = $this->customerCreditAccountIds();
+
+        return "
+            COALESCE(SUM(CASE WHEN transactions.credit_account_id IN ({$creditIds}) AND transactions.source_type = 'payment' THEN transactions.amount ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN transactions.debit_account_id IN ({$creditIds}) AND transactions.source_type = 'payment' THEN transactions.amount ELSE 0 END), 0) AS held_credit
+        ";
     }
 
     /**

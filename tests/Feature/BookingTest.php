@@ -13,11 +13,13 @@ use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Accounting\AccountingService;
 use App\Services\Booking\BookingAvailabilityService;
 use App\Services\Booking\BookingService;
 use App\Services\Booking\ContractService;
 use App\Services\Booking\PricingService;
 use App\Services\Booking\SignatureService;
+use App\Services\ReportService;
 use Carbon\CarbonPeriod;
 use Database\Seeders\ChartOfAccountSeeder;
 use Illuminate\Database\QueryException;
@@ -216,6 +218,77 @@ it('cancels a draft booking', function () {
 
     expect($cancelled->status)->toBe(BookingStatus::Cancelled)
         ->and($cancelled->cancellation_reason)->toBe('Customer changed mind');
+});
+
+/**
+ * E09: a handed-over booking has revenue rows standing against it. The ledger is
+ * append-only, so cancelling reverses each one — which also unwinds the receivable.
+ */
+it('reverses every booking row when a handed-over booking is cancelled', function () {
+    $period = CarbonPeriod::create('2026-08-01', '2026-08-05');
+    $booking = $this->service->createDraft($this->car, $this->customer, $period, $this->user);
+    $this->service->confirm($booking, $this->user);
+    $this->service->checkOut($booking, [
+        'actual_pickup_at' => '2026-08-01 10:00:00',
+        'odometer_out' => 50000,
+        'fuel_level_out' => 'full',
+    ], $this->user);
+
+    $invoice = $booking->ledgerTransactions()->where('is_reversal', false)->sole();
+
+    $this->service->cancel($booking, 'Customer no-show', $this->user);
+
+    $reversal = Transaction::where('is_reversal', true)->sole();
+
+    expect($reversal->reverses_transaction_id)->toBe($invoice->id)
+        // Mirrored legs: Dr 4010 / Cr 1110 on top of the original E02.
+        ->and($reversal->debit_account_id)->toBe($invoice->credit_account_id)
+        ->and($reversal->credit_account_id)->toBe($invoice->debit_account_id)
+        ->and($reversal->booking_id)->toBe($booking->id)
+        ->and($booking->fresh()->status)->toBe(BookingStatus::Cancelled)
+        ->and($booking->fresh()->cancellation_reason)->toBe('Customer no-show');
+
+    // The receivable is unwound: nothing invoiced, nothing paid, nothing owed.
+    expect(app(ReportService::class)->bookingSettlement($booking->id))
+        ->toMatchArray(['invoiced' => 0.0, 'paid' => 0.0, 'outstanding' => 0.0]);
+});
+
+it('skips rows an accountant already reversed when cancelling', function () {
+    $period = CarbonPeriod::create('2026-08-01', '2026-08-05');
+    $booking = $this->service->createDraft($this->car, $this->customer, $period, $this->user);
+    $this->service->confirm($booking, $this->user);
+    $this->service->checkOut($booking, [
+        'actual_pickup_at' => '2026-08-01 10:00:00',
+        'odometer_out' => 50000,
+        'fuel_level_out' => 'full',
+    ], $this->user);
+
+    $invoice = $booking->ledgerTransactions()->where('is_reversal', false)->sole();
+    app(AccountingService::class)->reverse($invoice, 'corrected amount', $this->user);
+
+    // The E02 row is already unwound; cancelling must not try to reverse it again.
+    $this->service->cancel($booking, 'Customer no-show', $this->user);
+
+    expect(Transaction::where('is_reversal', true)->count())->toBe(1)
+        ->and($booking->fresh()->status)->toBe(BookingStatus::Cancelled);
+});
+
+it('refuses to cancel a completed rental', function () {
+    $period = CarbonPeriod::create('2026-08-01', '2026-08-05');
+    $booking = $this->service->createDraft($this->car, $this->customer, $period, $this->user);
+    $this->service->confirm($booking, $this->user);
+    $this->service->checkOut($booking, [
+        'actual_pickup_at' => '2026-08-01 10:00:00',
+        'odometer_out' => 50000,
+        'fuel_level_out' => 'full',
+    ], $this->user);
+    $this->service->checkIn($booking, [
+        'odometer_in' => 50400,
+        'fuel_level_in' => 'half',
+    ], $this->user);
+
+    expect(fn () => $this->service->cancel($booking->fresh(), 'Too late', $this->user))
+        ->toThrow(RuntimeException::class);
 });
 
 // ---------------------------------------------------------------------------

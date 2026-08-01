@@ -184,3 +184,10 @@ Three conventions established in Phase 8:
 `AlertRule` deliberately overrides `BelongsToBranch::resolveBranchId()` to return null — a null
 `branch_id` there means "all branches", not "fill this in". Phase 10's branch scope must leave
 `alert_rules` alone for the same reason.
+
+`ReportService::openReceivableForBooking()` / `…ForCustomer()` are deliberately **not** branch-scoped,
+unlike every other method on that class. They decide how a payment posting splits between the
+receivable and the customer credit balance — arithmetic, not permission. Scoping them to the
+operator's branch would under-report the receivable whenever a booking's revenue and payment rows sit
+on different branches, and the shortfall would silently land on 2500 instead of clearing the invoice.
+Phase 10 must leave these two alone.

@@ -211,7 +211,8 @@ it('keeps the price editable even once sold — bookings snapshot their own pric
 
     expect($line->fresh()->unit_price)->toBe('500.00')
         ->and($line->fresh()->total)->toBe('500.00')
-        ->and($line->booking->fresh()->total_amount)->toBe('22000.00');
+        // The booking carries the line snapshot: 20 000 rental + the 500 line.
+        ->and($line->booking->fresh()->total_amount)->toBe('20500.00');
 });
 
 // -----------------------------------------------------------------------

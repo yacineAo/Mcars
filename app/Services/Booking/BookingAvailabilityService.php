@@ -11,11 +11,9 @@ use App\Models\Branch;
 use App\Models\Car;
 use App\Models\CarBlock;
 use App\Models\CarCategory;
-use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
-use RuntimeException;
 
 class BookingAvailabilityService
 {
@@ -91,7 +89,10 @@ class BookingAvailabilityService
             $feed[] = [
                 'id' => 'booking-'.$booking->id,
                 'resourceId' => (string) $booking->car_id,
-                'title' => $booking->customer?->full_name ?? 'N/A',
+                // `->full_name` does not exist on Customer, so every event in the feed
+                // was titled "N/A". Only visible once Booking declared the relation's
+                // type — the property access was previously against a bare Model.
+                'title' => $booking->customer?->displayName() ?? 'N/A',
                 'start' => $booking->pickup_at->toIso8601String(),
                 'end' => $booking->expected_return_at->toIso8601String(),
                 'color' => $booking->status->getColor(),
@@ -125,15 +126,11 @@ class BookingAvailabilityService
         });
     }
 
-    public function extend(Booking $booking, Carbon $newReturn): void
-    {
-        if ($booking->status !== BookingStatus::Active) {
-            throw new RuntimeException('Only active bookings can be extended.');
-        }
-
-        $booking->expected_return_at = $newReturn;
-        $booking->days_count = (int) ceil($booking->pickup_at->diffInDays($newReturn));
-        $booking->total_amount = $booking->daily_rate * $booking->days_count + $booking->extras_total - $booking->discount_amount;
-        $booking->save();
-    }
+    /*
+     * `extend()` used to live here. It had no callers, did money arithmetic in float,
+     * never checked that the car was free for the additional window, and — worst —
+     * raised `total_amount` without posting anything, so the extra days were invoiced
+     * nowhere and the ledger silently disagreed with the booking. Extending is an
+     * orchestration with a ledger posting, so it belongs in BookingService::extend().
+     */
 }

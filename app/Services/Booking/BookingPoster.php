@@ -59,6 +59,53 @@ class BookingPoster
         return $drafts;
     }
 
+    /**
+     * E72 — additional days invoiced when a live rental is extended.
+     *
+     * Revenue is recognised for the full contracted amount at pickup (E02). Extending
+     * the contract raises that amount, so the extra days post as their own E02-shaped
+     * row rather than by editing the original: the ledger is append-only, and the
+     * original row is what the customer's contract says at the time it was signed.
+     *
+     * `occurredOn` is today, not the pickup date — the extension is agreed now, and
+     * backdating it would move revenue into a period that may already be reported.
+     *
+     * The day count and the reason ride in `meta` because this row is the only
+     * un-editable record of them: `bookings.notes` is free text staff can type over.
+     *
+     * @return list<TransactionDraft>
+     */
+    public function postExtensionRevenue(
+        Booking $booking,
+        string $additionalAmount,
+        int $userId,
+        int $additionalDays,
+        ?string $reason = null,
+    ): array {
+        return [new TransactionDraft(
+            debitAccountId: $this->resolveId('1110'),
+            creditAccountId: $this->resolveId('4010'),
+            amount: $additionalAmount,
+            type: TransactionType::RentalRevenue,
+            occurredOn: new DateTimeImmutable('now'),
+            description: 'Rental extension — '.$booking->reference,
+            branchId: $booking->branch_id,
+            createdById: $userId,
+            carId: $booking->car_id,
+            bookingId: $booking->id,
+            customerId: $booking->customer_id,
+            sourceType: 'booking',
+            sourceId: $booking->id,
+            meta: [
+                'booking_reference' => $booking->reference,
+                'extension' => true,
+                'additional_days' => $additionalDays,
+                'extended_to' => $booking->expected_return_at?->toIso8601String(),
+                'reason' => $reason,
+            ],
+        )];
+    }
+
     public function postCloseoutCharges(Booking $booking, CloseoutQuote $quote, int $userId): array
     {
         $drafts = [];

@@ -144,7 +144,26 @@ untagged fuel expense silently disappears from every car's P&L.
 | E06 | Excess mileage at closeout | 1110 AR–Customers | 4040 Excess Mileage | km × rate | car, booking, customer |
 | E07 | Fuel shortfall at closeout | 1110 AR–Customers | 4050 Fuel Recharge | shortfall | car, booking, customer |
 | E08 | Cleaning charge at closeout | 1110 AR–Customers | 4080 Cleaning Fees | fee | car, booking, customer |
-| E09 | Booking cancelled after invoicing | *reversal of E02–E08* | | | reason mandatory |
+| E09 | Booking cancelled after invoicing | *reversal of E02–E08* | | | reason mandatory — each open booking row reversed via `AccountingService::reverse()` |
+| E72 | **Rental extended** — additional days invoiced | 1110 AR–Customers | 4010 Rental Revenue | extra days × the booking's own `daily_rate`, any started day counted whole | car, booking, customer, branch |
+
+> **E72 posts, it does not amend.** Revenue was recognised at pickup for the amount
+> contracted then; extending raises the contracted amount, so the extra days are a new row
+> rather than an edit to E02 — the ledger is append-only, and the original row is what the
+> customer signed. It is dated the day the extension is agreed, not the pickup date, so
+> revenue never lands in a period that may already have been reported. Priced at the
+> booking's `daily_rate` rather than today's list price: the customer is extending the
+> contract they signed. Any started day is charged whole — a rental is priced in days,
+> and a car back twelve hours late is a day it could not be re-let. The day count and
+> the stated reason ride in the row's `meta`, which is the only record of them that
+> cannot later be edited. See `BookingService::extend()`.
+
+> **E09 cancels by reversing, one row at a time.** `BookingService::cancel()` walks the
+> booking's non-reversal ledger rows (E02, E04, E72, E05–E08) newest first and posts a
+> reversal for each — the ledger is append-only, so nothing is deleted or edited. Rows an
+> accountant already reversed are skipped. Reversal rows keep the booking and source
+> dimensions, so `bookingSettlement()` shows the receivable unwound without any special
+> casing: the reversal credits 1110 and `outstanding` absorbs it.
 
 > **Revenue recognition point: contract activation (pickup), for the full contracted amount.**
 > Not at confirmation (rentals fall through), not at return (a 3-month rental would show no revenue for
@@ -165,9 +184,38 @@ untagged fuel expense silently disappears from every car's P&L.
 | E16 | Card — processor fee | 5130 Bank Charges | 1050 POS Clearing | same `group_uuid` as E15 |
 | E17 | **Partial payment** | *as E10–E14, smaller amount* | | Remaining balance = AR balance for that customer. No `paid_amount` column anywhere. |
 | E18 | Instalment payment | *as E10–E14* | | additionally allocated to a `payment_schedules` line |
-| E19 | Overpayment | 1010 Cash | 2500 Customer Credit Balances | customer |
+| E19 | **Payment on account** — money beyond the open receivable | 1010 Cash | 2500 Customer Credit Balances | customer, **booking** (when taken against one) |
 | E20 | Cheque bounced | 1110 AR–Customers | 1020 Bank | *reversal-style*; plus Dr 5130 / Cr 1020 for the fee |
 | E21 | Refund to customer | 1110 AR–Customers | 1010 Cash | customer — leaves a debit balance if no offsetting revenue |
+
+> **E10–E14 split at the outstanding receivable.** `PaymentPoster` posts an inbound
+> payment as E10–E14 up to what the receivable still owes — the booking's own AR when
+> the payment is taken against a booking, the customer's whole AR otherwise — and the
+> rest lands in 2500 (E19). Money in excess of a debt is a credit held for the customer,
+> not a fabricated credit balance on 1110. The receivable is *read* to make the split,
+> through `ReportService::openReceivableForBooking()` / `…ForCustomer()` — every sum over
+> `transactions` has exactly one home. Only `AccountingService` ever writes the ledger.
+>
+> **E19 is not only an overpayment — it is every payment taken before invoicing.** A
+> deposit at booking time is the ordinary case: the rental is not invoiced until pickup
+> (E02), so at that point there is no receivable and the whole payment is money on
+> account. This is why E19 carries the **booking** dimension: without it the money
+> detached from the rental it was paid for, and the booking read "paid 0 / outstanding in
+> full" beside a payments list showing the customer's cash.
+>
+> **Where the credit goes out again.** Nothing applies a credit balance automatically —
+> the invoice stays open until it is cleared. Two things consume it:
+>
+> 1. A `compensation` payment (Dr 2500 / Cr 1110) applies it explicitly. That is the
+>    accountant's instrument, and it is the *only* thing that moves the receivable.
+> 2. Every derived figure nets it, so the office never has to. `bookingSettlement()`,
+>    `customerStatement()` and `receivablesAgeing()` all treat a 2500 credit as money in
+>    hand: `paid` includes it and `owed` / `outstanding` subtract it. A customer who
+>    prepaid in full therefore reads as settled from the moment they pay, whether or not
+>    an accountant has posted the compensation entry.
+>
+> The two are consistent by construction: applying a credit adds to the receivable-cleared
+> term and removes the same amount from the held-credit term, so no figure moves.
 
 ### Security deposits (ADV-07) — **a deposit is a liability, never revenue**
 

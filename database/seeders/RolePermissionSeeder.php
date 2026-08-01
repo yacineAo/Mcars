@@ -118,6 +118,19 @@ class RolePermissionSeeder extends Seeder
                 UserRole::SuperAdmin,
                 UserRole::Manager,
             ],
+            // Working an actual booking — quoting it, confirming it, handing over the
+            // keys, taking the car back, taking money. Distinct from the catalogue
+            // above: `bookings.manage` decides what a rental *costs*, this decides
+            // that one happened. The visibility matrix gives the receptionist and the
+            // supervisor "full" on Bookings, and a receptionist who cannot check a car
+            // out cannot do the job, so the catalogue's manager-only spread would be
+            // the wrong gate. The accountant keeps `bookings.view` and audits.
+            'bookings.operate' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Receptionist,
+                UserRole::Supervisor,
+            ],
             // Operating the till — opening and closing a cash session. The matrix gives
             // the receptionist "payments + cash only" on Finance, and closing posts a
             // variance to the ledger, so the two halves of the feature are split:

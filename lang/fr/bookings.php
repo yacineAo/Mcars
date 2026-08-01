@@ -21,6 +21,7 @@ return [
         'odometer_in' => 'Kilométrage au retour',
         'fuel_level_in' => 'Carburant au retour',
         'cancellation_reason' => "Motif de l'annulation",
+        'extras_total_helper' => 'Calculé à partir des lignes d’extras sur la page de réservation.',
     ],
     'notifications' => [
         'confirmed' => 'Réservation confirmée. Le véhicule est réservé pour ces dates.',

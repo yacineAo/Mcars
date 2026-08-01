@@ -10,24 +10,46 @@ use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\HasLedgerPostings;
 use App\Models\Concerns\LogsActivity;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 /**
+ * Properties are declared because static analysis reads column types from the schema,
+ * not from casts() — without them a `decimal` column looks like a float and a
+ * `timestamptz` like a string, so every `->addDay()` and every Money round-trip on a
+ * booking reads as a type error.
+ *
  * @property int $id
  * @property BookingStatus $status
  * @property int|null $car_id
  * @property int|null $customer_id
  * @property int|null $branch_id
  * @property string|null $reference
+ * @property CarbonInterface|null $pickup_at
+ * @property CarbonInterface|null $expected_return_at
+ * @property CarbonInterface|null $actual_pickup_at
+ * @property CarbonInterface|null $actual_return_at
+ * @property string $daily_rate
+ * @property int $days_count
+ * @property string $subtotal
+ * @property string $extras_total
+ * @property string $discount_amount
  * @property string $total_amount
+ * @property string $security_deposit_amount
+ * @property string|null $notes
+ * @property string|null $cancellation_reason
  * @property int|null $odometer_out
  * @property int|null $odometer_in
  * @property FuelLevel|null $fuel_level_out
  * @property FuelLevel|null $fuel_level_in
+ * @property-read Car|null $car
+ * @property-read Customer|null $customer
  */
 class Booking extends Model
 {
@@ -172,8 +194,61 @@ class Booking extends Model
         return $this->hasMany(Fine::class);
     }
 
-    public function scopeActive($query): void
+    /**
+     * Money taken against this booking.
+     *
+     * A payment points at its booking through the `payable` morph rather than a
+     * `booking_id`, because the same table also carries owner and payroll payments.
+     *
+     * @return MorphMany<Payment, $this>
+     */
+    public function payments(): MorphMany
+    {
+        return $this->morphMany(Payment::class, 'payable');
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeActive(Builder $query): void
     {
         $query->whereIn('status', [BookingStatus::Confirmed, BookingStatus::Active, BookingStatus::Overdue]);
+    }
+
+    /**
+     * Out on rental and past its expected return.
+     *
+     * `Overdue` is included alongside `Active` because nothing flips the status
+     * automatically — a booking becomes late by the clock passing, not by anything
+     * writing to the row. Matches `OverdueReturnsTable`, which is the same question
+     * asked from the dashboard.
+     *
+     * @param Builder<self> $query
+     */
+    public function scopeOverdue(Builder $query): void
+    {
+        $query
+            ->whereIn('status', [BookingStatus::Active, BookingStatus::Overdue])
+            ->where('expected_return_at', '<', now());
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->status->is(BookingStatus::Active, BookingStatus::Overdue)
+            && $this->expected_return_at !== null
+            && $this->expected_return_at->isPast();
+    }
+
+    /**
+     * Whether the rental has begun — the point revenue is posted (matrix E02).
+     *
+     * Past this line the booking's car, customer, dates and pricing are referenced by
+     * append-only ledger rows, so editing them desynchronises the two with no trace.
+     */
+    public function hasStarted(): bool
+    {
+        return $this->status->is(
+            BookingStatus::Active,
+            BookingStatus::Overdue,
+            BookingStatus::Completed,
+        );
     }
 }

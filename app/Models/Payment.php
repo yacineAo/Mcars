@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Concerns\BelongsToBranch;
@@ -14,6 +15,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * Declared because static analysis reads column types from the schema, not from
+ * casts() — without it `direction` reads as a string and every comparison against
+ * PaymentDirection looks like it can never match.
+ *
+ * @property PaymentDirection $direction
+ * @property PaymentMethod $method
+ * @property PaymentStatus $status
+ * @property string $amount
+ * @property string|null $payable_type
+ * @property int|null $payable_id
+ */
 class Payment extends Model
 {
     use BelongsToBranch, HasAuditColumns, HasLedgerPostings, LogsActivity;
@@ -37,6 +50,12 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
+            // Without this, `direction` came back as whatever was assigned: a string
+            // from the Filament form, but a PaymentDirection instance when a service
+            // built the payment. PaymentPoster compared it to the string 'inbound', so
+            // a service-built payment fell through to the refund branch and posted
+            // backwards — cash credited, receivable debited.
+            'direction' => PaymentDirection::class,
             'method' => PaymentMethod::class,
             'status' => PaymentStatus::class,
             'amount' => 'decimal:2',

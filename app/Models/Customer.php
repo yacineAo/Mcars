@@ -70,6 +70,20 @@ class Customer extends Model
         });
     }
 
+    /**
+     * How this customer is named on screen.
+     *
+     * A company booking has no first/last name, and listing bookings by first name
+     * alone makes scanning or searching for "Benali" fail — which is why every list
+     * that shows a customer should go through this rather than `first_name`.
+     */
+    public function displayName(): string
+    {
+        $person = trim($this->first_name.' '.$this->last_name);
+
+        return $person !== '' ? $person : ($this->company_name ?? $this->phone ?? '—');
+    }
+
     public function casts(): array
     {
         return [

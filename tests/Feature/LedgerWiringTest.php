@@ -141,6 +141,14 @@ it('releases the car and closes the rental on check-in', function () {
 it('posts a customer payment to the ledger as soon as it is recorded', function () {
     $booking = ($this->makeBooking)();
 
+    // Give the customer something to owe: revenue posts at hand-over.
+    Livewire::test(BookingResource\Pages\ListBookings::class)
+        ->callTableAction('checkout', $booking, [
+            'actual_pickup_at' => '2026-08-01 10:00:00',
+            'odometer_out' => 45000,
+            'fuel_level_out' => FuelLevel::Full->value,
+        ]);
+
     Livewire::test(PaymentResource\Pages\CreatePayment::class)
         ->fillForm([
             'reference' => 'PAY-TEST-1',
@@ -157,7 +165,7 @@ it('posts a customer payment to the ledger as soon as it is recorded', function 
     $payment = Payment::query()->firstOrFail();
 
     // E10: Dr Main Cash Box / Cr Accounts Receivable.
-    $posting = Transaction::query()->where('source_type', 'payment')->firstOrFail();
+    $posting = Transaction::query()->where('source_type', 'payment')->sole();
 
     expect($payment->isPostedToLedger())->toBeTrue()
         ->and($posting->source_id)->toBe($payment->id)
@@ -165,6 +173,70 @@ it('posts a customer payment to the ledger as soon as it is recorded', function 
         ->and($posting->debitAccount->code)->toBe('1010')
         ->and($posting->creditAccount->code)->toBe('1110')
         ->and($posting->customer_id)->toBe($this->customer->id);
+});
+
+it('posts the part of a payment beyond what is owed as a credit balance (E19)', function () {
+    $booking = ($this->makeBooking)();
+
+    Livewire::test(BookingResource\Pages\ListBookings::class)
+        ->callTableAction('checkout', $booking, [
+            'actual_pickup_at' => '2026-08-01 10:00:00',
+            'odometer_out' => 45000,
+            'fuel_level_out' => FuelLevel::Full->value,
+        ])
+        ->callTableAction('record_payment', $booking->fresh(), data: [
+            'amount' => '25000.00',
+            'method' => PaymentMethod::Cash->value,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $rows = Transaction::query()->where('source_type', 'payment')->orderBy('id')->get();
+
+    expect($rows)->toHaveCount(2);
+
+    // E10: the receivable clears up to what the booking owes.
+    $clearsAr = $rows->get(0);
+    expect($clearsAr->amount)->toEqual('20000.00')
+        ->and($clearsAr->debitAccount->code)->toBe('1010')
+        ->and($clearsAr->creditAccount->code)->toBe('1110')
+        ->and($clearsAr->booking_id)->toBe($booking->id)
+        ->and($clearsAr->customer_id)->toBe($this->customer->id);
+
+    // E19: the remainder is a credit held for the customer — never fabricated AR.
+    // It keeps the booking dimension: the credit was paid against this rental, and
+    // `bookingSettlement()` nets it into `paid` so the booking does not read as unpaid
+    // while the customer's money sits on account.
+    $credit = $rows->get(1);
+    expect($credit->amount)->toEqual('5000.00')
+        ->and($credit->debitAccount->code)->toBe('1010')
+        ->and($credit->creditAccount->code)->toBe('2500')
+        ->and($credit->booking_id)->toBe($booking->id)
+        ->and($credit->customer_id)->toBe($this->customer->id);
+});
+
+it('credits the whole payment to the balance account when nothing is owed (E19)', function () {
+    // Confirmed but never handed over: the customer owes nothing, so there is no
+    // receivable for a payment to clear.
+    ($this->makeBooking)();
+
+    Livewire::test(PaymentResource\Pages\CreatePayment::class)
+        ->fillForm([
+            'reference' => 'PAY-TEST-CREDIT',
+            'direction' => 'inbound',
+            'customer_id' => $this->customer->id,
+            'method' => PaymentMethod::Cash->value,
+            'amount' => 5000,
+            'paid_at' => '2026-08-02',
+            'status' => 'completed',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $row = Transaction::query()->where('source_type', 'payment')->sole();
+
+    expect($row->amount)->toEqual('5000.00')
+        ->and($row->debitAccount->code)->toBe('1010')
+        ->and($row->creditAccount->code)->toBe('2500');
 });
 
 it('hides the manual post action once a payment is on the ledger', function () {

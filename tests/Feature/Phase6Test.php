@@ -33,6 +33,7 @@ use App\Models\PayrollItem;
 use App\Models\PayrollRun;
 use App\Models\User;
 use App\Services\Accounting\AccountingService;
+use App\Services\Booking\BookingPoster;
 use App\Services\Payment\DepositPoster;
 use App\Services\Payment\DepositService;
 use App\Services\Payment\FineLiabilityService;
@@ -106,6 +107,7 @@ beforeEach(function () {
     ]);
 
     $this->accounting = app(AccountingService::class);
+    $this->bookingPoster = app(BookingPoster::class);
     $this->paymentService = app(PaymentService::class);
     $this->paymentPoster = app(PaymentPoster::class);
     $this->depositPoster = app(DepositPoster::class);
@@ -115,6 +117,13 @@ beforeEach(function () {
     $this->payrollPoster = app(PayrollPoster::class);
     $this->ownerStatement = app(OwnerStatementService::class);
     $this->fineLiability = app(FineLiabilityService::class);
+
+    // E10–E14 clear a receivable, so give the customer one: post the rental
+    // invoice (E02) for the 20 000 booking subtotal. Without it the whole payment
+    // would be an E19 credit balance and the leg mapping would not be on trial.
+    $this->invoiceBooking = fn () => $this->accounting->postMany(
+        ...$this->bookingPoster->postRentalRevenue($this->booking, $this->user->id),
+    );
 });
 
 // ---------------------------------------------------------------------------
@@ -134,6 +143,8 @@ it('posts a cash payment debiting 1010 and crediting 1110 (E10)', function () {
         'created_by_id' => $this->user->id,
     ]);
 
+    ($this->invoiceBooking)();
+
     $drafts = $this->paymentPoster->postPayment($payment, $this->user->id);
     $txns = $this->accounting->postMany(...$drafts);
 
@@ -150,13 +161,15 @@ it('posts a bank transfer payment debiting 1020 and crediting 1110 (E11)', funct
         'branch_id' => $this->branch->id,
         'reference' => makeRef('PAY'),
         'method' => PaymentMethod::BankTransfer,
-        'amount' => 25000.00,
+        'amount' => 20000.00,
         'direction' => 'inbound',
         'status' => PaymentStatus::Completed,
         'customer_id' => $this->customer->id,
         'paid_at' => now(),
         'created_by_id' => $this->user->id,
     ]);
+
+    ($this->invoiceBooking)();
 
     $drafts = $this->paymentPoster->postPayment($payment, $this->user->id);
     $txns = $this->accounting->postMany(...$drafts);
@@ -179,6 +192,8 @@ it('posts a CCP payment debiting 1030 and crediting 1110 (E12)', function () {
         'created_by_id' => $this->user->id,
     ]);
 
+    ($this->invoiceBooking)();
+
     $drafts = $this->paymentPoster->postPayment($payment, $this->user->id);
     $txns = $this->accounting->postMany(...$drafts);
 
@@ -200,6 +215,8 @@ it('posts a BaridiMob payment debiting 1040 and crediting 1110 (E13)', function 
         'created_by_id' => $this->user->id,
     ]);
 
+    ($this->invoiceBooking)();
+
     $drafts = $this->paymentPoster->postPayment($payment, $this->user->id);
     $txns = $this->accounting->postMany(...$drafts);
 
@@ -220,6 +237,8 @@ it('posts a card payment debiting 1050 and crediting 1110 (E14)', function () {
         'paid_at' => now(),
         'created_by_id' => $this->user->id,
     ]);
+
+    ($this->invoiceBooking)();
 
     $drafts = $this->paymentPoster->postPayment($payment, $this->user->id);
     $txns = $this->accounting->postMany(...$drafts);

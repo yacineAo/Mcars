@@ -21,6 +21,7 @@ return [
         'odometer_in' => 'العداد عند الاسترجاع (كم)',
         'fuel_level_in' => 'الوقود عند الاسترجاع',
         'cancellation_reason' => 'سبب الإلغاء',
+        'extras_total_helper' => 'تُحسب من سطور الإضافات في صفحة الحجز.',
     ],
     'notifications' => [
         'confirmed' => 'تم تأكيد الحجز. المركبة محجوزة لهذه التواريخ.',

@@ -34,7 +34,7 @@ that each piece stays reviewable on its own.
 | [15](15-expense.md) | **Expense** | Accounting | ✅ audited — fine |
 | [16](16-extra.md) | **Extra** | Bookings | ✅ audited — fine |
 | [17](17-contract-template.md) | **ContractTemplate** | Bookings | ✅ audited — fine |
-| [18](18-booking.md) | **Booking** | Bookings | 🟡 audited — partial |
+| [18](18-booking.md) | **Booking** | Bookings | ✅ audited — fine |
 | [19](19-contract.md) | **Contract** | Bookings | 🔴 audited — needs work |
 | [20](20-condition-report.md) | **ConditionReport** | Bookings | 🔴 audited — needs work |
 | [21](21-car-block.md) | **CarBlock** | Bookings | 🟡 audited — partial |

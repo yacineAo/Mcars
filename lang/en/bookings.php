@@ -21,6 +21,7 @@ return [
         'odometer_in' => 'Odometer at return (km)',
         'fuel_level_in' => 'Fuel at return',
         'cancellation_reason' => 'Reason for cancelling',
+        'extras_total_helper' => 'Computed from the Extras lines on the booking page.',
     ],
     'notifications' => [
         'confirmed' => 'Booking confirmed. The car is now reserved for these dates.',
