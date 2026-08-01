@@ -20,6 +20,7 @@ use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -239,6 +240,25 @@ class PaymentScheduleResource extends Resource
                     })
                     // Overdue too: an instalment whose date has passed is precisely the
                     // one that needs moving, and the service permits it.
+                    ->visible(fn (PaymentSchedule $record): bool => self::isUnpaid($record)),
+                Action::make('waive')
+                    ->label(__('payment_schedules.actions.waive'))
+                    ->icon('heroicon-o-x-circle')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalDescription(__('payment_schedules.actions.waive_confirm'))
+                    ->form([
+                        Textarea::make('reason')
+                            ->label(__('payment_schedules.fields.waived_reason'))
+                            ->required()
+                            ->maxLength(500),
+                    ])
+                    ->action(function (PaymentSchedule $record, array $data, PaymentScheduleService $schedules): void {
+                        $schedules->waive($record, $data['reason'], (int) Auth::id());
+                        Notification::make()->success()->title(__('payment_schedules.notifications.waived'))->send();
+                    })
+                    // Waiving is the last resort for an unpaid line; a paid one
+                    // stays on the ledger and a waived one cannot change again.
                     ->visible(fn (PaymentSchedule $record): bool => self::isUnpaid($record)),
                 EditAction::make(),
             ])

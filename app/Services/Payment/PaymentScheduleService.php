@@ -136,6 +136,36 @@ class PaymentScheduleService
     }
 
     /**
+     * Write off one instalment without money moving.
+     *
+     * A schedule line is never posted to the ledger by itself — only the
+     * payments settling it are (through their allocation) — so a waiver is a
+     * status transition with an audit trail, not a posting. The reason is
+     * mandatory, and the actor and moment are stamped so the decision can be
+     * questioned later.
+     */
+    public function waive(PaymentSchedule $schedule, string $reason, int $userId): PaymentSchedule
+    {
+        if (trim($reason) === '') {
+            throw new DomainException('A waiver needs a reason.');
+        }
+
+        return $this->db->transaction(function () use ($schedule, $reason, $userId): PaymentSchedule {
+            $schedule = PaymentSchedule::query()->lockForUpdate()->findOrFail($schedule->id);
+            $this->assertUnpaid($schedule);
+
+            $schedule->update([
+                'status' => InstallmentStatus::Waived,
+                'waived_reason' => trim($reason),
+                'waived_at' => now(),
+                'waived_by_id' => $userId,
+            ]);
+
+            return $schedule->refresh();
+        });
+    }
+
+    /**
      * Overdue counts as unpaid: an instalment whose date has passed is precisely the
      * one a clerk needs to move or settle, and locking it out would leave the only
      * fix as editing the row by hand.

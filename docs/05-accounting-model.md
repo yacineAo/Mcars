@@ -188,6 +188,13 @@ untagged fuel expense silently disappears from every car's P&L.
 | E20 | Cheque bounced | 1110 AR–Customers | 1020 Bank | *reversal-style*; plus Dr 5130 / Cr 1020 for the fee |
 | E21 | Refund to customer | 1110 AR–Customers | 1010 Cash | customer — leaves a debit balance if no offsetting revenue |
 
+> **A waived instalment posts nothing.** A `payment_schedules` line is never posted by
+> itself — only the payments settling it are, through their allocation (E18). Waiving a
+> line is therefore a status transition with an audit trail (`waived_reason`,
+> `waived_at`, `waived_by_id`), not a ledger entry: nothing that was ever on the books
+> is written off, so nothing needs reversing. Contrast with the owner-side E36, which
+> reverses a posted accrual.
+
 > **E10–E14 split at the outstanding receivable.** `PaymentPoster` posts an inbound
 > payment as E10–E14 up to what the receivable still owes — the booking's own AR when
 > the payment is taken against a booking, the customer's whole AR otherwise — and the

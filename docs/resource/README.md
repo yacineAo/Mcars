@@ -40,7 +40,7 @@ that each piece stays reviewable on its own.
 | [21](21-car-block.md) | **CarBlock** | Bookings | ✅ audited — fine |
 | [22](22-payment.md) | **Payment** | Payments | ✅ audited — fine |
 | [23](23-deposit.md) | **Deposit** | Payments | ✅ audited — fine |
-| [24](24-payment-schedule.md) | **PaymentSchedule** | Payments | 🔴 audited — needs work |
+| [24](24-payment-schedule.md) | **PaymentSchedule** | Payments | ✅ audited — fine |
 | [25](25-owner-installment.md) | **OwnerInstallment** | Payments | ✅ audited — fine |
 | [26](26-fine.md) | **Fine** | Operations | 🟡 audited — partial |
 | [27](27-employee.md) | **Employee** | HR | 🔴 audited — needs work |
@@ -181,6 +181,9 @@ fixing them 38 times, so they are recorded here rather than repeated in every fi
    `SequenceGenerator`. It is the Phase 0 primitive built specifically to split an amount
    without losing a centime, and the one place that needs it — generating instalments —
    does not exist, so amounts are typed in by hand. See [24](24-payment-schedule.md) gap 1.
+
+   **Resolved by 24** — `PaymentScheduleService::generate()` splits with `Money::allocate()`;
+   gap 1 no longer applies.
 10. **Money records stay editable after they post to the ledger.** Payment, Expense,
     Deposit and OwnerInstallment all keep a fully open edit form after posting, so a figure can be
     changed while the append-only rows that recorded it cannot. This is one pattern, not four

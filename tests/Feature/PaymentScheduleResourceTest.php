@@ -178,6 +178,63 @@ it('reschedules through the service when the edit form is saved', function () {
     expect($schedule->fresh()->due_date->toDateString())->toBe('2027-01-31');
 });
 
+it('waives an instalment through the service and stamps the decision', function () {
+    $service = app(PaymentScheduleService::class);
+    $schedule = $service->generate($this->booking, '100.00', 1, Carbon::parse('2026-03-15'))->sole();
+
+    $waived = $service->waive($schedule, 'Client closed the account', (int) $this->accountant->id);
+
+    expect($waived->status)->toBe(InstallmentStatus::Waived)
+        ->and($waived->waived_reason)->toBe('Client closed the account')
+        ->and($waived->waived_by_id)->toBe($this->accountant->id)
+        ->and($waived->waived_at)->not->toBeNull()
+        // Waiving is a status transition, not a posting: the schedule line is
+        // never on the ledger by itself, and no payment ever moved.
+        ->and(Payment::count())->toBe(0)
+        ->and(PaymentScheduleAllocation::count())->toBe(0);
+
+    expect(fn () => $service->recordPayment($waived, ['method' => PaymentMethod::Cash->value], (int) $this->accountant->id))
+        ->toThrow(DomainException::class, 'Only an unpaid instalment');
+});
+
+it('demands a reason and an unpaid line before waiving', function () {
+    $service = app(PaymentScheduleService::class);
+    $schedule = $service->generate($this->booking, '100.00', 1, Carbon::parse('2026-03-15'))->sole();
+
+    expect(fn () => $service->waive($schedule, '   ', (int) $this->accountant->id))
+        ->toThrow(DomainException::class, 'needs a reason');
+
+    $service->recordPayment($schedule, ['method' => PaymentMethod::Cash->value], (int) $this->accountant->id);
+
+    expect(fn () => $service->waive($schedule, 'Too late', (int) $this->accountant->id))
+        ->toThrow(DomainException::class, 'Only an unpaid instalment');
+
+    // Neither attempt left a trace on the line.
+    expect($schedule->fresh()->status)->toBe(InstallmentStatus::Paid);
+});
+
+it('waives an instalment from the row action with a reason', function () {
+    $schedule = app(PaymentScheduleService::class)
+        ->generate($this->booking, '9000.00', 3, Carbon::parse('2026-03-15'))
+        ->first();
+
+    Livewire::test(ListPaymentSchedules::class)
+        ->mountTableAction('waive', $schedule->getKey())
+        ->setTableActionData(['reason' => 'Business decision'])
+        ->callMountedTableAction()
+        ->assertHasNoTableActionErrors();
+
+    $fresh = $schedule->fresh();
+
+    expect($fresh->status)->toBe(InstallmentStatus::Waived)
+        ->and($fresh->waived_reason)->toBe('Business decision')
+        ->and($fresh->waived_by_id)->toBe($this->accountant->id)
+        // Waived lines are gone from the collections queue.
+        ->and(PaymentScheduleResource::getEloquentQuery()
+            ->where('status', InstallmentStatus::Pending->value)
+            ->count())->toBe(2);
+});
+
 it('counts the whole plan even when the table is filtered', function () {
     app(PaymentScheduleService::class)->generate($this->booking, '9000.00', 3, Carbon::parse('2026-03-15'));
 

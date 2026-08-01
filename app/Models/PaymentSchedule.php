@@ -29,6 +29,9 @@ use Illuminate\Support\Carbon;
  * @property string $amount
  * @property Carbon|null $reminder_sent_at
  * @property string|null $notes
+ * @property string|null $waived_reason
+ * @property Carbon|null $waived_at
+ * @property int|null $waived_by_id
  */
 class PaymentSchedule extends Model
 {
@@ -39,6 +42,7 @@ class PaymentSchedule extends Model
         'customer_id', 'branch_id',
         'sequence', 'due_date', 'amount',
         'status', 'notes',
+        'waived_reason', 'waived_at', 'waived_by_id',
     ];
 
     protected function casts(): array
@@ -48,6 +52,7 @@ class PaymentSchedule extends Model
             'amount' => 'decimal:2',
             'status' => InstallmentStatus::class,
             'reminder_sent_at' => 'datetime',
+            'waived_at' => 'datetime',
         ];
     }
 

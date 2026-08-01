@@ -7,6 +7,8 @@ return [
         'generate' => 'إنشاء جدول الدفع',
         'record_payment' => 'تسجيل الدفعة',
         'reschedule' => 'تعديل تاريخ الاستحقاق',
+        'waive' => 'إلغاء القسط',
+        'waive_confirm' => 'سيتم إلغاء القسط دون دفع. هذا القرار نهائي — يتم تسجيل السبب.',
     ],
     'fields' => [
         'customer' => 'الزبون',
@@ -25,6 +27,7 @@ return [
         'installments' => 'عدد الأقساط',
         'first_due_date' => 'تاريخ أول استحقاق',
         'notes' => 'ملاحظات',
+        'waived_reason' => 'سبب الإلغاء',
     ],
     'filters' => [
         'overdue' => 'متأخر',
@@ -42,5 +45,6 @@ return [
         'generated_body' => ':count قسطا بإجمالي :total دج.',
         'payment_recorded' => 'تم تسجيل الدفعة على القسط.',
         'rescheduled' => 'تم تعديل تاريخ استحقاق القسط.',
+        'waived' => 'تم إلغاء القسط.',
     ],
 ];

@@ -482,7 +482,8 @@ Proof of payment via Media Library.
 `id`, `schedulable_type`, `schedulable_id` (Booking or Contract), `customer_id`, `branch_id`,
 `sequence`, `due_date`, `amount`,
 `status` (`pending | partially_paid | paid | overdue | waived | cancelled`),
-`reminder_sent_at`, `notes`.
+`reminder_sent_at`, `notes`,
+`waived_reason`, `waived_at`, `waived_by_id` (audit of a waiver — the reason is mandatory).
 `amount_paid` is **derived** by matching payments allocated to this schedule line —
 see `payment_schedule_allocations` below, which is what "allocated" means.
 Drives the "customer payment overdue" alert (REQ-17).

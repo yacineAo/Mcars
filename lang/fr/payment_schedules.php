@@ -7,6 +7,8 @@ return [
         'generate' => 'Générer un échéancier',
         'record_payment' => 'Enregistrer le paiement',
         'reschedule' => 'Reporter l’échéance',
+        'waive' => 'Annuler l’échéance',
+        'waive_confirm' => 'L’échéance sera annulée sans paiement. Cette décision est définitive — une raison est enregistrée.',
     ],
     'fields' => [
         'customer' => 'Client',
@@ -25,6 +27,7 @@ return [
         'installments' => 'Nombre d’échéances',
         'first_due_date' => 'Première échéance',
         'notes' => 'Notes',
+        'waived_reason' => 'Motif de l’annulation',
     ],
     'filters' => [
         'overdue' => 'En retard',
@@ -42,5 +45,6 @@ return [
         'generated_body' => ':count échéance(s) pour un total de :total DZD.',
         'payment_recorded' => 'Paiement enregistré sur l’échéance.',
         'rescheduled' => 'Échéance reportée.',
+        'waived' => 'Échéance annulée.',
     ],
 ];
