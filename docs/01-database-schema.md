@@ -10,7 +10,7 @@ Applied to every table unless stated otherwise.
 |---|---|
 | Primary key | `id` — `bigIncrements`. Public-facing entities (contracts, bookings, transactions) additionally carry a `uuid` and a human `reference`. |
 | Money | `decimal(18, 2)`, cast `decimal:2`. **Never** `float`/`double`. Currency default `DZD`. |
-| Dates | `timestamptz` for moments (`pickup_at`), `date` for accounting periods (`occurred_on`). App timezone `Africa/Algiers`. |
+| Dates | `timestamptz` for moments (`pickup_at`), `date` for accounting periods (`occurred_on`). App timezone `Africa/Algiers`; the pgsql connection sets its session timezone to match (`config/database.php`), so naive PHP writes land on the intended instant. |
 | Soft deletes | On master data (`cars`, `customers`, `car_owners`, `users`, `employees`, `vendors`). **Never** on `transactions` — the ledger is append-only. |
 | Audit columns | `created_by_id`, `updated_by_id` → `users`, on every operational table. |
 | Branch | `branch_id` → `branches`, **nullable, present from Phase 1** on every operational and financial table. Enforcement (global scope, switcher) turns on in Phase 10. See ADR-004. |

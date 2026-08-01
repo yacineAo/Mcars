@@ -183,4 +183,12 @@ return [
         'three_quarters' => 'Trois quarts',
         'full' => 'Plein',
     ],
+    'block_reason' => [
+        'maintenance' => 'Maintenance',
+        'owner_use' => 'Usage propriétaire',
+        'inter_branch_transfer' => 'Transfert inter-agences',
+        'insurance_claim' => 'Sinistre assurance',
+        'administrative' => 'Administratif',
+        'other' => 'Autre',
+    ],
 ];

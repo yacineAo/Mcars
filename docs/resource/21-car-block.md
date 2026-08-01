@@ -1,6 +1,6 @@
 # 21 — CarBlock (Bookings)
 
-**Model:** `App\Models\CarBlock` · **Slug:** `/admin/car-blocks` · **Status:** 🟡 partial
+**Model:** `App\Models\CarBlock` · **Slug:** `/admin/car-blocks` · **Status:** ✅ audited — fine
 
 Supports **REQ-05** (availability). See
 [`../06-design-decisions.md`](../06-design-decisions.md) ADR-002.
@@ -15,87 +15,55 @@ block and a booking must not be able to overlap on the same car.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | no filters |
-| create | ✅ | |
+| index | ✅ | state / car / reason / window filters; `defaultSort('starts_at','desc')` |
+| create | ✅ | via `CarBlockService`; clashes surface as field errors |
 | view | ❌ | not needed |
-| edit | ✅ | |
-| row actions | ✅ | `unblock`, Edit, Delete |
-| header / toolbar actions | 🟡 | `CreateAction`; **`DeleteBulkAction`** |
+| edit | ✅ | `car_id` frozen; re-checks clashes on save |
+| row actions | ✅ | `unblock`/`cancel`, Edit, Delete |
+| header / toolbar actions | ✅ | `CreateAction` only |
 | relation managers | ❌ | none needed |
-| `canAccess()` | ❌ | absent |
+| `canAccess()` | ✅ | `bookings.view` OR `fleet.manage_maintenance` |
 
-## Should be
+## Invariants
 
-### Index
-Filter by **active now** (`starts_at <= now < ends_at`), by car, by reason, and by a date range.
-"Which cars are off the road today" is the question this screen answers and it currently cannot
-be asked. Show the car, reason, the window, and whether it is currently in force.
+A block takes a car off the market for a half-open window `[starts_at, ends_at)`:
 
-Sort by `starts_at desc`.
+- **No overlap with another block on the same car** — Postgres `EXCLUDE` constraint
+  (`car_blocks_no_overlap`, ADR-002) is the race-proof backstop.
+- **No overlap with a confirmed/active/overdue booking on the same car** — the
+  `check_car_block_booking_conflict` trigger enforces it on writes.
+- **`ends_at > starts_at`** — a `CHECK` constraint; the form also validates it first.
+- Every write (create, update, `endEarly`) goes through **`CarBlockService`**, which mirrors
+  the DB guards in readable form so the user sees "the car is already blocked during part of
+  this window" instead of a raw constraint error. The DB stays the backstop, not the teacher.
+- **`endEarly`** truncates an in-force block to now — recorded in the activity log, so how
+  long the car was actually off the road stays answerable.
+- **`cancel`** deletes a block that has not started yet. Deleting a future block is not losing
+  evidence — it never took a car off the road; ending it would leave an inverted window that
+  records nothing.
 
-### Create
-`starts_at` / `ends_at` must be validated against existing blocks **and bookings** for the same
-car. Availability is enforced by the Postgres `EXCLUDE` constraint plus
-`BookingAvailabilityService` (ADR-002) — so the form should surface the clash as a readable
-validation error rather than letting the constraint throw a raw database error at the user.
-Worth verifying which currently happens.
+## Access
 
-### View
-**Not needed.** A block is a car, a window and a reason. The car's view page is the right place
-to see its blocks in context — see the Fleet audit for `CarResource`.
-
-### Edit
-Shortening a block is fine; extending it must re-check for clashes, because the window may now
-overlap a booking made in the meantime. Freeze `car_id` — moving a block to a different car is
-a delete-and-recreate, not an edit, since it changes what was validated.
-
-### Relations
-None. A block belongs on the car, not the reverse.
-
-### Actions
-
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| `unblock` | row | `ends_at > now()` | **nothing** | raw `update(['ends_at' => now()])` | rewrites history; breaks for future blocks — gaps 1, 6 |
-| `EditAction` | row | always | **nothing** | — | re-check clashes when extending |
-| `DeleteAction` | row | always | **nothing** | — | prefer `unblock` |
-| `DeleteBulkAction` | toolbar | always | **nothing** | — | **remove** — gap 3 |
-
-## Gaps and risks
-
-1. **🔴 `unblock` writes `ends_at = now()` inline** (`CarBlockResource.php:71-72`). It is a raw
-   `$record->update(['ends_at' => now()])` in a Filament closure. Two problems beyond the
-   layering point: it silently rewrites the historical record of how long the car was actually
-   blocked, and it bypasses any check that the shortened window is consistent. Ending a block
-   early is a legitimate operation — it should go through a service that records it, so
-   "this car was blocked 3 days, released early on the 2nd" stays answerable.
-2. **🟡 No `canAccess()`.** Blocking a car removes it from sale; unblocking puts it back. Not
-   every role should decide that.
-3. **🟡 `DeleteBulkAction`** — deleting blocks in bulk silently returns cars to availability
-   with no record. Prefer `unblock`.
-4. **🟡 No filters**, so the current state of the fleet is not visible here — see Index.
-5. **🟡 Clash validation unverified** — see Create. If the `EXCLUDE` constraint is the only guard,
-   the user sees a database error rather than an explanation.
-6. **🟡 `unblock` visible test uses `$record->ends_at > now()`** — a block that has not started
-   yet is therefore "unblockable", which sets `ends_at` before `starts_at` and leaves an
-   inverted window. Cancelling a future block should delete it, not end it.
-7. **🟡 Deprecated `->actions([...])`.**
+- Read: `bookings.view` or `fleet.manage_maintenance` — the maintenance officer's
+  visibility-matrix row on Bookings is scoped to blocks only (the workshop's list).
+- Write (create/edit/delete): `bookings.operate` — deciding a car is off the market is the
+  desk's call; an accountant audits.
 
 ## Checklist
 
-- [ ] Move `unblock` into a service that records the early release rather than rewriting `ends_at`
-- [ ] Fix the inverted-window case for a block that has not started (cancel, don't end)
-- [ ] Add `canAccess()`
-- [ ] Remove `DeleteBulkAction`; prefer `unblock`
-- [ ] Add active-now / car / reason / date-range filters; show whether in force
-- [ ] Surface booking and block clashes as validation, not a database error
-- [ ] Freeze `car_id` on edit; re-check clashes when extending
-- [ ] `->actions(` → `->recordActions(`
+- [x] `unblock` moved into `CarBlockService::endEarly` — records the early release
+- [x] Inverted-window case fixed: a future block is cancelled, not ended
+- [x] `canAccess()` added with the matrix split
+- [x] `DeleteBulkAction` removed; row `unblock` is the preferred release
+- [x] Active-now / car / reason / window filters added; state shown
+- [x] Block and booking clashes surface as validation, not a database error
+- [x] `car_id` frozen on edit; clashes re-checked on extension
+- [x] `->actions(` → `->recordActions(`
 
 ## Verification
 
 ```bash
-docker compose exec app ./vendor/bin/pest tests/Feature/BookingTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/CarBlockResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/FleetManagementTest.php
 ```
 

@@ -183,4 +183,12 @@ return [
         'three_quarters' => 'Three quarters',
         'full' => 'Full',
     ],
+    'block_reason' => [
+        'maintenance' => 'Maintenance',
+        'owner_use' => 'Owner use',
+        'inter_branch_transfer' => 'Inter-branch transfer',
+        'insurance_claim' => 'Insurance claim',
+        'administrative' => 'Administrative',
+        'other' => 'Other',
+    ],
 ];

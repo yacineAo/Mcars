@@ -48,7 +48,7 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 | `ContractTemplateResource` | Per-locale templates (ar/fr/en) |
 | `ConditionReportResource` | View page shows the readings with the paired report side by side and the photo gallery (private disk); no delete path — evidence; readings freeze once the booking is closed; one report per type per booking |
 | `ExtraResource` | Services catalogue |
-| `CarBlockResource` | |
+| `CarBlockResource` | Blocks take a car off the market for a half-open window; state/car/reason/window filters, `unblock` (end an in-force block) vs `cancel` (delete a future one) through `CarBlockService`, clashes surface as field errors against the EXCLUDE constraint and cross-check trigger |
 
 ### Cluster: Finance — REQ-07, REQ-08, REQ-09, REQ-10, ADV-07
 | Resource / Page | Notes |

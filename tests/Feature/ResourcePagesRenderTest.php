@@ -18,6 +18,7 @@ use App\Enums\UserRole;
 use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\Car;
+use App\Models\CarBlock;
 use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
 use App\Models\CashSession;
@@ -221,6 +222,17 @@ beforeEach(function () {
         'odometer' => 50000,
         'is_clean' => true,
         'damage_points' => [],
+    ]);
+
+    // The fixture booking above is Active on $car — this block must stay clear
+    // of its window or the cross-check trigger refuses the row itself.
+    CarBlock::create([
+        'car_id' => $car->id,
+        'branch_id' => $branch->id,
+        'reason' => 'maintenance',
+        'starts_at' => now()->addDays(10),
+        'ends_at' => now()->addDays(12),
+        'created_by_id' => $this->admin->id,
     ]);
 
     unset($employee);

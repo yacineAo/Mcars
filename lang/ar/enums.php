@@ -183,4 +183,12 @@ return [
         'three_quarters' => 'ثلاثة أرباع',
         'full' => 'ممتلئ',
     ],
+    'block_reason' => [
+        'maintenance' => 'صيانة',
+        'owner_use' => 'استخدام المالك',
+        'inter_branch_transfer' => 'تحويل بين الفروع',
+        'insurance_claim' => 'مطالبة تأمين',
+        'administrative' => 'إداري',
+        'other' => 'أخرى',
+    ],
 ];

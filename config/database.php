@@ -99,6 +99,11 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Eloquent serializes datetimes as naive 'Y-m-d H:i:s' strings in
+            // the app timezone; this session timezone is how Postgres reads
+            // them back. Without it the session stays UTC and every timestamp
+            // written from PHP lands one hour ahead of the intended instant.
+            'timezone' => env('DB_TIMEZONE', 'Africa/Algiers'),
         ],
 
         'sqlsrv' => [

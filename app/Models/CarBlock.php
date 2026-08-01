@@ -7,9 +7,14 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property CarbonInterface $starts_at
+ * @property CarbonInterface $ends_at
+ */
 class CarBlock extends Model
 {
     use BelongsToBranch, HasAuditColumns, LogsActivity;
@@ -41,5 +46,23 @@ class CarBlock extends Model
     public function maintenanceLog(): BelongsTo
     {
         return $this->belongsTo(MaintenanceLog::class);
+    }
+
+    /** In force right now: the window has started and not yet ended. */
+    public function isActiveNow(): bool
+    {
+        return $this->starts_at <= now() && $this->ends_at > now();
+    }
+
+    /** Not started yet. */
+    public function isUpcoming(): bool
+    {
+        return $this->starts_at > now();
+    }
+
+    /** Already over. */
+    public function isEnded(): bool
+    {
+        return $this->ends_at <= now();
     }
 }
