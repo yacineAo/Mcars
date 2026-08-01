@@ -29,6 +29,7 @@ banned; the value is always a query over `transactions`.
 - `car_owners.balance`, `owner_installments.amount_paid`, `owner_installments.remaining_balance`
 - `financial_accounts.current_balance`
 - `deposits.refunded_amount`
+- `payment_schedules.amount_paid` — sum `payment_schedule_allocations.amount` for the line instead
 
 The single exception is `ledger_daily_balances` — an explicitly labelled, **rebuildable cache**
 (see [Finance](#module-4--finance)).
@@ -482,8 +483,27 @@ Proof of payment via Media Library.
 `sequence`, `due_date`, `amount`,
 `status` (`pending | partially_paid | paid | overdue | waived | cancelled`),
 `reminder_sent_at`, `notes`.
-`amount_paid` is **derived** by matching payments allocated to this schedule line.
+`amount_paid` is **derived** by matching payments allocated to this schedule line —
+see `payment_schedule_allocations` below, which is what "allocated" means.
 Drives the "customer payment overdue" alert (REQ-17).
+
+### `payment_schedule_allocations` — REQ-07
+`id`, `branch_id`, `payment_id` → `payments` (**cascade**), `payment_schedule_id` →
+`payment_schedules` (**restrict**), `amount`, timestamps.
+Unique on (`payment_id`, `payment_schedule_id`); indexed on `payment_schedule_id` and `branch_id`.
+
+The join that makes a schedule line's paid amount derivable rather than stored. A schedule line's
+`amount_paid` is `sum(amount)` over the allocations pointing at it, and there is deliberately no
+`payment_schedules.amount_paid` column — it is on the list of balances that must never exist.
+
+The cardinality is many-to-many on purpose: one payment can settle several instalments, and one
+instalment can be settled by several payments (which is what `partially_paid` is for), so the amount
+belongs on the join and not on either side. `restrict` on the schedule side because deleting an
+instalment that money has been allocated against would orphan a receipt; `cascade` on the payment
+side because an allocation without its payment describes a settlement that never happened.
+
+Not a ledger table: the money itself is posted from `payments`, and this only records which line the
+receipt was applied to.
 
 ### `expense_categories` — REQ-08
 `id`, `name`, `name_ar`, `name_fr`, `slug`, `parent_id`,

@@ -13,6 +13,7 @@ use App\Models\Concerns\HasLedgerPostings;
 use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
@@ -111,5 +112,11 @@ class Payment extends Model
     public function financialAccount(): BelongsTo
     {
         return $this->belongsTo(FinancialAccount::class);
+    }
+
+    /** @return HasMany<PaymentScheduleAllocation, $this> */
+    public function scheduleAllocations(): HasMany
+    {
+        return $this->hasMany(PaymentScheduleAllocation::class);
     }
 }

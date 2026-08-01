@@ -4,11 +4,32 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\InstallmentStatus;
 use App\Models\Concerns\BelongsToBranch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * Declared because static analysis reads column types from the schema, not from
+ * casts() — without it `status` reads as a `varchar` string and every comparison
+ * against InstallmentStatus looks like it can never match, so PHPStan reports the
+ * resource's `->visible()` and `canEdit()` guards as dead code.
+ *
+ * @property int $id
+ * @property InstallmentStatus $status
+ * @property string|null $schedulable_type
+ * @property int|null $schedulable_id
+ * @property int|null $customer_id
+ * @property int|null $branch_id
+ * @property int $sequence
+ * @property Carbon $due_date
+ * @property string $amount
+ * @property Carbon|null $reminder_sent_at
+ * @property string|null $notes
+ */
 class PaymentSchedule extends Model
 {
     use BelongsToBranch;
@@ -20,13 +41,31 @@ class PaymentSchedule extends Model
         'status', 'notes',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'due_date' => 'date',
+            'amount' => 'decimal:2',
+            'status' => InstallmentStatus::class,
+            'reminder_sent_at' => 'datetime',
+        ];
+    }
+
+    /** @return MorphTo<Model, $this> */
     public function schedulable(): MorphTo
     {
         return $this->morphTo();
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /** @return HasMany<PaymentScheduleAllocation, $this> */
+    public function paymentAllocations(): HasMany
+    {
+        return $this->hasMany(PaymentScheduleAllocation::class);
     }
 }

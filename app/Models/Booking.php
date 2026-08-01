@@ -162,6 +162,12 @@ class Booking extends Model
         return $this->hasOne(Contract::class);
     }
 
+    /** @return MorphMany<PaymentSchedule, $this> */
+    public function paymentSchedules(): MorphMany
+    {
+        return $this->morphMany(PaymentSchedule::class, 'schedulable');
+    }
+
     public function extras(): HasMany
     {
         return $this->hasMany(BookingExtra::class);
