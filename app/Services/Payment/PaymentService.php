@@ -92,6 +92,14 @@ class PaymentService
         );
     }
 
+    /**
+     * Posting-only helpers, correct solely for a deposit nothing has been
+     * deducted from: they post the whole amount and never touch the deposit's
+     * status or settlement columns.
+     *
+     * `DepositService::refund()` / `::forfeit()` are the real entry points —
+     * they net off the deductions first and settle the row. Prefer those.
+     */
     public function refundDeposit(Deposit $deposit, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -99,6 +107,7 @@ class PaymentService
         );
     }
 
+    /** @see self::refundDeposit() for when this is safe to call. */
     public function forfeitDeposit(Deposit $deposit, int $userId): Collection
     {
         return $this->accounting->postMany(

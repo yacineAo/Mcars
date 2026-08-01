@@ -39,7 +39,7 @@ that each piece stays reviewable on its own.
 | [20](20-condition-report.md) | **ConditionReport** | Bookings | ✅ audited — fine |
 | [21](21-car-block.md) | **CarBlock** | Bookings | ✅ audited — fine |
 | [22](22-payment.md) | **Payment** | Payments | ✅ audited — fine |
-| [23](23-deposit.md) | **Deposit** | Payments | 🟡 audited — partial |
+| [23](23-deposit.md) | **Deposit** | Payments | ✅ audited — fine |
 | [24](24-payment-schedule.md) | **PaymentSchedule** | Payments | 🔴 audited — needs work |
 | [25](25-owner-installment.md) | **OwnerInstallment** | Payments | 🟡 audited — partial |
 | [26](26-fine.md) | **Fine** | Operations | 🟡 audited — partial |
@@ -82,8 +82,8 @@ All 38 resources audited.
 | | Count |
 |---|---|---|
 | 🔴 needs work | 21 |
-| 🟡 partial | 12 |
-| ✅ fine | 6 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md), [15 Expense](15-expense.md), [16 Extra](16-extra.md), [22 Payment](22-payment.md) |
+| 🟡 partial | 11 |
+| ✅ fine | 7 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md), [15 Expense](15-expense.md), [16 Extra](16-extra.md), [22 Payment](22-payment.md), [23 Deposit](23-deposit.md) |
 
 Four themes account for most of it, and each is one sweep rather than 38 fixes:
 
@@ -93,10 +93,11 @@ Four themes account for most of it, and each is one sweep rather than 38 fixes:
    and approve and pay payroll ([30](30-payroll-run.md)).
 2. **`DeleteBulkAction` is nearly universal** — flagged in 27 of 38 files (FinancialAccount now uses `->bulkActions([])`), including on posted money
    records, the chart of accounts, and condition reports that justify charges already in the ledger.
-3. **Records stay editable after they post.** Expense, Deposit, Fine, OwnerInstallment and
+3. **Records stay editable after they post.** Expense, Fine, OwnerInstallment and
    Booking all keep a fully open edit form after posting to an append-only ledger, so a figure can
-   change while the row that recorded it cannot. Payment now freezes its money fields once posted
-   ([22](22-payment.md)) — the pattern each of the rest should be swept to.
+   change while the row that recorded it cannot. Payment and Deposit now freeze their money fields
+   once posted ([22](22-payment.md), [23](23-deposit.md)) — the pattern each of the rest should be
+   swept to.
 4. **Several services exist but are called from nowhere.** The Fleet audit found
    `FleetStatusService`, `MaintenanceSchedulerService::recomputeSchedule()` and
    `OwnerStatementService::generateMonthlyInstallments()` each referenced only by a test or not at
@@ -180,11 +181,11 @@ fixing them 38 times, so they are recorded here rather than repeated in every fi
    `SequenceGenerator`. It is the Phase 0 primitive built specifically to split an amount
    without losing a centime, and the one place that needs it — generating instalments —
    does not exist, so amounts are typed in by hand. See [24](24-payment-schedule.md) gap 1.
-10. **Money records stay editable after they post to the ledger.** Payment, Expense, Deposit
-   and OwnerInstallment all keep a fully open edit form after posting, so a figure can be
-   changed while the append-only rows that recorded it cannot. This is one pattern, not four
-   bugs — worth a single sweep. See [15](15-expense.md), [22](22-payment.md),
-   [23](23-deposit.md), [25](25-owner-installment.md).
+10. **Money records stay editable after they post to the ledger.** Payment, Expense,
+    Deposit and OwnerInstallment all keep a fully open edit form after posting, so a figure can be
+    changed while the append-only rows that recorded it cannot. This is one pattern, not four
+    bugs — worth a single sweep. Payment and Deposit are now frozen
+    ([15](15-expense.md), [22](22-payment.md), [23](23-deposit.md), [25](25-owner-installment.md)).
 11. **`DeleteBulkAction` appears on almost every resource**, including posted money records and
    the chart of accounts. Soft deletes preserve the row, but the ledger keeps referencing
    records the UI has hidden, so figures reconcile to something nobody can open.

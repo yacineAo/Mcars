@@ -17,6 +17,14 @@ return [
         'description' => 'Note',
         'refund_amount' => 'Amount to refund',
         'refund_help' => 'Leave empty to refund the full remaining balance.',
+        'amount_held' => 'Amount held',
+        'amount_held_help' => 'A liability owed back to the customer — never revenue.',
+        'remaining_balance' => 'Remaining balance',
+    ],
+    'filters' => [
+        'held_at' => 'Held at',
+        'from' => 'From',
+        'to' => 'To',
     ],
     'notifications' => [
         'held' => 'Deposit held. It is recorded as money owed back to the customer, not as income.',

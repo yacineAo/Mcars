@@ -17,6 +17,14 @@ return [
         'description' => 'Note',
         'refund_amount' => 'Montant à restituer',
         'refund_help' => 'Laissez vide pour restituer la totalité du solde restant.',
+        'amount_held' => 'Montant détenu',
+        'amount_held_help' => 'Une dette envers le client — jamais une recette.',
+        'remaining_balance' => 'Solde restant',
+    ],
+    'filters' => [
+        'held_at' => 'Retenue le',
+        'from' => 'Du',
+        'to' => 'Au',
     ],
     'notifications' => [
         'held' => 'Caution encaissée. Elle est enregistrée comme une somme due au client, non comme un produit.',

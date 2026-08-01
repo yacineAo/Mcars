@@ -45,13 +45,22 @@ class DepositPoster
         );
     }
 
-    /** E23: Deposit refunded in full */
-    public function postDepositRefunded(Deposit $deposit, int $userId): TransactionDraft
+    /**
+     * E23: Deposit refunded in full — and E31, the partial refund of what is
+     * left after deductions.
+     *
+     * `$amount` defaults to the whole deposit, which is only correct when
+     * nothing has been drawn down. A deposit that has been deducted from owes
+     * the customer less than it received, and 2100 already reflects that: the
+     * caller must pass the remainder, or the refund posting takes 2100 negative
+     * and credits cash that never left the till.
+     */
+    public function postDepositRefunded(Deposit $deposit, int $userId, ?string $amount = null): TransactionDraft
     {
         return new TransactionDraft(
             debitAccountId: $this->resolveId('2100'),
             creditAccountId: $this->resolveId('1010'),
-            amount: (string) $deposit->amount,
+            amount: $amount ?? (string) $deposit->amount,
             type: TransactionType::DepositRefund,
             occurredOn: new DateTimeImmutable('now'),
             description: 'Deposit refunded — booking '.$deposit->booking_id,
@@ -103,13 +112,21 @@ class DepositPoster
         );
     }
 
-    /** E29: Deposit forfeited entirely */
-    public function postForfeited(Deposit $deposit, int $userId): TransactionDraft
+    /**
+     * E29: Deposit forfeited.
+     *
+     * Same caveat as the refund above: `$amount` defaults to the whole deposit,
+     * which only holds when nothing has been deducted. Deductions have already
+     * moved their share of 2100 to their own revenue accounts, so forfeiting the
+     * original amount would clear 2100 twice and book the deducted part as
+     * income a second time.
+     */
+    public function postForfeited(Deposit $deposit, int $userId, ?string $amount = null): TransactionDraft
     {
         return new TransactionDraft(
             debitAccountId: $this->resolveId('2100'),
             creditAccountId: $this->resolveId('4090'),
-            amount: (string) $deposit->amount,
+            amount: $amount ?? (string) $deposit->amount,
             type: TransactionType::DepositForfeited,
             occurredOn: new DateTimeImmutable('now'),
             description: 'Deposit forfeited — booking '.$deposit->booking_id,

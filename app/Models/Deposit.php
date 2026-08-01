@@ -10,6 +10,7 @@ use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\HasLedgerPostings;
 use App\Models\Concerns\LogsActivity;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,6 +22,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $booking_id
  * @property int $customer_id
  * @property int|null $branch_id
+ * @property int|null $contract_id
+ * @property PaymentMethod $method
+ * @property CarbonInterface $held_at
+ * @property CarbonInterface|null $settled_at
+ * @property-read Booking|null $booking
+ * @property-read Customer|null $customer
+ * @property-read User|null $settledBy
+ * @property-read string|null $deductions_sum_amount
+ * @property-read string|null $refunds_sum_amount
  */
 class Deposit extends Model
 {
@@ -44,26 +54,37 @@ class Deposit extends Model
         ];
     }
 
+    /** @return BelongsTo<Booking, $this> */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<FinancialAccount, $this> */
+    public function financialAccount(): BelongsTo
+    {
+        return $this->belongsTo(FinancialAccount::class);
+    }
+
+    /** @return HasMany<DepositDeduction, $this> */
     public function deductions(): HasMany
     {
         return $this->hasMany(DepositDeduction::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function settledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'settled_by_id');
