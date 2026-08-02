@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\ExportFormat;
 use App\Enums\ReportType;
+use App\Enums\TransactionType;
 use App\Enums\UserRole;
 use App\Filament\Admin\Panels\AdminPanelProvider;
 use App\Filament\Admin\Resources\ReportDefinitionResource;
@@ -16,9 +17,12 @@ use App\Livewire\BranchSwitcher;
 use App\Models\Branch;
 use App\Models\Car;
 use App\Models\CarOwner;
+use App\Models\ChartOfAccount;
 use App\Models\Customer;
 use App\Models\PendingExport;
 use App\Models\User;
+use App\Services\Accounting\AccountingService;
+use App\Services\Accounting\TransactionDraft;
 use App\Services\Reporting\ReportDataResolver;
 use App\Services\Reporting\ReportRequest;
 use App\Services\ReportService;
@@ -27,6 +31,7 @@ use Closure;
 use Database\Seeders\ChartOfAccountSeeder;
 use Database\Seeders\FinancialAccountSeeder;
 use Database\Seeders\RolePermissionSeeder;
+use DateTimeImmutable;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Filament\View\PanelsRenderHook;
@@ -34,6 +39,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use ReflectionProperty;
 
 uses(RefreshDatabase::class);
@@ -77,6 +83,80 @@ function makeReport(ReportType $type, User $user, Branch $branch, array $overrid
         'status' => 'pending',
         ...$overrides,
     ]);
+}
+
+/**
+ * The three P&L totals parsed out of a rendered export.
+ *
+ * @return array{revenue: float, expenses: float, net_profit: float}
+ */
+function csvProfitAndLossTotals(string $content): array
+{
+    $rows = array_map(
+        fn (string $line): array => str_getcsv($line),
+        preg_split('/\r?\n/', trim($content)) ?: [],
+    );
+
+    $byMetric = collect($rows)
+        ->filter(fn (array $row): bool => count($row) >= 2)
+        ->mapWithKeys(fn (array $row): array => [$row[0] => (float) $row[1]])
+        ->all();
+
+    return [
+        'revenue' => $byMetric['Revenue'] ?? 0.0,
+        'expenses' => $byMetric['Expenses'] ?? 0.0,
+        'net_profit' => $byMetric['Net Profit'] ?? 0.0,
+    ];
+}
+
+/**
+ * The same totals read from the spreadsheet's cells.
+ *
+ * @return array{revenue: float, expenses: float, net_profit: float}
+ */
+function spreadsheetProfitAndLossTotals(string $path): array
+{
+    $sheet = IOFactory::load($path)->getActiveSheet();
+
+    return [
+        'revenue' => (float) $sheet->getCell('B2')->getValue(),
+        'expenses' => (float) $sheet->getCell('B3')->getValue(),
+        'net_profit' => (float) $sheet->getCell('B4')->getValue(),
+    ];
+}
+
+/**
+ * The amounts that appear in the rendered PDF, in table order.
+ *
+ * dompdf stores its content streams FlateDecode-compressed; the text survives
+ * in its original runs ("[(50,000.00 DZD)] TJ"), so inflating the streams and
+ * reading the (…) string literals is enough to read the numbers back.
+ *
+ * @return array{revenue: float, expenses: float, net_profit: float}
+ */
+function pdfProfitAndLossAmounts(string $content): array
+{
+    $decoded = '';
+
+    preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $content, $matches);
+
+    foreach ($matches[1] as $stream) {
+        $inflated = @gzuncompress($stream);
+        $decoded .= ($inflated !== false) ? $inflated : $stream;
+    }
+
+    preg_match_all('/\(([0-9][0-9,]+\.[0-9]{2}) DZD\)/', $decoded, $amounts);
+
+    $numbers = array_map(
+        fn (string $value): float => (float) str_replace(',', '', $value),
+        $amounts[1] ?? [],
+    );
+
+    return [
+        'revenue' => $numbers[0] ?? 0.0,
+        'expenses' => $numbers[1] ?? 0.0,
+        'net_profit' => $numbers[2] ?? 0.0,
+    ];
 }
 
 it('exposes exactly one reports entry point', function () {
@@ -393,6 +473,92 @@ it('produces a real file for every report type in every format', function () {
     }
 
     expect($failures)->toBe([]);
+});
+
+it('renders export totals that match the on-screen figures from a seeded fixture', function () {
+    Storage::fake('private');
+
+    $accounting = app(AccountingService::class);
+    $cash = ChartOfAccount::where('code', '1010')->firstOrFail();
+    $revenue = ChartOfAccount::where('code', '4010')->firstOrFail();
+    $expense = ChartOfAccount::where('code', '5010')->firstOrFail();
+    $clearing = ChartOfAccount::where('code', '2600')->firstOrFail();
+
+    // The fixture exercises the aggregations a P&L is made of, including the
+    // company-wide exclusion of inter-branch clearing (2600) — a figure that
+    // must disappear from the file exactly as it disappears on screen.
+    $accounting->post(new TransactionDraft(
+        debitAccountId: $cash->id,
+        creditAccountId: $revenue->id,
+        amount: '50000.00',
+        type: TransactionType::RentalRevenue,
+        occurredOn: new DateTimeImmutable('2026-01-15'),
+        branchId: $this->branch->id,
+    ));
+    $accounting->post(new TransactionDraft(
+        debitAccountId: $expense->id,
+        creditAccountId: $cash->id,
+        amount: '12000.00',
+        type: TransactionType::Expense,
+        occurredOn: new DateTimeImmutable('2026-01-20'),
+        branchId: $this->branch->id,
+    ));
+    $accounting->post(new TransactionDraft(
+        debitAccountId: $cash->id,
+        creditAccountId: $clearing->id,
+        amount: '10000.00',
+        type: TransactionType::CashTransfer,
+        occurredOn: new DateTimeImmutable('2026-01-20'),
+        branchId: $this->branch->id,
+    ));
+
+    // "On screen" is the resolver's output — ViewReport renders exactly that,
+    // no second aggregation.
+    $onScreen = app(ReportDataResolver::class)->resolve(new ReportRequest(
+        type: ReportType::ProfitAndLoss,
+        from: CarbonImmutable::parse('2026-01-01'),
+        to: CarbonImmutable::parse('2026-01-31'),
+        branchId: null,
+    ));
+
+    expect($onScreen)->toMatchArray([
+        'revenue' => 50000.0,
+        'expenses' => 12000.0,
+        'net_profit' => 38000.0,
+    ]);
+
+    foreach (ExportFormat::cases() as $format) {
+        $report = makeReport(ReportType::ProfitAndLoss, $this->manager, $this->branch, [
+            'format' => $format->value,
+        ]);
+        $report->update(['parameters' => ['branch_id' => null, 'from' => '2026-01-01', 'to' => '2026-01-31']]);
+
+        (new ExportJob($report, $this->manager->id))->handle(
+            app(ReportService::class),
+            app(ReportDataResolver::class),
+        );
+
+        $report->refresh();
+
+        expect($report->isCompleted())->toBeTrue($format->value);
+
+        $content = Storage::disk('private')->get($report->file_path);
+
+        $exported = match ($format) {
+            ExportFormat::Csv => csvProfitAndLossTotals($content),
+            ExportFormat::Xlsx => spreadsheetProfitAndLossTotals(Storage::disk('private')->path($report->file_path)),
+            // PDFs carry the formatted figures; the exact numbers are asserted on
+            // CSV and XLSX above, so checking that the same amounts appear in the
+            // rendered document is the right level of precision here.
+            ExportFormat::Pdf => pdfProfitAndLossAmounts($content),
+        };
+
+        expect($exported)->toMatchArray([
+            'revenue' => 50000.0,
+            'expenses' => 12000.0,
+            'net_profit' => 38000.0,
+        ], $format->value);
+    }
 });
 
 it('keeps the per-car rows in a fleet CSV', function () {

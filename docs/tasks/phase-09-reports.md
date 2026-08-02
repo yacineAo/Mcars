@@ -55,9 +55,13 @@ phase can proceed without it.
 
 ## Tests
 
-- [ ] Exported totals match the on-screen figures **exactly** *(requires a seeded fixture)*
-- [ ] Arabic PDFs render RTL correctly and are not boxes *(deferred to Phase 9b)*
-- [ ] A 3-year export completes on the queue without timing out *(manual integration test)*
+- [x] Exported totals match the on-screen figures **exactly** — seeded fixture test in
+      `ReportsSectionTest` parses the rendered CSV/XLSX/PDF and compares to the resolver output
+- [ ] Arabic PDFs render RTL correctly and are not boxes *(deferred to Phase 9b — locale/direction
+      plumbing for the requester landed, verification still needs font work)*
+- [x] A 3-year export completes on the queue without timing out — `slow`-group test in
+      `Phase9Test` (runs in the default suite; isolate with
+      `./vendor/bin/pest tests/Feature/Phase9Test.php --group=slow`)
 - [x] Report data respects the requester's role and branch scope
 - [x] A queued export produces the same figures as the interactive report *(tested via ReportService delegation)*
 

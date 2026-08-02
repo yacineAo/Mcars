@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html dir="ltr">
+<html dir="{{ $direction }}">
 <head>
     <meta charset="utf-8">
     <title>Owner Statement</title>

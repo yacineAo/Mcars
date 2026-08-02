@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\TransactionDraft;
 use App\Services\CashRegisterService;
+use App\Services\Reporting\ReportDataResolver;
 use App\Services\ReportService;
 use Carbon\CarbonImmutable;
 use Database\Seeders\ChartOfAccountSeeder;
@@ -257,3 +258,63 @@ it('returns export format mime types and extensions', function () {
     expect(ExportFormat::Xlsx->extension())->toBe('xlsx');
     expect(ExportFormat::Csv->extension())->toBe('csv');
 });
+
+/**
+ * A three-year export is the archive worst case: it must complete on the queue,
+ * not stall the worker. The job is executed synchronously here — a queue worker
+ * runs exactly the same handle() — and the wall-clock bound keeps a regression
+ * that turns the export into a minutes-long scan loud instead of silent.
+ *
+ * Marked group "slow" so it can be run in isolation (it seeds three years of
+ * ledger activity); it still runs in the default suite, at a few seconds' cost.
+ *
+ *     ./vendor/bin/pest tests/Feature/Phase9Test.php --group=slow
+ */
+it('completes a three-year export without timing out', function () {
+    Storage::fake('private');
+
+    $cash = ChartOfAccount::where('code', '1010')->firstOrFail();
+    $expense = ChartOfAccount::where('code', '5010')->firstOrFail();
+
+    // Three years of monthly activity, so the period scan is the worst one.
+    $month = CarbonImmutable::parse('2024-01-15');
+
+    for ($i = 0; $i < 36; $i++) {
+        $this->accounting->post(new TransactionDraft(
+            debitAccountId: $expense->id,
+            creditAccountId: $cash->id,
+            amount: '1000.00',
+            type: TransactionType::Expense,
+            occurredOn: new DateTimeImmutable($month->toDateString()),
+            branchId: $this->branch->id,
+        ));
+
+        $month = $month->addMonth();
+    }
+
+    $export = PendingExport::factory()->create([
+        'user_id' => $this->user->id,
+        'branch_id' => $this->branch->id,
+        'report_type' => ReportType::ExpenseBreakdown->value,
+        'format' => ExportFormat::Csv->value,
+        'parameters' => [
+            'branch_id' => $this->branch->id,
+            'from' => '2024-01-01',
+            'to' => '2026-12-31',
+        ],
+        'status' => 'pending',
+    ]);
+
+    $startedAt = microtime(true);
+
+    (new ExportJob($export, $this->user->id))->handle(
+        app(ReportService::class),
+        app(ReportDataResolver::class),
+    );
+
+    expect($export->refresh()->isCompleted())->toBeTrue()
+        ->and($export->file_size)->toBeGreaterThan(0)
+        // The queue worker's timeout is 600s; if the export approaches that
+        // this test catches it before it ever lands on the queue.
+        ->and(microtime(true) - $startedAt)->toBeLessThan(120);
+})->group('slow');

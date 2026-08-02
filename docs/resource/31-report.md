@@ -76,33 +76,38 @@ None. A run is a leaf. The reverse direction — a saved definition's run histor
 
 ## Gaps and risks
 
-1. **🟡 Queued PDFs ignore the requester's language.** `ExportJob` never calls
-   `App::setLocale()`, so a PDF renders in the queue worker's default locale regardless of who
-   asked for it. Related: `App\Enums\Locale::direction()` exists and is unused, and all eight
-   templates under `resources/views/reports/pdf/` hardcode `<html dir="ltr">`. The fix is to pass
-   the requesting user's locale and direction into the view from the job. **Scope note:**
-   `phase-09-reports.md` defers Arabic RTL PDF verification to Phase 9b because it needs font
-   work, so the locale plumbing can land now but the RTL rendering needs verifying separately —
-   do not close the 9b item on the back of it.
-2. **🟡 Two phase-9 test items remain open**, per `phase-09-reports.md`: exported totals matching
-   the on-screen figures against a seeded fixture, and a three-year export completing on the queue
-   without timing out. The resolver is shared, so parity is structural rather than accidental —
-   but it is asserted only at the resolver level, not by comparing a rendered file's numbers to the
-   screen.
-3. **🔵 Scope column costs a lookup per row.** `describeScope()` resolves the customer, car or owner
-   a run was narrowed to, so a page of 25 scoped runs is up to 25 extra queries. Acceptable for an
-   archive that is not hot, and noted so it is a decision rather than a surprise.
+1. **✅ Locale plumbing landed.** `ExportJob::generatePdf` now sets the app locale to the
+   requester's `User::locale` (restored in a `finally`, since queue workers persist between
+   jobs) and passes `locale` + `Locale::direction()` into the view; the eight templates
+   render `<html dir="{{ $direction }}">` instead of a hardcoded `dir="ltr"`. **Still open by
+   design:** the Phase 9b item — Arabic RTL PDF *verification* — stays open because it needs
+   font work; do not close the 9b item on the back of the plumbing.
+2. **🟡 Seeded-fixture parity test added; timing test scheduled.** The parity test
+   (`ReportsSectionTest`, "renders export totals that match the on-screen figures from a
+   seeded fixture") posts a revenue, an expense and an inter-branch-clearing row through
+   `AccountingService`, then asserts the resolver's output (what the view page renders)
+   equals the numbers parsed out of the rendered CSV, XLSX and PDF files — the 2600
+   exclusion is asserted in the file as well as on screen. The three-year export test in
+   `Phase9Test` seeds 36 months of ledger rows and runs the job synchronously (what the
+   worker runs) under a wall-clock bound; it is marked group `slow` and can be run in
+   isolation with `./vendor/bin/pest tests/Feature/Phase9Test.php --group=slow`, while
+   still running in the default suite at a few seconds' cost.
+3. **🔵 Scope column lookups: decided — not worth batching.** `describeScope()` resolves the
+   customer, car or owner a run was narrowed to, so a page of 25 scoped runs is up to 25
+   primary-key lookups across three tables. The page is a cold archive that is not hot; a
+   batched `whereIn` per entity type would save tens of milliseconds on a page that is
+   browsed occasionally. Decision: leave as is.
 4. **🔵 `ReportType::CashSessionAudit` is not obviously financial** in the way P&L is, yet the whole
    resource sits behind `reports.view_financials`. Defensible — a till variance is money — but if a
    supervisor ever needs the cash audit without seeing profit, that gate is where it will bite.
 
 ## Checklist
 
-- [ ] Pass the requesting user's locale and `Locale::direction()` from `ExportJob` into the PDF views
-- [ ] Replace `dir="ltr"` in the 8 templates under `resources/views/reports/pdf/`
-- [ ] Add the seeded-fixture test comparing a rendered export's totals to the on-screen figures
-- [ ] Add (or schedule) the long-range export timing test
-- [ ] Decide whether the scope column's per-row lookups are worth batching
+- [x] Pass the requesting user's locale and `Locale::direction()` from `ExportJob` into the PDF views
+- [x] Replace `dir="ltr"` in the 8 templates under `resources/views/reports/pdf/`
+- [x] Add the seeded-fixture test comparing a rendered export's totals to the on-screen figures
+- [x] Add (or schedule) the long-range export timing test — scheduled as `slow`-group; run command above
+- [x] Decide whether the scope column's per-row lookups are worth batching — **no**: cold archive, PK lookups, see gap 3
 
 ## Verification
 

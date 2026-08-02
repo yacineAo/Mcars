@@ -141,21 +141,33 @@ class ExportJob implements ShouldQueue
 
     private function generatePdf(ReportDataResolver $resolver, ReportRequest $request, User $user): string
     {
-        $pdf = Pdf::setOptions([
-            'defaultFont' => 'dejavu sans',
-            'isRemoteEnabled' => true,
-            'isHtml5ParserEnabled' => true,
-        ])->loadView("reports.pdf.{$request->type->value}", [
-            'data' => $resolver->resolve($request),
-            'from' => $request->from,
-            'to' => $request->to,
-            'branchId' => $request->branchId,
-            'branchName' => $resolver->branchName($request->branchId),
-            'user' => $user,
-            'generatedAt' => CarbonImmutable::now(),
-        ]);
+        // The queue worker has no session and no request locale, so the requester's
+        // language and direction are carried in the job payload. Setting the app
+        // locale lets any __() in the template resolve for the person who asked.
+        $originalLocale = app()->getLocale();
+        app()->setLocale($user->locale->value);
 
-        return $pdf->output();
+        try {
+            $pdf = Pdf::setOptions([
+                'defaultFont' => 'dejavu sans',
+                'isRemoteEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+            ])->loadView("reports.pdf.{$request->type->value}", [
+                'data' => $resolver->resolve($request),
+                'from' => $request->from,
+                'to' => $request->to,
+                'branchId' => $request->branchId,
+                'branchName' => $resolver->branchName($request->branchId),
+                'user' => $user,
+                'locale' => $user->locale,
+                'direction' => $user->locale->direction(),
+                'generatedAt' => CarbonImmutable::now(),
+            ]);
+
+            return $pdf->output();
+        } finally {
+            app()->setLocale($originalLocale);
+        }
     }
 
     /**
