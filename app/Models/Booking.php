@@ -157,6 +157,7 @@ class Booking extends Model
         return $this->belongsTo(Branch::class, 'return_branch_id');
     }
 
+    /** @return HasOne<Contract, $this> */
     public function contract(): HasOne
     {
         return $this->hasOne(Contract::class);

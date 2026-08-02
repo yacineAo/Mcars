@@ -183,6 +183,28 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Manager,
                 UserRole::Accountant,
             ],
+            // Fines, per the Operations row of the visibility matrix:
+            // "full | fines (financial) | fines (assign) | — | full". Reading the
+            // queue is broad — the desk that receives the notice must be able to
+            // find it later. Deciding who pays is not: it posts E49/E50 to the
+            // ledger, so it follows the bookings.operate spread (the receptionist
+            // is the one facing the customer) and deliberately excludes the
+            // accountant — the same reasoning as reverse_transaction: the role
+            // that answers for the books does not make the call that charges a
+            // customer, it audits the result.
+            'fines.view' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+                UserRole::Receptionist,
+                UserRole::Supervisor,
+            ],
+            'fines.manage' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Receptionist,
+                UserRole::Supervisor,
+            ],
         ];
 
         foreach ($grants as $permissionName => $roles) {

@@ -10,9 +10,31 @@ use App\Enums\FineType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasLedgerPostings;
 use App\Models\Concerns\LogsActivity;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int|null $branch_id
+ * @property int|null $car_id
+ * @property int|null $booking_id
+ * @property int|null $contract_id
+ * @property int|null $customer_id
+ * @property FineType $type
+ * @property string $reference
+ * @property string|null $authority
+ * @property string|null $notice_number
+ * @property CarbonInterface|null $violation_at
+ * @property string|null $location
+ * @property CarbonInterface|null $received_at
+ * @property CarbonInterface|null $due_date
+ * @property string $amount
+ * @property string $late_penalty_amount
+ * @property string $total_amount
+ * @property FineLiability $liability
+ * @property FineStatus $status
+ */
 class Fine extends Model
 {
     use BelongsToBranch, HasLedgerPostings, LogsActivity;
@@ -49,26 +71,31 @@ class Fine extends Model
         ];
     }
 
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /** @return BelongsTo<Booking, $this> */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function liabilityDeterminedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'liability_determined_by_id');

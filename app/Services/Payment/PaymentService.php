@@ -145,6 +145,14 @@ class PaymentService
         );
     }
 
+    /** E50: Fine received, company liable — an absorbed expense. */
+    public function absorbFine(Fine $fine, int $userId): Collection
+    {
+        return $this->accounting->postMany(
+            $this->finePoster->postCompanyLiability($fine, $userId),
+        );
+    }
+
     public function approvePayroll(PayrollRun $run, int $userId): Collection
     {
         return $this->accounting->postMany(
