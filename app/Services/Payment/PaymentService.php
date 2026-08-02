@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Services\Payment;
 
+use App\Enums\AdvanceStatus;
 use App\Enums\PaymentDirection;
 use App\Models\Booking;
 use App\Models\Deposit;
+use App\Models\EmployeeAdvance;
 use App\Models\Fine;
 use App\Models\OwnerInstallment;
 use App\Models\Payment;
 use App\Models\PayrollRun;
+use App\Models\Transaction;
 use App\Services\Accounting\AccountingService;
 use App\Support\Sequences\SequenceGenerator;
+use DomainException;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 
@@ -29,6 +33,7 @@ class PaymentService
         private readonly SequenceGenerator $sequences,
     ) {}
 
+    /** @return Collection<int, Transaction> */
     public function recordPayment(Payment $payment, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -85,6 +90,7 @@ class PaymentService
         });
     }
 
+    /** @return Collection<int, Transaction> */
     public function holdDeposit(Deposit $deposit, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -100,6 +106,7 @@ class PaymentService
      * `DepositService::refund()` / `::forfeit()` are the real entry points —
      * they net off the deductions first and settle the row. Prefer those.
      */
+    /** @return Collection<int, Transaction> */
     public function refundDeposit(Deposit $deposit, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -108,6 +115,7 @@ class PaymentService
     }
 
     /** @see self::refundDeposit() for when this is safe to call. */
+    /** @return Collection<int, Transaction> */
     public function forfeitDeposit(Deposit $deposit, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -115,6 +123,7 @@ class PaymentService
         );
     }
 
+    /** @return Collection<int, Transaction> */
     public function accrueOwnerInstallment(OwnerInstallment $installment, int $userId): Collection
     {
         // The pointer stamp is part of the accrual, not a follow-up: posted
@@ -138,6 +147,7 @@ class PaymentService
         });
     }
 
+    /** @return Collection<int, Transaction> */
     public function assignFine(Fine $fine, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -146,6 +156,7 @@ class PaymentService
     }
 
     /** E50: Fine received, company liable — an absorbed expense. */
+    /** @return Collection<int, Transaction> */
     public function absorbFine(Fine $fine, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -153,6 +164,7 @@ class PaymentService
         );
     }
 
+    /** @return Collection<int, Transaction> */
     public function approvePayroll(PayrollRun $run, int $userId): Collection
     {
         return $this->accounting->postMany(
@@ -160,10 +172,74 @@ class PaymentService
         );
     }
 
+    /** @return Collection<int, Transaction> */
     public function payPayroll(PayrollRun $run, int $userId): Collection
     {
         return $this->accounting->postMany(
             ...$this->payrollPoster->postPayrollPaid($run, $userId),
         );
+    }
+
+    /**
+     * E61: approving an advance is authorising the payout — the status flip and
+     * the ledger posting land in one transaction, so a crash cannot leave cash
+     * out of the till with the advance still reading `requested` (or the
+     * reverse: posted and still requestable).
+     *
+     * The guard is the invariant: only a `requested` advance may be approved,
+     * and never one granted to yourself — the clearest self-dealing path in
+     * the panel is the exact flow this closes.
+     */
+    /** @return Collection<int, Transaction> */
+    public function approveAdvance(EmployeeAdvance $advance, int $userId): Collection
+    {
+        return $this->db->transaction(function () use ($advance, $userId): Collection {
+            $advance = EmployeeAdvance::query()->lockForUpdate()->findOrFail($advance->id);
+
+            if ($advance->status !== AdvanceStatus::Requested) {
+                throw new DomainException('Only a requested advance can be approved.');
+            }
+
+            $employee = $advance->employee;
+
+            if ($employee?->user_id !== null && (int) $employee->user_id === $userId) {
+                throw new DomainException('An advance to your own employee record cannot be approved.');
+            }
+
+            $transactions = $this->accounting->postMany(
+                $this->payrollPoster->postAdvance(
+                    (string) $advance->amount,
+                    $advance->employee_id,
+                    $advance->branch_id,
+                    $userId,
+                ),
+            );
+
+            $advance->update(['status' => AdvanceStatus::Outstanding]);
+
+            return $transactions;
+        });
+    }
+
+    /**
+     * A requested advance the manager does not sanction: status flip only, no
+     * ledger. The guard needs the same transaction boundary as the approval:
+     * `lockForUpdate()` outside one holds no lock in PostgreSQL autocommit, and
+     * a reject racing an approve could otherwise overwrite `outstanding` (with
+     * E61 already on the ledger) back to `rejected`.
+     */
+    public function rejectAdvance(EmployeeAdvance $advance): EmployeeAdvance
+    {
+        return $this->db->transaction(function () use ($advance): EmployeeAdvance {
+            $advance = EmployeeAdvance::query()->lockForUpdate()->findOrFail($advance->id);
+
+            if ($advance->status !== AdvanceStatus::Requested) {
+                throw new DomainException('Only a requested advance can be rejected.');
+            }
+
+            $advance->update(['status' => AdvanceStatus::Rejected]);
+
+            return $advance->fresh();
+        });
     }
 }

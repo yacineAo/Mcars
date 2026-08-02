@@ -189,6 +189,13 @@ return [
         'suspended' => 'Suspendu',
         'terminated' => 'Démissionnaire',
     ],
+    'advance_status' => [
+        'requested' => 'Demandée',
+        'rejected' => 'Refusée',
+        'outstanding' => 'En cours',
+        'recovered' => 'Récupérée',
+        'written_off' => 'Annulée',
+    ],
     'block_reason' => [
         'maintenance' => 'Maintenance',
         'owner_use' => 'Usage propriétaire',

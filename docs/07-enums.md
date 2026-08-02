@@ -229,7 +229,12 @@ needing a switch statement in three places.
 `pending` · `approved` · `paid`
 
 ### `AdvanceStatus`
-`outstanding` · `partially_recovered` · `recovered` · `written_off`
+`requested` · `rejected` · `outstanding` · `recovered` · `written_off`
+
+`partially_recovered` was dropped from the documented set: the recovery link
+`employee_advances.recovered_in_payroll_item_id` is a single column, so recovery lands in one
+payroll item and nothing can ever set the intermediate state. Multi-month recovery would need a
+schema change and a `Money::allocate()` split — revisit both together if it is ever wanted.
 
 ### `CommissionStatus`
 `pending` · `approved` · `paid` · `cancelled`

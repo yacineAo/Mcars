@@ -189,6 +189,13 @@ return [
         'suspended' => 'موقوف',
         'terminated' => 'منتهي الخدمة',
     ],
+    'advance_status' => [
+        'requested' => 'مطلوبة',
+        'rejected' => 'مرفوضة',
+        'outstanding' => 'قائمة',
+        'recovered' => 'مسترجعة',
+        'written_off' => 'ملغاة',
+    ],
     'block_reason' => [
         'maintenance' => 'صيانة',
         'owner_use' => 'استخدام المالك',

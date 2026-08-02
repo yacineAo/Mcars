@@ -595,7 +595,7 @@ Totals are derived by summing items.
 ### `employee_advances` — REQ-15
 `id`, `employee_id`, `branch_id`, `amount`, `advanced_on`, `reason`,
 `financial_account_id`, `payment_id`,
-`status` (`outstanding | partially_recovered | recovered | written_off`),
+`status` (`requested | rejected | outstanding | recovered | written_off`),
 `recovered_in_payroll_item_id` (nullable).
 An advance is an **asset** (money owed back), not an expense.
 

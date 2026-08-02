@@ -105,6 +105,10 @@ Not built (Phase 10): `SettingsPage`, `ActivityLogResource`, `BackupsPage`.
 
 Enforced by Filament Shield permissions, not by hiding navigation. Hidden navigation is not security.
 
+The HR row is a coarse guide: `EmployeeAdvanceResource` is more restrictive than the supervisor's
+HR `read` — it requires `hr.view_salary` (accountant, manager), so the supervisor sees no salary
+data at all there.
+
 ---
 
 ## Retired: the `owner` and `client` panels

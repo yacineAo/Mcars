@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\AdvanceStatus;
 use App\Enums\DeductionReason;
 use App\Enums\DepositStatus;
 use App\Enums\FineLiability;
@@ -310,10 +311,10 @@ return new class extends Migration
         // status column and would only surface later as an enum cast failure.
         //
         // Constrained here only where the enum actually exists. employees
-        // (contract_type, salary_type, status), payroll_items.status,
-        // employee_advances.status and commissions.status are documented in
-        // docs/07-enums.md but have no enum class yet — inventing a value set for
-        // them here would guess at a contract that has not been written.
+        // (contract_type, salary_type, status), payroll_items.status and
+        // commissions.status are documented in docs/07-enums.md but have no
+        // enum class yet — inventing a value set for them here would guess at
+        // a contract that has not been written.
         DB::statement("ALTER TABLE payments ADD CHECK (method IN ('".implode("','", PaymentMethod::values())."'))");
         DB::statement("ALTER TABLE payments ADD CHECK (status IN ('".implode("','", PaymentStatus::values())."'))");
         DB::statement("ALTER TABLE payments ADD CHECK (direction IN ('inbound','outbound'))");
@@ -325,6 +326,10 @@ return new class extends Migration
         DB::statement("ALTER TABLE fines ADD CHECK (liability IN ('".implode("','", FineLiability::values())."'))");
         DB::statement("ALTER TABLE fines ADD CHECK (status IN ('".implode("','", FineStatus::values())."'))");
         DB::statement("ALTER TABLE owner_installments ADD CHECK (status IN ('".implode("','", InstallmentStatus::values())."'))");
+        // This constraint landed after the migration shipped with the rest of
+        // the phase: it applies on fresh migrations only — an existing dev DB
+        // needs `migrate:fresh` for it to actually exist.
+        DB::statement("ALTER TABLE employee_advances ADD CHECK (status IN ('".implode("','", AdvanceStatus::values())."'))");
         DB::statement("ALTER TABLE payroll_runs ADD CHECK (status IN ('".implode("','", PayrollStatus::values())."'))");
     }
 

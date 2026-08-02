@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\AdvanceStatus;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,12 @@ class EmployeeAdvance extends Model
         'employee_id', 'branch_id', 'amount', 'advanced_on', 'reason',
         'financial_account_id', 'payment_id',
         'status', 'recovered_in_payroll_item_id',
+    ];
+
+    protected $casts = [
+        'status' => AdvanceStatus::class,
+        'amount' => 'decimal:2',
+        'advanced_on' => 'date',
     ];
 
     /** @return BelongsTo<Employee, $this> */
