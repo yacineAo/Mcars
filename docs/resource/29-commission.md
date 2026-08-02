@@ -1,6 +1,6 @@
 # 29 — Commission (HR)
 
-**Model:** `App\Models\Commission` · **Slug:** `/admin/commissions` · **Status:** 🟡 partial
+**Model:** `App\Models\Commission` · **Slug:** `/admin/commissions` · **Status:** ✅ done
 
 Supports **ADV-07**.
 
@@ -11,88 +11,67 @@ What a sales agent earned on a booking. Recorded per booking, then swept into a 
 which is the right choice: the commission is fixed at the moment it is earned and must not move
 when a price list changes later.
 
+## Decisions taken
+
+- **`amount` is never typed.** `CommissionService` computes `basis × rate / 100` through
+  `Money` (integer minor units, half-up) on both create and update, so the stored figure always
+  agrees with its own basis and rate. The form has no amount field; the create page has no status
+  field either.
+- **The lifecycle is owned by the payroll flow.** The form cannot write `status` and
+  `CommissionService` re-asserts the existing one on update — `pending → paid` moves with the
+  sweep (E59 in `PayrollPoster`), `cancelled` is a payroll-flow decision, never a typed edit. The
+  sweep stamp `payroll_item_id` is equally untyped: a crafted one on create or update is stripped,
+  so a commission can never claim payment without the payroll run behind it. The
+  `commissions.status` CHECK constraint shipped with the enum (fresh migrations only, like the
+  advance's).
+- **Freeze once paid.** A commission with `payroll_item_id` set keeps only `notes` editable —
+  employee, booking, basis, rate and `earned_on` are disabled in the form and re-asserted
+  server-side against a crafted payload — and the service refuses to write a commission whose
+  status is `paid` at all. Before payment, correcting the rate is legitimate and the service
+  recomputes the amount.
+- **Self-dealing is refused twice.** The create form rejects an employee whose `user_id` is the
+  acting user, and `CommissionService` re-checks it at write time — a crafted create cannot get
+  around it. The service also refuses an employee who does not exist or whose branch the acting
+  user cannot reach: the form pins the options, the payload re-checks the fact.
+- **No delete path.** A commission is money: unpaid it sits in the sweep queue, paid it has an
+  E59 posting behind it. Neither is deleted.
+- **Automatic raising on booking completion is out of scope** — the commission is created from
+  the resource, by hand, until the gap-2 feature (auto-raise at booking completion) is built.
+  The service API (`create`/`update` over `EmployeeId + basis + rate + earned_on`) is the seam
+  that feature will call.
+
 ## Current state
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | `->filters([])` **empty** |
-| create | ✅ | |
-| view | ❌ | not needed |
-| edit | ✅ | fully open |
-| row actions | ❌ | **none** |
-| header / toolbar actions | 🟡 | `CreateAction`; **`DeleteBulkAction`** |
-| relation managers | ❌ | none |
-| `canAccess()` | ❌ | **absent** |
+| index | ✅ | employee, booking, `earned_on`, basis, rate, amount, status badge, **paid in** (derived from `payrollItem.payrollRun.period_month`) |
+| create | ✅ | employee (pinned, self-dealing refused), booking (pinned, optional), basis, rate, `earned_on`, notes; amount computed by the service |
+| view | ❌ | not needed — a commission is one line |
+| edit | ✅ | notes only once paid; terms re-asserted server-side |
+| row actions | ✅ | Edit (the lifecycle has no human step — it moves with payroll) |
+| header / toolbar actions | ✅ | `CreateAction`; **no `DeleteBulkAction`** |
+| relation managers | ❌ | none — the commission is a line on the employee's view page |
+| `canAccess()` | ✅ | `hr.view_salary`; writes additionally `hr.manage` |
 
-Confirmed good: `basis_amount` and `rate` are stored alongside `amount`, so the figure is
-reproducible from the record rather than recomputed on display. That avoids the drift this kind of
-screen usually has.
+## Filters
 
-## Should be
+- **Unpaid** (default ON): `payroll_item_id IS NULL` — the month-end sweep queue. Off shows
+  everything already swept into a payroll run.
+- Employee (pinned to reachable branches), `earned_on` range (inclusive, plain date column).
 
-### Index
-Show employee, booking, `earned_on`, basis, rate, amount, and status. Filter by employee,
-`earned_on` range, and **unpaid** (`payroll_item_id IS NULL`) — the sweep queue for month-end.
-That is the only filter that matters here and there are currently none at all.
+## Service
 
-Group or total by employee for a period, or leave that to the payroll run — but do not sum in the
-resource; if a total is wanted it comes from a service.
-
-### Create
-Commissions should be raised automatically when a booking completes, not typed. `booking_id`,
-`basis_amount` and `rate` determine `amount`, and that multiplication must happen in a service —
-see gap 2.
-
-### View
-**Not needed.** A commission is one line. Its context is the booking and the payroll run, both of
-which have their own screens.
-
-### Edit
-Freeze everything once `payroll_item_id` is set. A commission that has been paid must not change.
-Before payment, correcting the rate is legitimate.
-
-### Relations
-None. Commissions appear as lines on the employee ([`27-employee.md`](27-employee.md)) and on the
-payroll run ([`30-payroll-run.md`](30-payroll-run.md)).
-
-### Actions
-
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| _(none)_ | row | — | — | — | no row actions — gap 6 |
-| `DeleteBulkAction` | toolbar | always | **nothing** | — | **remove** — gap 3 |
-| _needed_ | row | `payroll_item_id IS NULL` | payroll permission | — | add Edit; freeze once paid |
-
-## Gaps and risks
-
-1. **🔴 No `canAccess()`.** Commission amounts are pay. Any staff role can read every agent's
-   earnings and create commissions — including for themselves. Needs the payroll permission from
-   [`27-employee.md`](27-employee.md) gap 1.
-2. **🟡 `amount` may be hand-entered.** With `basis_amount` and `rate` both stored, `amount` should
-   be `basis_amount × rate` computed in a service. If the form accepts all three independently,
-   nothing prevents an amount that does not match its own basis and rate — and because money here
-   is cast `'decimal:2'` rather than through `MoneyCast` (see [`README.md`](README.md) finding 12),
-   that multiplication would be float arithmetic if done naively. Worth checking which happens.
-3. **🔴 `DeleteBulkAction`** on commissions that may already be paid through payroll.
-4. **🟡 No filters at all**, including no unpaid sweep queue.
-5. **🟡 Nothing frozen after payment** — see Edit.
-6. **🟡 No row actions** — same discoverability pattern as [`16-extra.md`](16-extra.md) gap 1.
-7. **🔵 No automatic raising** on booking completion — see Create. Whether that is intended or
-   simply unbuilt should be settled against ADV-07.
-
-## Checklist
-
-- [ ] Add `canAccess()` with the payroll permission; refuse self-created commissions
-- [ ] Compute `amount` from `basis_amount × rate` in a service, not the form
-- [ ] Remove `DeleteBulkAction`
-- [ ] Add unpaid / employee / `earned_on` filters
-- [ ] Freeze the row once `payroll_item_id` is set
-- [ ] Add explicit row actions
-- [ ] Establish whether commissions should be raised automatically on booking completion
+`App\Services\Payment\CommissionService::create(array, int $userId)` and
+`update(Commission, array, int $userId)` — refuse self-granted records and employees outside the
+acting user's reachable branches, own the `status`, the computed `amount` and the sweep stamp
+(`payroll_item_id` is stripped on create, re-asserted on update), and `update` refuses a
+commission already swept into payroll or in a `paid` state. All three throw `DomainException`; the
+create/edit pages surface it as a validation error on `employee_id` instead of a 500.
 
 ## Verification
 
 ```bash
+docker compose exec app ./vendor/bin/pest tests/Feature/CommissionResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/Phase6Test.php
 ```
 

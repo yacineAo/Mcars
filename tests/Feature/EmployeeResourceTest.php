@@ -315,7 +315,7 @@ it('renders the pay histories on the view page for someone with hr.view_salary',
         'basis_amount' => '20000.00',
         'rate' => '10.00',
         'amount' => '2000.00',
-        'status' => 'earned',
+        'status' => 'pending',
         'earned_on' => '2026-06-05',
     ]);
 

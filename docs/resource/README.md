@@ -44,8 +44,8 @@ that each piece stays reviewable on its own.
 | [25](25-owner-installment.md) | **OwnerInstallment** | Payments | ✅ audited — fine |
 | [26](26-fine.md) | **Fine** | Operations | 🟡 audited — partial |
 | [27](27-employee.md) | **Employee** | HR | 🔴 audited — needs work |
-| [28](28-employee-advance.md) | **EmployeeAdvance** | HR | 🔴 audited — needs work |
-| [29](29-commission.md) | **Commission** | HR | 🟡 audited — partial |
+| [28](28-employee-advance.md) | **EmployeeAdvance** | HR | ✅ done |
+| [29](29-commission.md) | **Commission** | HR | ✅ done |
 | [30](30-payroll-run.md) | **PayrollRun** | HR | 🔴 audited — needs work |
 | [31](31-report.md) | **Report** | Reports | ✅ audited — fine |
 | [32](32-report-definition.md) | **ReportDefinition** | Reports | 🟡 audited — partial |

@@ -196,6 +196,12 @@ return [
         'recovered' => 'Recovered',
         'written_off' => 'Written Off',
     ],
+    'commission_status' => [
+        'pending' => 'Pending',
+        'approved' => 'Approved',
+        'paid' => 'Paid',
+        'cancelled' => 'Cancelled',
+    ],
     'block_reason' => [
         'maintenance' => 'Maintenance',
         'owner_use' => 'Owner use',

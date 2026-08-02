@@ -105,9 +105,11 @@ Not built (Phase 10): `SettingsPage`, `ActivityLogResource`, `BackupsPage`.
 
 Enforced by Filament Shield permissions, not by hiding navigation. Hidden navigation is not security.
 
-The HR row is a coarse guide: `EmployeeAdvanceResource` is more restrictive than the supervisor's
-HR `read` — it requires `hr.view_salary` (accountant, manager), so the supervisor sees no salary
-data at all there.
+The HR row is a coarse guide: `EmployeeAdvanceResource` and `CommissionResource` are more
+restrictive than the supervisor's HR `read` — they require `hr.view_salary` (accountant, manager),
+so the supervisor sees no salary data there, and their writes additionally require `hr.manage`.
+Commissions have no delete path and compute their amount in `CommissionService`; the status moves
+only with the payroll sweep.
 
 ---
 

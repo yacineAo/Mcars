@@ -196,6 +196,12 @@ return [
         'recovered' => 'Récupérée',
         'written_off' => 'Annulée',
     ],
+    'commission_status' => [
+        'pending' => 'En attente',
+        'approved' => 'Approuvée',
+        'paid' => 'Payée',
+        'cancelled' => 'Annulée',
+    ],
     'block_reason' => [
         'maintenance' => 'Maintenance',
         'owner_use' => 'Usage propriétaire',

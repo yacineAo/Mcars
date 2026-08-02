@@ -196,6 +196,12 @@ return [
         'recovered' => 'مسترجعة',
         'written_off' => 'ملغاة',
     ],
+    'commission_status' => [
+        'pending' => 'قيد الانتظار',
+        'approved' => 'معتمدة',
+        'paid' => 'مدفوعة',
+        'cancelled' => 'ملغاة',
+    ],
     'block_reason' => [
         'maintenance' => 'صيانة',
         'owner_use' => 'استخدام المالك',
