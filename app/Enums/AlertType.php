@@ -30,6 +30,7 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
     case RecurringExpenseDue = 'recurring_expense_due';
     case CashVariance = 'cash_variance';
     case BackupFailed = 'backup_failed';
+    case ScheduledReportFailed = 'scheduled_report_failed';
 
     public function getColor(): string
     {
@@ -37,7 +38,8 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
             self::BookingOverdue,
             self::CustomerPaymentOverdue,
             self::CashVariance,
-            self::BackupFailed => 'danger',
+            self::BackupFailed,
+            self::ScheduledReportFailed => 'danger',
 
             self::CarDocumentExpiring,
             self::DrivingLicenceExpiring,
@@ -62,6 +64,7 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
             self::RecurringExpenseDue => 'heroicon-o-arrow-path',
             self::CashVariance => 'heroicon-o-scale',
             self::BackupFailed => 'heroicon-o-server-stack',
+            self::ScheduledReportFailed => 'heroicon-o-document-chart-bar',
         };
     }
 
@@ -91,7 +94,8 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
             self::BookingOverdue,
             self::CustomerPaymentOverdue,
             self::CashVariance,
-            self::BackupFailed => 0,
+            self::BackupFailed,
+            self::ScheduledReportFailed => 0,
         };
     }
 
@@ -108,7 +112,8 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
             self::CustomerPaymentOverdue => 3,
             self::BookingReturnDue => 1,
             self::CashVariance,
-            self::BackupFailed => 1,
+            self::BackupFailed,
+            self::ScheduledReportFailed => 1,
             default => 7,
         };
     }
@@ -118,7 +123,9 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::BookingReturnDue => 1,
-            self::CashVariance, self::BackupFailed => 3,
+            self::CashVariance,
+            self::BackupFailed,
+            self::ScheduledReportFailed => 3,
             default => 5,
         };
     }
@@ -143,6 +150,8 @@ enum AlertType: string implements HasColor, HasIcon, HasLabel
             self::DrivingLicenceExpiring => [UserRole::Manager, UserRole::Receptionist],
 
             self::BackupFailed => [UserRole::SuperAdmin],
+
+            self::ScheduledReportFailed => [UserRole::Manager, UserRole::Accountant],
         };
     }
 }

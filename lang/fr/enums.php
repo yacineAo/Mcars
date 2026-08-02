@@ -138,6 +138,7 @@ return [
         'recurring_expense_due' => 'Charge récurrente due',
         'cash_variance' => 'Écart de caisse',
         'backup_failed' => 'Échec de sauvegarde',
+        'scheduled_report_failed' => 'Échec de rapport programmé',
     ],
     'notification_channel' => [
         'database' => 'Dans l\'application',

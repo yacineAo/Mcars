@@ -691,7 +691,7 @@ Lead times configurable by the manager rather than hardcoded.
 `id`, `branch_id` (nullable = global),
 `type` (`booking_return_due | booking_overdue | customer_payment_overdue | owner_installment_due |
 car_document_expiring | driving_licence_expiring | maintenance_due | recurring_expense_due |
-cash_variance | backup_failed`),
+cash_variance | backup_failed | scheduled_report_failed`),
 `days_before`, `repeat_every_days`, `max_repeats`,
 `channels` (jsonb), `recipient_roles` (jsonb),
 `template_key`, `is_active`, audit columns, soft deletes.

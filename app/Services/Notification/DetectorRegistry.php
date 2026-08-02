@@ -16,6 +16,7 @@ use App\Services\Notification\Detectors\DrivingLicenceExpiringDetector;
 use App\Services\Notification\Detectors\MaintenanceDueDetector;
 use App\Services\Notification\Detectors\OwnerInstallmentDueDetector;
 use App\Services\Notification\Detectors\RecurringExpenseDueDetector;
+use App\Services\Notification\Detectors\ScheduledReportFailedDetector;
 use Illuminate\Contracts\Container\Container;
 
 /**
@@ -49,6 +50,7 @@ final class DetectorRegistry
             AlertType::RecurringExpenseDue => RecurringExpenseDueDetector::class,
             AlertType::CashVariance => CashVarianceDetector::class,
             AlertType::BackupFailed => BackupFailedDetector::class,
+            AlertType::ScheduledReportFailed => ScheduledReportFailedDetector::class,
         };
 
         return $this->resolved[$type->value] = $this->container->make($class);

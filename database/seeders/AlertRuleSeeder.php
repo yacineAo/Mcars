@@ -62,7 +62,8 @@ class AlertRuleSeeder extends Seeder
             AlertType::CustomerPaymentOverdue,
             AlertType::CarDocumentExpiring,
             AlertType::CashVariance,
-            AlertType::BackupFailed => true,
+            AlertType::BackupFailed,
+            AlertType::ScheduledReportFailed => true,
             default => false,
         };
 

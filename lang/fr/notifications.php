@@ -82,6 +82,10 @@ return [
             'subject' => 'Échec de la sauvegarde',
             'body' => "La sauvegarde planifiée n'a pas abouti. Vérifiez le journal de sauvegarde immédiatement.",
         ],
+        'scheduled_report_failed' => [
+            'subject' => 'Échec du rapport programmé : :name',
+            'body' => 'Le rapport programmé :name n\'a pas pu être généré. Dernier échec : :failed_at. Consultez son historique d\'exécutions.',
+        ],
     ],
 
     'digest' => [

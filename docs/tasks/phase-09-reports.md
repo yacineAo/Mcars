@@ -45,7 +45,8 @@ phase can proceed without it.
 - [x] **Queued generation** for large ranges, via `ExportJob` + `PendingExport` model
       Queued exports carry `branch_id` in the **job payload** — there is no session on the queue,
       so a global scope resolves to nothing and silently produces the wrong data.
-- [ ] Saved report configurations; optional scheduled email delivery *(deferred to Phase 9b)*
+- [x] Saved report configurations; optional scheduled email delivery *(completed in Phase 9b —
+      see [`../resource/32-report-definition.md`](../resource/32-report-definition.md))*
 - [x] Report headers state the branch, or "All Branches" — the PDF/Excel output states its scope
 
 ### Correctness

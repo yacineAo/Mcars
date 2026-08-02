@@ -13,13 +13,21 @@ use App\Models\Car;
 use App\Models\CarOwner;
 use App\Models\Customer;
 use App\Models\ReportDefinition;
+use App\Rules\EmailList;
+use App\Rules\ValidCronExpression;
+use App\Services\Reporting\ScheduledReportRunner;
 use BackedEnum;
+use Carbon\CarbonImmutable;
+use Cron\CronExpression;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -28,6 +36,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
@@ -83,7 +92,13 @@ class ReportDefinitionResource extends Resource
                 ->label(__('reports.resources.report_definition.fields.report_type'))
                 ->options(ReportType::options())
                 ->required()
-                ->live(),
+                ->live()
+                // Freeze once the definition has run: two different report types
+                // under one name would make the history read as one report.
+                ->disabled(fn (string $operation, ?ReportDefinition $record): bool => $operation === 'edit' && $record?->hasRuns())
+                ->hint(fn (string $operation, ?ReportDefinition $record): ?string => $operation === 'edit' && $record?->hasRuns()
+                    ? __('reports.resources.report_definition.fields.report_type_frozen')
+                    : null),
 
             Select::make('format')
                 ->label(__('reports.resources.report_definition.fields.format'))
@@ -137,12 +152,15 @@ class ReportDefinitionResource extends Resource
                         ->label(__('reports.resources.report_definition.fields.schedule_cron'))
                         ->helperText(__('reports.resources.report_definition.help.cron'))
                         ->placeholder('0 8 * * 1')
+                        ->rules([new ValidCronExpression])
+                        ->live()
+                        ->hint(fn (?string $state): ?string => self::nextRunsPreview($state))
                         ->maxLength(100),
 
                     TextInput::make('schedule_email')
                         ->label(__('reports.resources.report_definition.fields.schedule_email'))
                         ->helperText(__('reports.resources.report_definition.help.email'))
-                        ->email()
+                        ->rules([new EmailList])
                         ->maxLength(255),
 
                     Toggle::make('schedule_enabled')
@@ -183,11 +201,29 @@ class ReportDefinitionResource extends Resource
                     ->boolean()
                     ->sortable(),
 
+                // Derived from the cron expression, not stored — the schedule
+                // screen answers "when does this fire next?" without waiting.
+                TextColumn::make('next_run_at')
+                    ->label(__('reports.resources.report_definition.fields.next_run_at'))
+                    ->getStateUsing(fn (ReportDefinition $record): ?CarbonImmutable => $record->schedule_enabled ? $record->nextRunAt() : null)
+                    ->dateTime('d/m/Y H:i')
+                    ->placeholder('—'),
+
                 TextColumn::make('last_sent_at')
                     ->label(__('reports.resources.report_definition.fields.last_sent_at'))
-                    ->dateTime()
                     ->sortable()
-                    ->placeholder(__('reports.resources.report_definition.never')),
+                    // An enabled schedule that has never produced a run looks like
+                    // a working one; this is the one time silence means broken.
+                    ->color(fn (ReportDefinition $record): ?string => $record->schedule_enabled && $record->last_sent_at === null ? 'warning' : null)
+                    ->getStateUsing(function (ReportDefinition $record): string {
+                        if ($record->last_sent_at !== null) {
+                            return $record->last_sent_at->format('d/m/Y H:i');
+                        }
+
+                        return $record->schedule_enabled
+                            ? __('reports.resources.report_definition.never_sent')
+                            : __('reports.resources.report_definition.never');
+                    }),
             ])
             ->filters([
                 SelectFilter::make('report_type')
@@ -195,9 +231,20 @@ class ReportDefinitionResource extends Resource
                 SelectFilter::make('format')
                     ->options(ExportFormat::options()),
                 TernaryFilter::make('schedule_enabled'),
+                SelectFilter::make('schedule_state')
+                    ->label(__('reports.resources.report_definition.filters.schedule_state'))
+                    ->options([
+                        'enabled_never_sent' => __('reports.resources.report_definition.filters.enabled_never_sent'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        ($data['value'] ?? null) === 'enabled_never_sent',
+                        fn (Builder $q): Builder => $q->where('schedule_enabled', true)->whereNull('last_sent_at'),
+                    )),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
+                self::runNowAction(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -212,7 +259,57 @@ class ReportDefinitionResource extends Resource
         return [
             'index' => Pages\ListReportDefinitions::route('/'),
             'create' => Pages\CreateReportDefinition::route('/create'),
+            'view' => Pages\ViewReportDefinition::route('/{record}'),
             'edit' => Pages\EditReportDefinition::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Runs the definition now, exactly as the cron sweep would — the same runner,
+     * the same last-month window, the same email — and takes the user to the new
+     * run so they can watch it generate and download it.
+     */
+    public static function runNowAction(): Action
+    {
+        return Action::make('run_now')
+            ->label(__('reports.resources.report_definition.actions.run_now'))
+            ->icon('heroicon-o-play')
+            ->color('primary')
+            ->requiresConfirmation()
+            ->modalDescription(__('reports.resources.report_definition.actions.run_now_confirm'))
+            ->action(function (Action $action, ReportDefinition $record): void {
+                $run = app(ScheduledReportRunner::class)->run($record, CarbonImmutable::now());
+
+                Notification::make()
+                    ->title(__('reports.resources.report_definition.actions.run_now_notification'))
+                    ->success()
+                    ->send();
+
+                $action->getLivewire()->redirect(ReportResource::getUrl('view', ['record' => $run]));
+            });
+    }
+
+    /**
+     * The next few run times of a cron expression, as a hint under the field, or
+     * nothing until the operator types a valid one.
+     */
+    private static function nextRunsPreview(?string $cron): ?string
+    {
+        if ($cron === null || $cron === '') {
+            return null;
+        }
+
+        if (! CronExpression::isValidExpression($cron)) {
+            return __('reports.resources.report_definition.help.cron_invalid');
+        }
+
+        $times = array_map(
+            fn (CarbonImmutable $time): string => $time->format('d/m/Y H:i'),
+            ReportDefinition::runTimes($cron, 3),
+        );
+
+        return __('reports.resources.report_definition.help.next_runs', [
+            'times' => implode(' · ', $times),
+        ]);
     }
 }

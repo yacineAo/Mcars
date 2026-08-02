@@ -26,6 +26,7 @@ class PendingExport extends Model
     protected $fillable = [
         'branch_id',
         'user_id',
+        'report_definition_id',
         'report_type',
         'format',
         'parameters',

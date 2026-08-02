@@ -82,6 +82,10 @@ return [
             'subject' => 'Backup failed',
             'body' => 'The scheduled backup did not complete. Check the backup log immediately.',
         ],
+        'scheduled_report_failed' => [
+            'subject' => 'Scheduled report failed: :name',
+            'body' => 'The scheduled report :name failed to generate. Latest failure: :failed_at. Check its run history.',
+        ],
     ],
 
     'digest' => [

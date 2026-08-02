@@ -280,7 +280,7 @@ the queue is one the recipient is about to get.
 ### `AlertType` — REQ-17
 `booking_return_due` · `booking_overdue` · `customer_payment_overdue` · `owner_installment_due` ·
 `car_document_expiring` · `driving_licence_expiring` · `maintenance_due` · `recurring_expense_due` ·
-`cash_variance` · `backup_failed`
+`cash_variance` · `backup_failed` · `scheduled_report_failed`
 
 ---
 

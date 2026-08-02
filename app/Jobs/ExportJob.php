@@ -106,7 +106,13 @@ class ExportJob implements ShouldQueue
 
         $definition = $this->pendingExport->reportDefinition;
 
-        if ($definition === null || $definition->schedule_email === null) {
+        if ($definition === null) {
+            return;
+        }
+
+        $recipients = $definition->scheduleEmailRecipients();
+
+        if ($recipients === []) {
             return;
         }
 
@@ -122,7 +128,7 @@ class ExportJob implements ShouldQueue
         }
 
         Mail::mailer()
-            ->to($definition->schedule_email)
+            ->to($recipients)
             ->send(new ScheduledReportMail(
                 reportName: $definition->name,
                 fileName: $this->pendingExport->file_name,

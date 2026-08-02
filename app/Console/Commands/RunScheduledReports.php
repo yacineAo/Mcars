@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Jobs\ExportJob;
-use App\Models\PendingExport;
 use App\Models\ReportDefinition;
+use App\Services\Reporting\ScheduledReportRunner;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
 use Illuminate\Console\Command;
-use Illuminate\Database\DatabaseManager;
 
 /**
  * Every-minute sweep that dispatches queued export jobs for saved report
  * definitions whose cron expression matches the current minute.
  *
  * Each dispatched export carries a `report_definition_id` so ExportJob can
- * send the completed file to the definition's `schedule_email` recipient.
+ * send the completed file to the definition's schedule recipients. The run
+ * itself is built by ScheduledReportRunner — the same code the "Run now"
+ * action calls, so manual and scheduled runs are the same thing.
  */
 class RunScheduledReports extends Command
 {
@@ -27,7 +27,7 @@ class RunScheduledReports extends Command
     protected $description = 'Evaluate scheduled report definitions and dispatch any that are due';
 
     public function __construct(
-        private readonly DatabaseManager $db,
+        private readonly ScheduledReportRunner $runner,
     ) {
         parent::__construct();
     }
@@ -53,33 +53,9 @@ class RunScheduledReports extends Command
                 continue;
             }
 
-            $this->db->transaction(function () use ($definition, $now, &$count): void {
-                $parameters = $definition->parameters;
+            $this->runner->run($definition, $now);
 
-                $parameters['from'] = $now->subMonth()->startOfMonth()->format('Y-m-d');
-                $parameters['to'] = $now->subMonth()->endOfMonth()->format('Y-m-d');
-
-                if ($definition->branch_id !== null) {
-                    $parameters['branch_id'] = $definition->branch_id;
-                }
-
-                /** @var PendingExport $pendingExport */
-                $pendingExport = PendingExport::create([
-                    'branch_id' => $definition->branch_id,
-                    'user_id' => $definition->user_id,
-                    'report_definition_id' => $definition->id,
-                    'report_type' => $definition->report_type,
-                    'format' => $definition->format,
-                    'parameters' => $parameters,
-                    'status' => 'pending',
-                ]);
-
-                ExportJob::dispatch($pendingExport, $definition->user_id);
-
-                $definition->update(['last_sent_at' => $now]);
-
-                $count++;
-            });
+            $count++;
         }
 
         $this->info("Dispatched {$count} scheduled report(s).");

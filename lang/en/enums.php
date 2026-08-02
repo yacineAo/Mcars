@@ -138,6 +138,7 @@ return [
         'recurring_expense_due' => 'Recurring expense due',
         'cash_variance' => 'Cash variance',
         'backup_failed' => 'Backup failed',
+        'scheduled_report_failed' => 'Scheduled report failed',
     ],
     'notification_channel' => [
         'database' => 'In-app',

@@ -138,6 +138,7 @@ return [
         'recurring_expense_due' => 'مصروف دوري مستحق',
         'cash_variance' => 'فرق في الصندوق',
         'backup_failed' => 'فشل النسخ الاحتياطي',
+        'scheduled_report_failed' => 'فشل تقرير مجدول',
     ],
     'notification_channel' => [
         'database' => 'داخل التطبيق',
