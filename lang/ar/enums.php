@@ -183,6 +183,12 @@ return [
         'three_quarters' => 'ثلاثة أرباع',
         'full' => 'ممتلئ',
     ],
+    'employee_status' => [
+        'active' => 'نشط',
+        'on_leave' => 'في عطلة',
+        'suspended' => 'موقوف',
+        'terminated' => 'منتهي الخدمة',
+    ],
     'block_reason' => [
         'maintenance' => 'صيانة',
         'owner_use' => 'استخدام المالك',

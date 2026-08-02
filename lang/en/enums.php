@@ -183,6 +183,12 @@ return [
         'three_quarters' => 'Three quarters',
         'full' => 'Full',
     ],
+    'employee_status' => [
+        'active' => 'Active',
+        'on_leave' => 'On Leave',
+        'suspended' => 'Suspended',
+        'terminated' => 'Terminated',
+    ],
     'block_reason' => [
         'maintenance' => 'Maintenance',
         'owner_use' => 'Owner use',

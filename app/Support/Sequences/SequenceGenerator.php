@@ -32,6 +32,7 @@ final class SequenceGenerator
         'payment' => 'PAY',
         'expense' => 'EXP',
         'invoice' => 'INV',
+        'employee' => 'EMP',
     ];
 
     public function next(

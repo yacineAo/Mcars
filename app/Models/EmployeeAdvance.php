@@ -19,8 +19,15 @@ class EmployeeAdvance extends Model
         'status', 'recovered_in_payroll_item_id',
     ];
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    /** @return BelongsTo<PayrollItem, $this> */
+    public function recoveredInPayrollItem(): BelongsTo
+    {
+        return $this->belongsTo(PayrollItem::class, 'recovered_in_payroll_item_id');
     }
 }

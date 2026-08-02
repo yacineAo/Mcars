@@ -205,6 +205,35 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Receptionist,
                 UserRole::Supervisor,
             ],
+            // HR, per the visibility matrix ("full | payroll | — | — | read").
+            // Opening the directory — names, job titles, departments — is the
+            // supervisor's "read": the person watching the floor can see who
+            // works where without seeing what anyone earns.
+            'hr.view' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+                UserRole::Supervisor,
+            ],
+            // Payroll confidentiality: base_salary and the three pay relations
+            // (payroll items, advances, commissions). Base salary is the most
+            // sensitive personal data in the system after customer NIN, and
+            // `reports.view_financials` is the wrong gate conceptually — this is
+            // payroll confidentiality, not financial reporting — so it is its
+            // own permission. The accountant answers for the books and gets it;
+            // the supervisor's "read" on HR deliberately does not.
+            'hr.view_salary' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+            ],
+            // Writing the employee record itself. "full" in the matrix belongs
+            // to the manager alone: hiring, salary changes and terminations are
+            // the manager's call, never an accountant's or a supervisor's.
+            'hr.manage' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
         ];
 
         foreach ($grants as $permissionName => $roles) {
