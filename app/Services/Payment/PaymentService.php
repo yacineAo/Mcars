@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Services\Payment;
 
 use App\Enums\AdvanceStatus;
+use App\Enums\CommissionStatus;
 use App\Enums\PaymentDirection;
+use App\Enums\PayrollStatus;
 use App\Models\Booking;
+use App\Models\Commission;
 use App\Models\Deposit;
 use App\Models\EmployeeAdvance;
 use App\Models\Fine;
@@ -164,20 +167,78 @@ class PaymentService
         );
     }
 
+    /**
+     * E57-E59, E62: approving a run records salaries, employer contributions
+     * and commissions as payables, and recovers the advances — all in the same
+     * transaction as the status flip, so a crash cannot leave the accrual on
+     * the ledger with the run still draft (which would make the run neither
+     * re-approvable nor payable).
+     *
+     * The guard is the invariant: only a draft run may be approved, and the
+     * double-post risk is closed by the lock — a second caller (a stale tab,
+     * an import) finds the run already approved and is refused.
+     */
     /** @return Collection<int, Transaction> */
     public function approvePayroll(PayrollRun $run, int $userId): Collection
     {
-        return $this->accounting->postMany(
-            ...$this->payrollPoster->postPayrollApproved($run, $userId),
-        );
+        return $this->db->transaction(function () use ($run, $userId): Collection {
+            $run = PayrollRun::query()->lockForUpdate()->findOrFail($run->id);
+
+            if ($run->status !== PayrollStatus::Draft) {
+                throw new DomainException('Only a draft payroll run can be approved.');
+            }
+
+            $transactions = $this->accounting->postMany(
+                ...$this->payrollPoster->postPayrollApproved($run, $userId),
+            );
+
+            $run->update([
+                'status' => PayrollStatus::Approved,
+                'approved_by_id' => $userId,
+                'approved_at' => now(),
+            ]);
+            $run->items()->update(['status' => 'approved']);
+
+            return $transactions;
+        });
     }
 
+    /**
+     * E60: paying the run is the largest posting the business makes each
+     * month, so this is the highest-consequence double-post in the system. The
+     * status flip, the item statuses and the posting share one transaction and
+     * one lock: only an approved run can be paid, and a second caller finds it
+     * already paid and is refused.
+     */
     /** @return Collection<int, Transaction> */
     public function payPayroll(PayrollRun $run, int $userId): Collection
     {
-        return $this->accounting->postMany(
-            ...$this->payrollPoster->postPayrollPaid($run, $userId),
-        );
+        return $this->db->transaction(function () use ($run, $userId): Collection {
+            $run = PayrollRun::query()->lockForUpdate()->findOrFail($run->id);
+
+            if ($run->status !== PayrollStatus::Approved) {
+                throw new DomainException('Only an approved payroll run can be paid.');
+            }
+
+            $itemIds = $run->items()->pluck('id');
+
+            $transactions = $this->accounting->postMany(
+                ...$this->payrollPoster->postPayrollPaid($run, $userId),
+            );
+
+            $run->update([
+                'status' => PayrollStatus::Paid,
+                'paid_at' => now(),
+            ]);
+            $run->items()->update(['status' => 'paid', 'paid_at' => now()]);
+
+            // The swept commissions are settled by this payment: marking them
+            // paid seals them against the sweep queue and against amendment.
+            Commission::whereIn('payroll_item_id', $itemIds)
+                ->update(['status' => CommissionStatus::Paid->value]);
+
+            return $transactions;
+        });
     }
 
     /**

@@ -1,6 +1,6 @@
 # 30 — PayrollRun (HR)
 
-**Model:** `App\Models\PayrollRun` · **Slug:** `/admin/payroll-runs` · **Status:** 🔴 needs work
+**Model:** `App\Models\PayrollRun` · **Slug:** `/admin/payroll-runs` · **Status:** ✅ done
 
 Closes **ADV-07**. Read [`../05-accounting-model.md`](../05-accounting-model.md) — payroll
 posts salaries, and the run is the batch.
@@ -11,115 +11,81 @@ One month's payroll for a branch. It gathers the employees' items — base salar
 earned, advances to recover — is approved, then paid, which posts the whole batch to the ledger.
 It is the largest single posting the business makes each month.
 
+## Decisions taken
+
+- **A run is generated, not typed.** `PayrollService::generate(branchId, period)` creates the run
+  and, in one transaction, gathers every active employee's base salary, their unrecovered
+  advances (`employee_advances.recovered_in_payroll_item_id IS NULL` and still
+  `outstanding`) and their unpaid commissions (`commissions.payroll_item_id IS NULL`, not
+  cancelled) into one `payroll_items` row per employee. The screen only names the month; the
+  branch is the acting user's own (same resolution `BelongsToBranch` applies). `gross` is the
+  salary leg, `net = base + commissions − advances` — the poster splits E57/E59 at approval and
+  E60 pays the net.
+- **The sweep is claimed at generation.** The moment a commission or advance lands in a run its
+  stamp (`payroll_item_id` / `recovered_in_payroll_item_id`) is set, so a second run can never
+  gather it again — including a run for a *later* month while an earlier one is still draft.
+  Removing a draft item (a legitimate correction) releases its stamps back to the queues via
+  `PayrollService::unsweep()`, so nothing is buried with the line. A settled commission is sealed:
+  paying the run marks its swept commissions `paid`, which the round-29 guard already refuses to
+  amend.
+- **The status moves only through the posting flow.** The form has no status field. The resource's
+  `canEdit` freezes a run once approved (a draft keeps `period_month` and `notes` editable), and
+  `PaymentService::approvePayroll()` / `payPayroll()` own the status flip, the approval/payment
+  stamps and the item statuses (`pending → approved → paid`) inside the **same transaction and
+  row lock as the posting** — a second caller (stale tab, import, double-click) finds the run
+  already moved and is refused. Approving twice, paying a draft, paying twice: all
+  `DomainException`, all tested.
+- **One live run per branch and period.** A partial unique index
+  (`payroll_runs_branch_period_unique`, `WHERE status <> 'cancelled'`, raw `DB::statement` —
+  Laravel's `unique()->where()` does not emit a PG partial index) makes the DB refuse a duplicate
+  before the service's own guard gets a word in. A cancelled run does not hold the slot, so a
+  month can be re-generated after a mistake.
+- **No delete path at all.** `DeleteBulkAction` is gone: once generated the run has claimed
+  amounts from the sweep queues, once approved the month is on the ledger. There is no delete —
+  not single, not bulk.
+- **Totals are derived, never stored.** `PayrollService::runTotals()` sums the items (gross,
+  commissions, advances, net) and the index shows the net total and the item count; the resource
+  never sums money itself (docs/05).
+
 ## Current state
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | has filters |
-| create | ✅ | `period_month`, branch, notes |
-| view | ❌ | **absent** — the run's items cannot be seen |
-| edit | ✅ | |
-| row actions | ✅ | `approve`, `pay`, Edit — deprecated `->actions([...])` |
-| header / toolbar actions | 🟡 | `CreateAction`; **`DeleteBulkAction`** |
-| relation managers | ❌ | none, though `PayrollRun hasMany items` |
-| `canAccess()` | ❌ | **absent** |
+| index | ✅ | period, branch, status badge, **derived net total** (`PayrollService::totalNetFor`), **employee count** (`counts('items')`), approval trail; filters: status (defaults to draft + approved), period, branch (pinned) |
+| create | ✅ | `period_month` + notes only; `PayrollService::generate()` gathers the items; duplicate month refused as a field error; redirects to the view page |
+| view | ✅ | **new** — period, branch, status, approval trail (approved_by/at, paid_at), derived totals (gross, commissions, advances, net), items + transactions relation managers |
+| edit | ✅ | `period_month` + notes only while draft; frozen once approved (`canEdit`) |
+| row actions | ✅ | `approve` (visible on Draft), `pay` (visible on Approved) — both behind `hr.manage`, both call the service that owns the transaction boundary; Edit |
+| header / toolbar actions | ✅ | `CreateAction`; **no `DeleteBulkAction`** |
+| relation managers | ✅ | **items** — employee, base, commissions, advances, net, status; edit/remove in a modal **only while draft** (edit recomputes gross/net from the edited terms); **transactions** — the run's ledger rows, strictly read-only, via `HasLedgerPostings` |
+| `canAccess()` | ✅ | `hr.view_salary`; writes additionally `hr.manage` |
 
-Schema is sensible: `approved_by_id`, `approved_at`, `paid_at` give the run an audit trail, and
-`payroll_runs` holds no total column — the total is the sum of its items, derived.
+## Service
 
-## Should be
+`App\Services\Payment\PayrollService`:
 
-### Index
-Show `period_month`, branch, status, the derived total, and employee count. Filter by status
-(defaulting to draft/pending), period and branch. The total must come from a service or
-`ReportService`, not be summed in the resource.
+- `generate(int $branchId, string $period): PayrollRun` — duplicate guard, then gathers the
+  employees/advances/commissions into items and claims the sweep stamps, one transaction.
+- `runTotals(PayrollRun): array{gross, commissions, advances, net}` / `totalNetFor(PayrollRun)` —
+  the derived figures the screens display.
+- `unsweep(PayrollItem): void` — releases a removed draft item's commission and advance back to
+  the queues.
 
-### Create
-A run is generated for a period, not typed: creating it should gather every active employee's
-base salary, their unrecovered advances (`employee_advances.recovered_in_payroll_item_id IS NULL`)
-and their unpaid commissions (`commissions.payroll_item_id IS NULL`) into items. Confirm that
-gathering exists in a service; if it does not, a run is an empty shell and the screen cannot do
-its job.
-
-Prevent two runs for the same period and branch — paying a month twice is the worst outcome this
-screen can produce.
-
-### View
-**Add one.** A payroll run's substance is its items, and there is currently no way to see them —
-you can approve and pay a batch whose contents you cannot inspect. That is the single most
-important change here.
-
-Sections: period, branch, status with the approval trail, derived totals (gross, advances
-recovered, commissions, net). Then the items table.
-
-### Edit
-Freeze once approved. After `pay`, the whole run is immutable — the postings exist. `notes` only.
-
-### Relations
-
-| Relation | Where | Read-only | Gate | Columns |
-|---|---|---|---|---|
-| `items` | **view** | yes once approved; editable while draft | `reports.view_financials` | employee, base salary, commissions, advances recovered, net |
-| `transactions` | **view** | **yes, strictly** | `reports.view_financials` | reference, date, debit, credit, amount |
-
-While a run is draft, adjusting an item is legitimate (a correction before approval); once
-approved it must be read-only. That is a relation manager whose write actions are conditional on
-the parent's status — worth stating explicitly so it is not built fully open.
-
-### Actions
-
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| `approve` | row | see resource | **nothing** | raw update | must be gated separately from pay — gap 1 |
-| `pay` | row | `status === Approved` | **nothing** | `PaymentService::payPayroll()` | **opens `DB::transaction` and sets status in the closure** — gaps 2, 3 |
-| `EditAction` | row | always | **nothing** | — | must freeze once approved |
-| `DeleteBulkAction` | toolbar | always | **nothing** | — | **remove** — gap 5 |
-
-## Gaps and risks
-
-1. **🔴 No `canAccess()`.** Any staff role can create, approve and pay payroll — including
-   employees whose own salary is in it. Approval and payment must be gated, and separately from
-   each other; a receptionist should not see salaries at all.
-2. **🔴 The `pay` action owns the transaction boundary** (`PayrollRunResource.php:97-101`): it
-   opens `DB::transaction`, calls `PaymentService::payPayroll()`, then updates the status itself.
-   Per ADR-013 the boundary and the orchestration belong in the service —
-   `PaymentService::payPayroll()` should set the status as part of its own transaction, so a
-   second caller cannot post the batch without marking it paid. Identical in shape to
-   [`15-expense.md`](15-expense.md) gap 2.
-3. **🔴 Nothing prevents paying a run twice** at the invariant level. `visible()` restricts the
-   action to `Approved` status, but that is presentation. Because the status update lives in the
-   action rather than the service (gap 2), a second caller — an import, a test, a stale tab —
-   can post the batch again. For payroll this is the highest-consequence double-post in the
-   system.
-4. **🔴 No view page, so a run is approved and paid unseen** — see View.
-5. **🔴 `DeleteBulkAction` on paid runs.** Deleting a paid run leaves a month of salary postings
-   with nothing behind them.
-6. **🟡 Duplicate runs per period/branch not prevented** — see Create.
-7. **🟡 No derived total** on the index.
-8. **🟡 Deprecated `->actions([...])`.**
-
-## Checklist
-
-- [ ] Add `canAccess()`; separate approve from pay; hide salaries from non-HR roles
-- [ ] Move the transaction boundary and the status update into `PaymentService::payPayroll()`
-- [ ] Make the service refuse a run that is not approved or is already paid; test it
-- [ ] Add a view page with the items table and the approval trail
-- [ ] Add the items relation manager — writable only while draft
-- [ ] Remove `DeleteBulkAction`
-- [ ] Prevent two runs for the same period and branch
-- [ ] Add derived total and employee-count columns
-- [ ] `->actions(` → `->recordActions(`
+`PaymentService::approvePayroll(PayrollRun, int $userId)` and `payPayroll(PayrollRun, int $userId)`
+now own the transaction boundary, the row lock, the status guards (draft-only / approved-only) and
+the status/stamp updates that the resource previously did inside its own `DB::transaction` —
+closing the double-post at the invariant level rather than in a `visible()` closure. The pay flow
+also marks the run's swept commissions `paid`.
 
 ## Verification
 
 ```bash
+docker compose exec app ./vendor/bin/pest tests/Feature/PayrollRunResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/Phase6Test.php
-docker compose exec app ./vendor/bin/pest tests/Feature/AccountingLedgerTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/CommissionResourceTest.php
 ```
 
-A posting-matrix test for the payroll batch is required — both legs, and the sign — before
-touching `payPayroll`.
-
-By hand: generate a run for a month with one employee holding an advance and a commission.
-Confirm the items show all three components, that the net is right, and that paying it posts
-once. Then attempt to pay again from a second tab and confirm refusal.
+By hand: generate a run for a month, confirm the items carry base salary, commissions and
+advances; approve and confirm the accrual posts and the run freezes; pay and confirm the payable
+clears, the items read `paid` and the swept commissions are sealed; try to generate the same
+month again.

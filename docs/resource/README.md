@@ -46,7 +46,7 @@ that each piece stays reviewable on its own.
 | [27](27-employee.md) | **Employee** | HR | 🔴 audited — needs work |
 | [28](28-employee-advance.md) | **EmployeeAdvance** | HR | ✅ done |
 | [29](29-commission.md) | **Commission** | HR | ✅ done |
-| [30](30-payroll-run.md) | **PayrollRun** | HR | 🔴 audited — needs work |
+| [30](30-payroll-run.md) | **PayrollRun** | HR | ✅ done |
 | [31](31-report.md) | **Report** | Reports | ✅ audited — fine |
 | [32](32-report-definition.md) | **ReportDefinition** | Reports | 🟡 audited — partial |
 | [33](33-user.md) | **User** | Settings | 🔴 audited — needs work |

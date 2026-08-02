@@ -202,6 +202,12 @@ return [
         'paid' => 'مدفوعة',
         'cancelled' => 'ملغاة',
     ],
+    'payroll_status' => [
+        'draft' => 'مسودة',
+        'approved' => 'معتمدة',
+        'paid' => 'مدفوعة',
+        'cancelled' => 'ملغاة',
+    ],
     'block_reason' => [
         'maintenance' => 'صيانة',
         'owner_use' => 'استخدام المالك',

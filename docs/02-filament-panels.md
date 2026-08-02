@@ -66,8 +66,8 @@ Customer view page shows **derived** amounts owed, deposits held, and fines — 
 | `CashSessionResource` | Shift history and variance audit |
 
 ### Cluster: HR — REQ-15
-`EmployeeResource`, `PayrollRunResource` (+ items relation manager), `EmployeeAdvanceResource`,
-`CommissionResource`.
+`EmployeeResource`, `PayrollRunResource` (+ items and transactions relation managers on the view
+page), `EmployeeAdvanceResource`, `CommissionResource`.
 
 ### Cluster: Operations
 `FineResource` (with the liability-suggestion action), `NotificationLogResource` (delivery audit),
@@ -105,11 +105,14 @@ Not built (Phase 10): `SettingsPage`, `ActivityLogResource`, `BackupsPage`.
 
 Enforced by Filament Shield permissions, not by hiding navigation. Hidden navigation is not security.
 
-The HR row is a coarse guide: `EmployeeAdvanceResource` and `CommissionResource` are more
-restrictive than the supervisor's HR `read` — they require `hr.view_salary` (accountant, manager),
-so the supervisor sees no salary data there, and their writes additionally require `hr.manage`.
-Commissions have no delete path and compute their amount in `CommissionService`; the status moves
-only with the payroll sweep.
+The HR row is a coarse guide: `EmployeeAdvanceResource`, `CommissionResource` and
+`PayrollRunResource` are more restrictive than the supervisor's HR `read` — they require
+`hr.view_salary` (accountant, manager), so the supervisor sees no salary data there, and their
+writes additionally require `hr.manage`. Commissions have no delete path and compute their amount
+in `CommissionService`; the status moves only with the payroll sweep. A payroll run is generated
+for the month (`PayrollService`), approved and paid through `PaymentService`, which owns the
+status flips; its items are editable only while the run is draft, its totals are derived from the
+items, and there is no delete of any kind.
 
 ---
 

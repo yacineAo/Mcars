@@ -202,6 +202,12 @@ return [
         'paid' => 'Payée',
         'cancelled' => 'Annulée',
     ],
+    'payroll_status' => [
+        'draft' => 'Brouillon',
+        'approved' => 'Approuvée',
+        'paid' => 'Payée',
+        'cancelled' => 'Annulée',
+    ],
     'block_reason' => [
         'maintenance' => 'Maintenance',
         'owner_use' => 'Usage propriétaire',

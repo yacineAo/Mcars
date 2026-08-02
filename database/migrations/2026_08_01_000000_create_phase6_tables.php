@@ -338,6 +338,15 @@ return new class extends Migration
         DB::statement("ALTER TABLE employee_advances ADD CHECK (status IN ('".implode("','", AdvanceStatus::values())."'))");
         DB::statement("ALTER TABLE commissions ADD CHECK (status IN ('".implode("','", CommissionStatus::values())."'))");
         DB::statement("ALTER TABLE payroll_runs ADD CHECK (status IN ('".implode("','", PayrollStatus::values())."'))");
+        // One live run per branch and period: a cancelled run does not hold the
+        // slot, so a month can be re-generated after a mistake. Paying a month
+        // twice is the worst outcome this table can produce — the partial
+        // unique index makes the DB refuse it (ADR-002 style, PostgreSQL only).
+        DB::statement("
+            CREATE UNIQUE INDEX payroll_runs_branch_period_unique
+            ON payroll_runs (branch_id, period_month)
+            WHERE (status <> '".PayrollStatus::Cancelled->value."')
+        ");
     }
 
     public function down(): void

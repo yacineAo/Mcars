@@ -585,12 +585,15 @@ Separate from `users`: not every employee needs a login, and employment data out
 `payroll_runs`: `id`, `branch_id`, `period_month`, `status` (`draft | approved | paid | cancelled`),
 `approved_by_id`, `approved_at`, `paid_at`, `notes`.
 Totals are derived by summing items.
+Partial unique index `(branch_id, period_month) WHERE status <> 'cancelled'` — one live run per
+branch and period; a cancelled run does not hold the slot.
 
 `payroll_items`: `id`, `payroll_run_id`, `employee_id`,
 `base_salary`, `commissions_amount`, `bonuses_amount`, `overtime_amount`,
 `advances_deducted`, `absences_deduction`, `social_contributions`, `other_deductions`,
 `gross_amount`, `net_amount`,
 `status` (`pending | approved | paid`), `payment_id`, `paid_at`, `notes`.
+Unique `(payroll_run_id, employee_id)`.
 
 ### `employee_advances` — REQ-15
 `id`, `employee_id`, `branch_id`, `amount`, `advanced_on`, `reason`,

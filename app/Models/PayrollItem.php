@@ -17,11 +17,13 @@ class PayrollItem extends Model
         'status', 'payment_id', 'paid_at', 'notes',
     ];
 
+    /** @return BelongsTo<PayrollRun, $this> */
     public function payrollRun(): BelongsTo
     {
         return $this->belongsTo(PayrollRun::class);
     }
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
