@@ -81,6 +81,12 @@ class RolePermissionSeeder extends Seeder
             // The delivery audit trail exposes recipient addresses and message
             // payloads, so it is read-only and deliberately narrower than the
             // ability to receive alerts.
+            //
+            // Coupled to reports.view_financials by design: notification_logs.payload
+            // embeds amount-bearing keys ({"amount": "60000.00", ...}), making this
+            // the only screen in the panel that shows what was *said* to a person.
+            // Nothing keeps the two sets aligned automatically — any change here
+            // should be mirrored there, or the payload should be redacted instead.
             'alerts.view_logs' => [
                 UserRole::SuperAdmin,
                 UserRole::Manager,

@@ -156,6 +156,7 @@ return [
                 'type' => 'التنبيه',
                 'channel' => 'القناة',
                 'recipient' => 'المستلم',
+                'address' => 'العنوان',
                 'status' => 'الحالة',
                 'attempts' => 'المحاولات',
                 'subject' => 'يخص',
@@ -165,6 +166,9 @@ return [
             ],
             'filters' => [
                 'alert_rule' => 'قاعدة التنبيه',
+                'alert_type' => 'نوع التنبيه',
+                'branch' => 'الوكالة',
+                'date_range' => 'أُنشئ بين',
                 'failed_only' => 'الفاشلة فقط',
             ],
         ],

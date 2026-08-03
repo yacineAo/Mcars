@@ -34,6 +34,7 @@ use App\Models\ExpenseCategory;
 use App\Models\FinancialAccount;
 use App\Models\Fine;
 use App\Models\MaintenanceLog;
+use App\Models\NotificationLog;
 use App\Models\OwnerInstallment;
 use App\Models\Payment;
 use App\Models\PayrollRun;
@@ -229,6 +230,10 @@ beforeEach(function () {
     // columns (channels, recipient_roles) never fire their closures — the exact
     // lazy-evaluation trap this file exists to catch (Round 36).
     AlertRule::factory()->create();
+
+    // NotificationLog: the index and view pages carry morph links and a payload
+    // entry, both of which only render when there is a row to evaluate against.
+    NotificationLog::factory()->create();
 
     // The fixture booking above is Active on $car — this block must stay clear
     // of its window or the cross-check trigger refuses the row itself.

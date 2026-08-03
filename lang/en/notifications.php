@@ -156,6 +156,7 @@ return [
                 'type' => 'Alert',
                 'channel' => 'Channel',
                 'recipient' => 'Recipient',
+                'address' => 'Address',
                 'status' => 'Status',
                 'attempts' => 'Attempts',
                 'subject' => 'About',
@@ -165,6 +166,9 @@ return [
             ],
             'filters' => [
                 'alert_rule' => 'Alert rule',
+                'alert_type' => 'Alert type',
+                'branch' => 'Branch',
+                'date_range' => 'Raised between',
                 'failed_only' => 'Failed only',
             ],
         ],

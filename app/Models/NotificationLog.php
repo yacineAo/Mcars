@@ -7,7 +7,6 @@ namespace App\Models;
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationStatus;
 use App\Models\Concerns\BelongsToBranch;
-use App\Models\Concerns\LogsActivity;
 use Database\Factories\NotificationLogFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,7 +47,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class NotificationLog extends Model
 {
     /** @use HasFactory<NotificationLogFactory> */
-    use BelongsToBranch, HasFactory, LogsActivity;
+    use BelongsToBranch, HasFactory;
 
     protected $fillable = [
         'branch_id',

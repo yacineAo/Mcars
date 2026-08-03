@@ -72,6 +72,15 @@ Schedule::command('activitylog:clean')
     ->withoutOverlapping()
     ->onOneServer();
 
+// Purge terminal delivery rows older than the retention horizon (ADR-012 only
+// needs history as far back as the longest repeat window of an active rule, so
+// a scheduled prune is compatible with correctness where a UI delete never is).
+// Queued/Sending rows are never touched — their dedup window is still open.
+Schedule::command('alerts:prune-logs')
+    ->daily()->at('05:30')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 /*
 |--------------------------------------------------------------------------
 | Phase 10 — backup verification

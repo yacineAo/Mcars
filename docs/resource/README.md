@@ -53,7 +53,7 @@ that each piece stays reviewable on its own.
 | [34](34-role.md) | **Role** | Settings | ✅ done |
 | [35](35-branch.md) | **Branch** | Settings | ✅ done |
 | [36](36-alert-rule.md) | **AlertRule** | Settings | ✅ done |
-| [37](37-notification-log.md) | **NotificationLog** | Settings | 🟡 audited — partial |
+| [37](37-notification-log.md) | **NotificationLog** | Settings | ✅ done |
 | [38](38-activity-log.md) | **ActivityLog** | Settings | 🔴 audited — needs work |
 
 `09-customer.md` is the reference file — later ones should match its depth and structure.

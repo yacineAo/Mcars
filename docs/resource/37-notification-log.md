@@ -103,74 +103,59 @@ No state-changing action belongs on this screen at all. That is the design, not 
 
 ## Gaps and risks
 
-1. **🟡 Branch pinning uses a different rule here than in `ActivityLogResource`, and ignores the
-   pivot.** This resource filters `where('branch_id', $user->branch_id)` — the user's home branch
-   only — while `ActivityLogResource` uses `User::accessibleBranchIds()`, which is the resolution
-   phase-01 actually specifies (`branch_user` pivot first, then `branch_id`, then deny). A user
-   assigned to Alger and Oran through the pivot sees only their home branch's deliveries. And
-   Laravel rewrites `where('branch_id', null)` into `whereNull('branch_id')` — verified via
-   `toRawSql()` — so a user with no home branch and no `branches.view_all` sees the *global-branch*
-   rows instead of none, where `ActivityLogResource` denies explicitly with `whereRaw('1 = 0')`. No
-   live exposure today: all 34 rows have a non-null `branch_id`. Use `accessibleBranchIds()` in
-   both resources so there is one rule and one place to get it wrong.
-2. **🟡 `recipient` shows a user id, not a recipient.** Verified against live rows: for
-   `channel = database` the column holds `"3"` and `"2"` — the `users.id`. It is labelled
-   "Recipient" and is the one searchable column, so searching for a name finds nothing. `user` is
-   already eager-loaded and never displayed. Show `user.name` and fall back to `recipient` for
-   external addresses (mail, and the future SMS/WhatsApp drivers), keeping `recipient` searchable.
-3. **🟡 The table grows without bound and cannot be narrowed by date.** One row per recipient per
-   channel per sweep, no soft deletes, no pruning: after `transactions` this is the
-   fastest-growing table in the schema, and `notification_logs_dedup_idx` grows with it. Add the
-   `created_at` range filter (see Index), and take a retention decision: ADR-012 only needs history
-   as far back as the longest `repeat_every_days` window, so a scheduled prune is compatible with
-   correctness in a way an ad-hoc UI delete never is.
-4. **🟡 Payloads contain money, and this screen is not gated on `reports.view_financials`.**
-   Verified from live rows: `{"amount": "60000.00", "category": "Office Rent", "due_date":
-   "01/08/2026", …}`. `alerts.view_logs` and `reports.view_financials` are seeded independently and
-   today both land on super_admin + manager, so there is no live hole — but nothing keeps the two
-   sets aligned, and this is the only screen in the panel that shows what was *said* to a person.
-   Either note the coupling in the seeder beside `alerts.view_logs`, or redact amount-bearing keys
-   from the displayed payload.
-5. **🟡 Every status transition writes an activity-log row.** `NotificationLog` uses
-   `LogsActivity`, and `markSending()`, `markSent()` and `markDelivered()` each save. Verified in
-   the live database: 34 notification_logs have produced 128 `activity_log` rows (34 created + 94
-   updated) — roughly four audit rows per delivery. The delivery log is already the audit trail for
-   deliveries; duplicating its transitions into ADV-03's trail inflates the busiest audit table for
-   information nobody looks for there. Drop `LogsActivity` from this model, or restrict it to
-   `created`.
+1. **✅ Branch pinning now matches `ActivityLogResource`.** `getEloquentQuery()` resolves
+   `User::accessibleBranchIds()` — `branch_user` pivot first, then home `branch_id`, then
+   `whereRaw('1 = 0')` for a user with neither — so there is one rule and one place to get it
+   wrong. Verified by a test covering the pivot case and the deny case.
+2. **✅ `recipient` shows the human, not a user id.** The index column displays `user.name` and
+   falls back to `recipient` for external addresses; both columns stay searchable.
+3. **✅ The table can be narrowed by date, and has a retention policy.** `created_at` range filter
+   added, and `alerts:prune-logs` (scheduled daily at 05:30, after `activitylog:clean`) deletes
+   terminal rows older than 365 days — never Queued/Sending, whose dedup window is still open.
+   ADR-012 only needs history as far back as the longest `repeat_every_days` window, so a
+   scheduled prune is compatible with correctness where a UI delete never is.
+4. **✅ Coupling to `reports.view_financials` documented.** `RolePermissionSeeder` now explains
+   that `notification_logs.payload` embeds amount-bearing keys and that the two permission sets
+   must stay aligned. Chosen over redaction because the payload is the point of the audit trail.
+5. **✅ `LogsActivity` dropped from `NotificationLog`.** The delivery log already is the audit
+   trail for deliveries; duplicating transitions into ADV-03's trail inflated the busiest audit
+   table for information nobody looked for there. Verified by a test that a full send/fail cycle
+   writes zero `activity_log` rows.
 6. **🔵 `cost` is invisible.** `notification_logs.cost` is `decimal(18,2)`, cast `decimal:2`,
    defaulted to 0, documented in the migration as per-message provider cost in DZD — and it appears
    on no column and no infolist entry. Harmless while every driver is free. Recording it now: when
    "what did alerting cost last month" is asked, it is an aggregation, so it goes through
    `ReportService`, never summed on this table.
-7. **🔵 The subject is not a link.** `related_type` renders through `class_basename()`, so a row
-   says "Booking" without saying which.
-8. **🔵 `TranslatesModelLabel` is dead here** — the class declares its own `getModelLabel()` and
-   `getPluralModelLabel()`. See [`36-alert-rule.md`](36-alert-rule.md) gap 7.
+7. **✅ The subject is a link.** `related_type` still renders through `class_basename()`, but the
+   column and infolist entry now link to the subject's view page (via
+   `NotificationLogResource::subjectUrl()`, which checks a resource with a view page actually
+   exists) and the alert rule links back to its edit page.
+8. **✅ `TranslatesModelLabel` dropped** — the class declares its own `getModelLabel()` and
+   `getPluralModelLabel()`.
 
 ## Checklist
 
-- [ ] Replace the branch pin with `User::accessibleBranchIds()`, matching `ActivityLogResource`
-- [ ] Show `user.name` with `recipient` as fallback; keep `recipient` searchable
-- [ ] Add the `created_at` range, `alertRule.type`, `alert_rule_id` and branch filters
-- [ ] Link the subject and the alert rule on the index and the view page
-- [ ] Take a retention decision and add a scheduled prune command — never a UI delete
-- [ ] Decide how amount-bearing payload keys are handled, or document the
+- [x] Replace the branch pin with `User::accessibleBranchIds()`, matching `ActivityLogResource`
+- [x] Show `user.name` with `recipient` as fallback; keep `recipient` searchable
+- [x] Add the `created_at` range, `alertRule.type`, `alert_rule_id` and branch filters
+- [x] Link the subject and the alert rule on the index and the view page
+- [x] Take a retention decision and add a scheduled prune command — never a UI delete
+- [x] Decide how amount-bearing payload keys are handled: document the
       `alerts.view_logs` / `reports.view_financials` coupling in `RolePermissionSeeder`
-- [ ] Drop `LogsActivity` from `NotificationLog` (or narrow it to `created`)
-- [ ] Add a test asserting this resource exposes no create, edit, delete, bulk or resend action,
+- [x] Drop `LogsActivity` from `NotificationLog`
+- [x] Add a test asserting this resource exposes no create, edit, delete, bulk or resend action,
       and that a user without `alerts.view_logs` is refused the whole resource
-- [ ] Drop the unused `TranslatesModelLabel` trait
+- [x] Drop the unused `TranslatesModelLabel` trait
 
 ## Verification
 
 ```bash
-docker compose exec app ./vendor/bin/pest tests/Feature/Phase8Test.php
+docker compose exec app ./vendor/bin/pest tests/Feature/NotificationLogResourceTest.php
 docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/NotificationLogResource.php app/Filament/Admin/Resources/NotificationLogResource
 ```
 
-`ResourcePagesRenderTest` does not cover this resource; add it, with a row, and with the view page
-opened so the payload entry actually renders.
+`ResourcePagesRenderTest` now seeds a `NotificationLog` row, so the index and view pages — including
+the payload entry — render against real data.
 
 By hand: as `manager@mcars.dz`, open a delivery and confirm the payload table renders as escaped
 text — paste `<b>x</b>` into a payload value in tinker first and confirm it appears literally, not

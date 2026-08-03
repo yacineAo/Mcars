@@ -156,6 +156,7 @@ return [
                 'type' => 'Alerte',
                 'channel' => 'Canal',
                 'recipient' => 'Destinataire',
+                'address' => 'Adresse',
                 'status' => 'Statut',
                 'attempts' => 'Tentatives',
                 'subject' => 'Concerne',
@@ -165,6 +166,9 @@ return [
             ],
             'filters' => [
                 'alert_rule' => "Règle d'alerte",
+                'alert_type' => "Type d'alerte",
+                'branch' => 'Agence',
+                'date_range' => 'Levée entre',
                 'failed_only' => 'Échecs uniquement',
             ],
         ],
