@@ -6,16 +6,16 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Filament\Admin\Resources\UserResource;
-use App\Filament\Admin\Resources\UserResource\Pages\CreateUser;
-use App\Filament\Admin\Resources\UserResource\Pages\EditUser;
+use App\Filament\Admin\Resources\UserResource\Pages\ListUsers;
 use App\Models\Branch;
 use App\Models\User;
+use App\Services\UserService;
 use Database\Seeders\RolePermissionSeeder;
+use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
-use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -56,57 +56,63 @@ it('never offers a manager a role they do not hold', function () {
 
     $assignable = UserResource::assignableRoles();
 
-    expect($assignable)->not->toContain(UserRole::SuperAdmin->value)
-        ->and($assignable)->toContain(UserRole::Receptionist->value);
+    expect($assignable)->not->toHaveKey(UserRole::SuperAdmin->value)
+        ->and($assignable)->toHaveKey(UserRole::Receptionist->value);
 
     // A super_admin may hand out anything, including their own role.
     $this->actingAs($this->admin);
-    expect(UserResource::assignableRoles())->toContain(UserRole::SuperAdmin->value);
+    expect(UserResource::assignableRoles())->toHaveKey(UserRole::SuperAdmin->value);
 });
 
-it('refuses a super_admin role posted by a manager on create', function () {
+it('refuses a manager assigning super_admin through the action', function () {
     $this->actingAs($this->manager);
 
-    $superAdminId = Role::where('name', UserRole::SuperAdmin->value)->value('id');
+    // The CheckboxList itself validates the selection against the actor's assignable
+    // options (an In rule listing only the roles the actor holds), so the post is
+    // rejected at the form boundary — hiding an option is not security, rejecting it is.
+    Livewire::test(ListUsers::class)
+        ->callTableAction('assign_roles', $this->receptionist, ['roles' => [UserRole::SuperAdmin->value]])
+        ->assertHasTableActionErrors(['roles.0']);
 
-    // Hiding the option in the Select is not security — the form posts ids, so the
-    // server has to refuse this even when the option was never rendered.
-    Livewire::test(CreateUser::class)
-        ->fillForm([
-            'name' => 'Escalated',
-            'email' => 'escalated@mcars.test',
-            'password' => 'password',
-            'locale' => 'fr',
-            'roles' => [$superAdminId],
-        ])
-        ->call('create')
-        ->assertHasFormErrors();
-
-    expect(User::where('email', 'escalated@mcars.test')->exists())->toBeFalse();
+    expect($this->receptionist->fresh()->hasRole(UserRole::SuperAdmin->value))->toBeFalse()
+        ->and($this->receptionist->fresh()->hasRole(UserRole::Receptionist->value))->toBeTrue();
 });
 
-it('refuses a manager promoting themselves on edit', function () {
+it('keeps the assign-roles action off the acting user\'s own record', function () {
     $this->actingAs($this->manager);
 
-    $superAdminId = Role::where('name', UserRole::SuperAdmin->value)->value('id');
+    Livewire::test(ListUsers::class)
+        ->assertTableActionHidden('assign_roles', record: $this->manager)
+        ->assertTableActionExists('assign_roles', record: $this->receptionist);
 
-    Livewire::test(EditUser::class, ['record' => $this->manager->getKey()])
-        ->fillForm(['roles' => [$superAdminId]])
-        ->call('save')
-        ->assertHasFormErrors();
+    // Visibility is UI, not security — the service refuses it outright too.
+    expect(fn () => app(UserService::class)->assignRoles(
+        $this->manager,
+        [UserRole::SuperAdmin->value],
+        $this->manager,
+    ))->toThrow(DomainException::class);
+});
 
-    expect($this->manager->fresh()->hasRole(UserRole::SuperAdmin->value))->toBeFalse();
+it('refuses a manager changing the roles of a super_admin account', function () {
+    $this->actingAs($this->manager);
+
+    expect(fn () => app(UserService::class)->assignRoles(
+        $this->admin,
+        [UserRole::Receptionist->value],
+        $this->manager,
+    ))->toThrow(DomainException::class);
+
+    expect($this->admin->fresh()->hasRole(UserRole::SuperAdmin->value))->toBeTrue();
 });
 
 it('lets a super_admin still assign super_admin', function () {
     $this->actingAs($this->admin);
 
-    $superAdminId = Role::where('name', UserRole::SuperAdmin->value)->value('id');
-
-    Livewire::test(EditUser::class, ['record' => $this->receptionist->getKey()])
-        ->fillForm(['roles' => [$superAdminId]])
-        ->call('save')
-        ->assertHasNoFormErrors();
+    Livewire::test(ListUsers::class)
+        ->callTableAction('assign_roles', $this->receptionist, [
+            'roles' => [UserRole::SuperAdmin->value, UserRole::Receptionist->value],
+        ])
+        ->assertNotified();
 
     expect($this->receptionist->fresh()->hasRole(UserRole::SuperAdmin->value))->toBeTrue();
 });

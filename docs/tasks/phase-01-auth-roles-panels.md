@@ -22,6 +22,10 @@ Three panels exist, users land in the right one, permissions are enforced.
       access), `phone`, `whatsapp`, `avatar`, `locale`, `is_active`, `last_login_at`, `last_login_ip`,
       `two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`,
       `must_change_password`.
+
+      > Round 33 ([`../resource/33-user.md`](../resource/33-user.md)) wired the dead columns and
+      > dropped `two_factor_confirmed_at` (Filament never reads it) in migration
+      > `2026_08_17_000000_drop_two_factor_confirmed_at_from_users_table`.
 - [x] **`branch_user` pivot** — `user_id`, `branch_id`, `is_primary`, unique on the pair.
 - [x] **`User::accessibleBranchIds()`** implementing exactly this resolution:
 

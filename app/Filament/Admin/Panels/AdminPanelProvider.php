@@ -6,15 +6,18 @@ namespace App\Filament\Admin\Panels;
 
 use App\Enums\Locale;
 use App\Filament\Admin\Pages\Dashboard;
+use App\Filament\Admin\Pages\EditProfile;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\RoleResource;
 use App\Filament\Admin\Resources\UserResource;
+use App\Http\Middleware\ForcePasswordChange;
 use App\Http\Middleware\ResolveBranchContext;
 use App\Http\Middleware\SetLocaleFromUser;
 use App\Livewire\BranchSwitcher;
 use App\Livewire\LocaleSwitcher;
 use App\Support\Label;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Forms\Components\Field;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -99,6 +102,14 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->passwordReset()
+            // Round 33: the staff account screen. Locale and password live here so
+            // a receptionist can maintain their own account without users.manage.
+            ->profile(EditProfile::class)
+            // Round 33: wires the dormant two_factor_* columns to Filament's native
+            // authenticator-app MFA. Optional — staff opt in from their profile page.
+            ->multiFactorAuthentication([
+                AppAuthentication::make(),
+            ])
             ->brandName('Mcars')
             ->colors(['primary' => Color::Blue])
             // Phase 8: the in-app bell. Filtered by notifiable, so a user only
@@ -141,6 +152,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                // After Authenticate, so only signed-in staff reach it. Runs on the
+                // logout route too — that is why the middleware exempts it — and
+                // never on Livewire update requests, so profile saves are not bounced.
+                ForcePasswordChange::class,
             ])
             // Topbar switchers. Locale is always visible; branch only when multi-branch is on.
             ->renderHook(

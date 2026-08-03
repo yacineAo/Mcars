@@ -714,12 +714,20 @@ attempted-but-rejected ledger mutations.
 `id`, `branch_id`, `name`, `email` (unique), `email_verified_at`, `password`,
 `phone`, `whatsapp`, `avatar` (media), `locale` (`ar | fr | en`),
 `is_active`, `last_login_at`, `last_login_ip`,
-`two_factor_secret`, `two_factor_recovery_codes`, `two_factor_confirmed_at`,
+`two_factor_secret`, `two_factor_recovery_codes`,
 `must_change_password`.
 
 One `users` table serves the single staff panel; every role is a staff role (ADR-007)
 (`canAccessPanel()`), and `car_owners.user_id` / `customers.user_id` link the portal identity to its
 business record. See ADR-007 for why not three guards.
+
+Round 33 (docs/resource/33-user.md): `is_active` gates `canAccessPanel()` on every request
+(deactivate is the replace-for-delete); `last_login_at` / `last_login_ip` are written by the
+`Login::authenticate` listener; `must_change_password` drives the forced-change middleware;
+`two_factor_secret` / `two_factor_recovery_codes` back Filament's AppAuthentication (both are
+in `#[Fillable]` — only the 2FA interface methods write them). `two_factor_confirmed_at` was
+dropped by `2026_08_17_000000_drop_two_factor_confirmed_at_from_users_table` — Filament never
+reads it, so it could only lie.
 
 ### Spatie Permission tables — REQ-20
 `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`.

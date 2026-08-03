@@ -10,6 +10,8 @@ use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
 use Database\Factories\UserFactory;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -18,6 +20,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use SensitiveParameter;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -27,9 +30,9 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * @property Locale $locale
  */
-#[Fillable(['name', 'email', 'password', 'branch_id', 'phone', 'whatsapp', 'avatar', 'locale', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'branch_id', 'phone', 'whatsapp', 'avatar', 'locale', 'is_active', 'must_change_password', 'two_factor_secret', 'two_factor_recovery_codes'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
 {
     /** @use HasFactory<UserFactory> */
     use BelongsToBranch, HasAuditColumns, HasFactory, HasRoles, LogsActivity, Notifiable;
@@ -42,7 +45,6 @@ class User extends Authenticatable implements FilamentUser
             'locale' => Locale::class,
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
-            'two_factor_confirmed_at' => 'datetime',
             'last_login_at' => 'datetime',
         ];
     }
@@ -53,6 +55,43 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsToMany(Branch::class, 'branch_user')
             ->withPivot('is_primary')
             ->withTimestamps();
+    }
+
+    public function getAppAuthenticationSecret(): ?string
+    {
+        return $this->two_factor_secret;
+    }
+
+    public function saveAppAuthenticationSecret(#[SensitiveParameter] ?string $secret): void
+    {
+        $this->update(['two_factor_secret' => $secret]);
+    }
+
+    public function getAppAuthenticationHolderName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    public function getAppAuthenticationRecoveryCodes(): ?array
+    {
+        if ($this->two_factor_recovery_codes === null) {
+            return null;
+        }
+
+        $codes = json_decode($this->two_factor_recovery_codes, true);
+
+        return is_array($codes) ? array_values($codes) : null;
+    }
+
+    /**
+     * @param list<string>|null $codes
+     */
+    public function saveAppAuthenticationRecoveryCodes(#[SensitiveParameter] ?array $codes): void
+    {
+        $this->update(['two_factor_recovery_codes' => $codes === null ? null : json_encode($codes)]);
     }
 
     protected static function withoutBranchScope(): bool
@@ -111,6 +150,14 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() !== 'admin') {
+            return false;
+        }
+
+        // Deactivated accounts are out on their very next request — a parked leaver
+        // must not linger behind an open tab. Checked here rather than at login so
+        // every request re-asserts it, and it applies to existing sessions, not just
+        // the next attempt.
+        if (! $this->is_active) {
             return false;
         }
 

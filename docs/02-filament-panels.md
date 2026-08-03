@@ -90,6 +90,14 @@ Built: `UserResource`, `RoleResource` (Shield), `BranchResource`, `AlertRuleReso
 `NotificationLogResource`.
 Not built (Phase 10): `SettingsPage`, `ActivityLogResource`, `BackupsPage`.
 
+`UserResource` is gated on the dedicated `users.manage` permission (super_admin, manager) —
+**not** `branches.view_all`, which means "see other branches' data", not "administer
+accounts". Role assignment is a guarded `assign_roles` action (options limited to the actor's
+own assignable roles, own-record actions hidden), delete is replaced by deactivate
+(`is_active` gates `canAccessPanel()` on every request), and staff maintain their own
+locale/password on the registered `->profile(EditProfile::class)` page (plus optional
+Filament AppAuthentication 2FA). See [33](resource/33-user.md).
+
 ### Role → visibility matrix (REQ-20)
 
 | Cluster | manager | accountant | receptionist | maintenance | supervisor |
@@ -104,6 +112,8 @@ Not built (Phase 10): `SettingsPage`, `ActivityLogResource`, `BackupsPage`.
 | Settings & Access | full | — | — | — | — |
 
 Enforced by Filament Shield permissions, not by hiding navigation. Hidden navigation is not security.
+The Settings & Access "full" for a manager is what `users.manage` grants; a supervisor granted
+`branches.view_all` for reporting does **not** pick up account administration.
 
 The HR row is a coarse guide: `EmployeeAdvanceResource`, `CommissionResource` and
 `PayrollRunResource` are more restrictive than the supervisor's HR `read` — they require

@@ -1,6 +1,6 @@
 # 33 — User (Settings)
 
-**Model:** `App\Models\User` · **Slug:** `/admin/users` · **Status:** 🔴 needs work
+**Model:** `App\Models\User` · **Slug:** `/admin/users` · **Status:** ✅ done
 
 Closes **REQ-20** (RBAC). See
 [`../tasks/phase-01-auth-roles-panels.md`](../tasks/phase-01-auth-roles-panels.md) and the
@@ -18,165 +18,103 @@ the whole system — nothing else grants anything.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 6 columns; `->filters([])` **empty**; no default sort |
-| create | ✅ | flat 8-field form, no sections |
-| view | ❌ | — |
-| edit | ✅ | same form; `password` `->hiddenOn('edit')`; nothing frozen |
-| row actions | ✅ | `EditAction` only, via deprecated `->actions([...])` |
-| header / toolbar actions | ✅ | `CreateAction` (index), `DeleteAction` (edit), `DeleteBulkAction` |
-| relation managers | ❌ | none — `branchUsers` has no UI anywhere |
-| `canAccess()` | 🟡 | present, but on `branches.view_all` (`UserResource.php:43`) — see gap 2 |
+| index | ✅ | name/email searchable, roles badges, `branch.name`, `is_active` icon, `last_login_at`; role + `is_active` (default active) + branch filters; `defaultSort('name')`; eager-loaded `roles` + `branch` |
+| create | ✅ | sectioned: Identity / Access / Placement / Preferences; no roles field; `phone` unique-validated, nullables unconstrained |
+| view | ❌ | deliberately — see "Decisions taken", §view |
+| edit | ✅ | sectioned; `password` and secrets absent; header actions assign-roles / reset-password / deactivate (each `->record($record)`), no delete |
+| row actions | ✅ | edit, assign roles, reset password, set active — hidden on the acting user's own record where that matters |
+| header / toolbar actions | ✅ | `CreateAction`; **no bulk actions** |
+| relation managers | ✅ | `branchUsers` on edit: attach with `is_primary` pivot, pivot edit, detach |
+| `canAccess()` | ✅ | on `users.manage` (super_admin, manager) — not `branches.view_all` |
 
-Three things are already right and should not be undone. The sensitive columns are handled
-correctly: `#[Hidden(['password', 'remember_token', 'two_factor_secret',
-'two_factor_recovery_codes'])]` on the model (`User.php:31`), and **none of the four appears
-in the form or the table** — checked field by field. `password` is cast `hashed` and hidden on
-edit. `User::withoutBranchScope()` returns true, honouring phase-01's "do not scope `users` by
-branch — an admin can lock themselves out". And the `locale` Select is exactly what it should
-be: `Locale::options()`, required, now backed by the CHECK constraint added in migration
-`2026_08_06_000000`, so the form and the database agree on the same three values. PHPStan is
-clean on the resource and all three pages.
+## Decisions taken (Round 33)
 
-## Should be
-
-### Index
-
-Columns, in order: `name` (searchable), `email` (searchable), roles as badges rendered
-through `UserRole` labels, `branch.name`, `is_active` icon, `last_login_at`. Eager-load
-`roles` and `branch` — the roles badge is a per-row relation lookup today.
-
-Filters the table has none of: `SelectFilter` on role, `TernaryFilter` on `is_active`
-defaulting to active only, and a branch filter visible only with `branches.view_all`.
-`defaultSort('name')`.
-
-### Create
-
-Section it: **Identity** (name, email, phone, whatsapp) · **Access** (roles, `is_active`,
-initial password) · **Placement** (branch, branch assignments) · **Preferences** (locale,
-digest). `phone` needs `->unique(ignoreRecord: true)`: the column carries
-`users_phone_unique` and the form does not validate it, so a duplicate reaches Postgres as a
-raw `QueryException`.
-
-Roles must not be a plain unfiltered Select — see gap 1. Nothing here may set
-`two_factor_secret`, `two_factor_recovery_codes`, `remember_token` or `created_by_id`.
-
-### View
-
-Not needed for the fields — a user is eight of them, and an infolist would restate the edit
-form. **Proposal:** if "what has this person done" is ever answered inside the panel it belongs
-on a view page here as a read-only slice of `activity_log`, which requires adding Spatie's
-`CausesActivity` to `User` first. Until then it is answered by
-[`38-activity-log.md`](38-activity-log.md) filtered by causer.
-
-### Edit
-
-`email` and the profile fields stay editable. What must change is who may edit **which**
-fields: the acting user's own roles must be untouchable from their own record, and role
-assignment generally belongs to an action with an audit trail rather than a multi-select
-buried in a form (gap 1). Password stays out of the form; a reset is an action.
-
-### Relations
-
-One relation is worth attaching, and it is missing: **`branchUsers`** (`belongsToMany` with
-an `is_primary` pivot), the table `User::accessibleBranchIds()` reads first. It has no UI at
-all, so multi-branch assignment can only be done in tinker. It belongs on **edit** — the
-office maintains it in place — showing branch name, code and `is_primary`, not read-only.
-
-`roles` stays a form field rather than a relation manager: it is a short fixed list, and it
-needs the guard in gap 1 more than it needs a tab. No other relation belongs here.
-
-### Actions
-
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| Assign roles | row + edit header | never on `$record->is($actingUser)` | `users.manage` | `UserService` | replaces the in-form Select; records who changed what |
-| Reset password | row + edit header | always | `users.manage` | `UserService` | sets `must_change_password`; no path exists today |
-| Deactivate / reactivate | row | on `is_active` | `users.manage` | `UserService` | the intended replacement for delete |
-| Delete | — | remove | — | — | see gap 3 |
-
-## Gaps and risks
-
-1. **🔴 A manager can promote themselves to super_admin.** `canAccess()` requires
-   `branches.view_all`, which `RolePermissionSeeder` grants to super_admin **and manager**.
-   The roles field (`UserResource.php:72-75`) is an unfiltered
-   `->relationship('roles', 'name')->multiple()`, so a manager opens their own record, ticks
-   `super_admin`, and saves. Nothing filters the options, nothing excludes the acting user's
-   own record, and there is no policy to stop it: `Gate::getPolicyFor(User::class)` returns
-   **null** — `app/Policies/` does not exist and `shield:generate` was never wired into a
-   seeder, despite phase-01 marking it done. Verified live: `UserResource::canAccess()` is
-   true for `manager@mcars.dz`.
-2. **🔴 `branches.view_all` is the wrong gate.** It means "see other branches' data", not
-   "administer accounts". The role set it resolves to today (super_admin + manager) happens
-   to match the Settings & Access row of the matrix in `../02-filament-panels.md`, but the
-   match is accidental: the day a supervisor is granted `branches.view_all` for reporting,
-   they also get account creation, role assignment and delete. Needs its own permission —
-   `users.manage` — which **must be added to `RolePermissionSeeder`**: super_admin carries
-   only explicitly assigned permissions (`define_via_gate => false`, no `Gate::before`
-   anywhere in `app/`), so an unseeded permission is invisible even to admin.
-3. **🔴 Delete is a hard delete, and half the time it fails loudly.** `users` has no
-   `deleted_at` column and `User` does not use `SoftDeletes` — against CLAUDE.md's "soft
-   deletes on master data". `EditUser.php:18` offers `DeleteAction` and the table a
-   `DeleteBulkAction`, unguarded. Two outcomes, both bad. `transactions.created_by_id`,
-   `expenses.created_by_id` / `updated_by_id` / `approved_by_id` and
-   `cash_sessions.opened_by_id` / `closed_by_id` / `reconciled_by_id` are all **`NO ACTION`**
-   (verified against `information_schema`), so deleting anyone who has posted to the ledger
-   raises a raw FK violation. Deleting anyone else succeeds and `SET NULL`s some fifty
-   attribution columns, erasing who created a booking, took a payment or verified a document
-   — which is ADV-03's audit trail. Replace with deactivate; if delete stays, soft-delete it
-   and guard it.
-4. **🟡 A staff member cannot maintain their own account.** The panel registers `->login()`
-   and `->passwordReset()` but **no `->profile()`**, and this resource is gated to
-   super_admin/manager. A receptionist cannot change their own locale or password from inside
-   the panel, and because `password` is `->hiddenOn('edit')` an admin cannot reset one for
-   them either — the only path is the emailed reset link.
-5. **🟡 `branch_id` is fillable but absent from the form**, and `branchUsers` has no UI. Every
-   user created through this screen therefore has `branch_id = null`, which makes
-   `accessibleBranchIds()` fall through to its `report()` branch (`User.php:85`) and return
-   zero branches. Both log resources pin on branch, so such a user sees nothing in them.
-6. **🟡 Empty `->filters([])`, no default sort, N+1 on the roles badge.**
-7. **🟡 Deprecated `->actions([...])`** — panel-wide finding 3 in [`README.md`](README.md).
-8. **🔵 The roles Select shows raw `super_admin`.** `lang/en/enums.php` already holds
-   `user_role.*` labels; use `UserRole::options()` keyed to role ids.
-9. **🔵 Dead schema.** `must_change_password`, `last_login_at`, `last_login_ip` and the three
-   `two_factor_*` columns are cast on the model and **never read or written anywhere in
-   `app/`** — phase-01 lists "optional 2FA" as delivered. Wire them or drop them; a login
-   screen that implies 2FA and does not have it is worse than one that does not.
+1. **`users.manage` gates the resource; roles are assigned by action, not form field.**
+   The old unfiltered in-form `roles` Select was a self-promotion vector — a manager could
+   tick `super_admin` on their own record (gap 1). The form has no roles field at all.
+   `assign_roles` is a row/header action whose `CheckboxList` options are
+   `UserService::assignableRoleNames()` — *never* the actor's own record, and the
+   options list is validated server-side by the form (`In` rule over the actor's
+   assignable roles), so a posted `super_admin` from a manager is rejected at the form
+   boundary, not silently. `UserService` re-checks everything for defence in depth and
+   writes `roles_updated` activity with the actor.
+2. **Delete is replaced by deactivate.** A hard delete either violated ledger foreign
+   keys (`transactions.created_by_id` etc. are `NO ACTION`) or `SET NULL`ed the
+   attribution columns that *are* ADV-03's audit trail. `set_active` parks the account:
+   `is_active` gates `canAccessPanel()` on every request, so a leaver is out on their
+   very next request. No delete, no `DeleteBulkAction`, no `SoftDeletes` — parking
+   needs no tombstone.
+3. **Password reset is an action with a confirmation step** (`Password::default()`,
+   `->same('password_confirmation')`), and it flips the previously-dead
+   `must_change_password` column. `ForcePasswordChange` middleware (panel auth stack,
+   after `Authenticate`, exempting logout and the profile page) redirects every other
+   request to the profile until the user saves a new password there; `EditProfile`'s
+   `afterSave()` clears the flag.
+4. **Gap 4 closed — staff can maintain their own account.** `->profile(EditProfile::class)`
+   registers a profile page (name, phone, whatsapp, locale, password block — no email,
+   no roles). `UserResource` stays gated to `users.manage`; a receptionist changes their
+   own locale/password on the profile, not in the resource.
+5. **2FA is now real, not implied.** The panel registers
+   `->multiFactorAuthentication([AppAuthentication::make()])`; the previously-dead
+   `two_factor_secret` / `two_factor_recovery_codes` columns are wired through
+   `HasAppAuthentication` / `HasAppAuthenticationRecovery` and added to
+   `#[Fillable]` (they are only ever written by the interface methods). The genuinely
+   dead `two_factor_confirmed_at` column is dropped in migration
+   `2026_08_17_000000_drop_two_factor_confirmed_at_from_users_table` — Filament never
+   reads it, so it could only lie.
+6. **`last_login_at` / `last_login_ip` are wired.** `RecordLastLogin` listens on
+   `Login::authenticate` and `forceFill()`s both (last login is written through the
+   security boundary, not the fillable surface) and shows in the index.
+7. **Branch placement is no longer tinker-only.** `branch_id` is a `Select` on the form
+   (so new users land with an actual branch instead of the `report()` fallback), and the
+   `branchUsers` relation manager maintains the pivot on the edit page — attach with an
+   `is_primary` toggle, pivot edit, detach. The RM's `AttachAction` composes
+   `$action->getRecordSelect()` with the toggle (`->schema()` alone would replace the
+   record select and break attach).
+8. **View page: not built, on purpose.** A user is a handful of fields; the question
+   "what has this person done" is answered by the ActivityLog resource filtered by
+   causer. A read-only activity slice may come later without breaking anything.
+9. **The audit trail stays honest.** The forms and table expose none of `password`,
+   `remember_token`, `two_factor_secret`, `two_factor_recovery_codes`, and the
+   `LogsActivity` exclusion keeps hashes out of `activity_log` — both pinned by tests.
 
 ## Checklist
 
 - [x] Add `users.manage` to `RolePermissionSeeder` and re-gate `canAccess()` on it
-- [ ] Move role assignment out of the form into a guarded action that cannot target the
+- [x] Move role assignment out of the form into a guarded action that cannot target the
       acting user's own record, and cover it with a test asserting a manager cannot
       self-assign `super_admin`
-- [ ] Replace delete with deactivate; if delete stays, add `SoftDeletes` + a guard for users
-      with ledger rows, and drop `DeleteBulkAction`
-- [ ] Add `->unique(ignoreRecord: true)` to `phone`
-- [ ] Add `branch_id` to the form and a `branchUsers` relation manager on edit
-- [ ] Add a reset-password action; decide whether `must_change_password` is wired or dropped
-- [ ] Register a `->profile()` page so staff can change their own locale and password
-- [ ] Section the form; add the role / `is_active` / branch filters; `defaultSort('name')`
-- [ ] Eager-load `roles` and `branch`; `->actions(` → `->recordActions(`
-- [ ] Render roles through `UserRole` labels
-- [ ] Add a test asserting the form and table expose none of `password`, `remember_token`,
-      `two_factor_secret`, `two_factor_recovery_codes` — this is right today and must stay right
-
-
-> **Partly done.** The items ticked above were implemented and covered by
-> `tests/Feature/PrivilegeEscalationTest.php`. The rest of the checklist is untouched.
+- [x] Replace delete with deactivate; drop `DeleteBulkAction`
+- [x] Add `->unique(ignoreRecord: true)` to `phone` (two null phones stay allowed)
+- [x] Add `branch_id` to the form and a `branchUsers` relation manager on edit
+- [x] Add a reset-password action; wire `must_change_password` + `ForcePasswordChange`
+      + profile `afterSave()` clearing
+- [x] Register a `->profile()` page so staff can change their own locale and password
+- [x] Section the form; add the role / `is_active` / branch filters; `defaultSort('name')`
+- [x] Eager-load `roles` and `branch`; `->actions(` → `->recordActions(`
+- [x] Render roles through `UserRole` labels
+- [x] Add a test asserting the form and table expose none of `password`, `remember_token`,
+      `two_factor_secret`, `two_factor_recovery_codes`
+- [x] Wire `last_login_at` / `last_login_ip`; drop the dead `two_factor_confirmed_at`
 
 ## Verification
 
 ```bash
-docker compose exec app ./vendor/bin/pest tests/Feature/PanelAccessTest.php
-docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
-docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/UserResource.php app/Filament/Admin/Resources/UserResource
+docker compose exec app ./vendor/bin/pest tests/Feature/UserResourceTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/PrivilegeEscalationTest.php
 ```
 
-Neither test currently touches this resource: `ResourcePagesRenderTest` only ever acts as
-super_admin, and `PanelAccessTest` asserts each role reaches `/admin` but not what it may then
-open. New coverage is required, not just a green run.
+`UserResourceTest` (17 tests) covers create/duplicate-phone/no-phone, secrets out of
+forms and table, the deactivate/reactivate cycle plus next-request 403, self-deactivate
+refusal, reset-password + forced-change redirect + flag clearing, own-locale editing,
+last-login recording, role/password-reset audit with the actor, no-delete-anywhere,
+branch attach/pivot-edit/detach, and page rendering. `PrivilegeEscalationTest` pins the
+privilege paths: `users.manage` gating, manager role-option constraints, form-level
+rejection of `super_admin`, hidden own-record actions, and the service-level guards
+(own-role change, manager → super_admin account).
 
-By hand: log in as `manager@mcars.dz`, open your own user record, and try to add the
-`super_admin` role — today it saves. Then log in as `reception@mcars.dz` and confirm
-`/admin/users` is refused. Finally, attempt to delete `accountant@mcars.dz` (who has ledger
-rows) and record what the screen does.
+By hand: log in as `manager@mcars.dz` — `/admin/users` opens, `assign roles` never
+offers `super_admin`, and your own row has no assign/deactivate actions. Log in as
+`reception@mcars.dz` — `/admin/users` is refused (403) and the profile page lets you
+change your own locale and password. Deactivate `accountant@mcars.dz` and confirm the
+very next request bounces them with a 403.

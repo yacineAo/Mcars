@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Enums\Locale;
+use App\Listeners\RecordLastLogin;
 use App\Models\CarDocument;
 use App\Observers\CarDocumentObserver;
 use Carbon\Translator;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,6 +34,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Event::listen(Login::class, RecordLastLogin::class);
+
         CarDocument::observe(CarDocumentObserver::class);
 
         // Targets the 'ar' translator singleton, not Carbon::getTranslator(): the latter
