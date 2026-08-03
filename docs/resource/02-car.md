@@ -275,30 +275,6 @@ doc's tab list does: **Documents**, **Maintenance** (logs + schedules), **Owner*
 
 ## Checklist
 
-- [x] Route `update_status_odometer` through `FleetStatusService::transition()`, and build its
-      `Select` from `allowedTransitions()`; remove the dead `'cancelled'` target from the service
-- [x] Move `block_car` into a service that validates the window against bookings and blocks
-- [x] Remove `DeleteBulkAction`; restrict single delete and refuse it when bookings exist
-- [x] Add `SpatieMediaLibraryFileUpload` for `gallery` and `damage`, and show them on the view page
-- [x] Build `MaintenancePoster` (E41) and a document-renewal posting (E42) so the Profitability
-      section's expense figure is complete — see also [`07-maintenance-log.md`](07-maintenance-log.md)
-- [x] Section the 34-field form into Identity / Classification / Specification / Pricing /
-      Acquisition / Telematics / Photos / Status; make `car_owner_id` `live()` on ownership type
-- [x] Add GPS fields; limit `status` on create to available / out_of_service; remove `status`
-      from the edit form
-- [x] Freeze `chassis_number`, `registration_number` and `ownership_type` once in use
-- [x] Add the status / category / ownership / active / expiring / branch filters and
-      `defaultSort('registration_number')`
-- [x] Badge the `status` column; add category and owner columns with eager loading
-- [x] Add the six missing relation managers, grouped, and split read-only history onto the
-      view page via `getAllRelationManagers()`
-- [x] Make the three existing managers read-only on `ViewCar`
-- [x] Extend Profitability to lifetime totals with a period picker (REQ-02)
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `canAccess()` once a fleet permission exists
-- [x] Decide whether `is_active` withdraws a car from availability — **it does**
-- [x] Simplify `CarResource.php:196` to `$record->status->value`
-
 Still open, and deliberately owned elsewhere:
 
 - [ ] Serve private media back to the browser through a signed, authorised route —

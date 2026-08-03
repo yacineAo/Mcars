@@ -49,17 +49,6 @@ A block takes a car off the market for a half-open window `[starts_at, ends_at)`
 - Write (create/edit/delete): `bookings.operate` — deciding a car is off the market is the
   desk's call; an accountant audits.
 
-## Checklist
-
-- [x] `unblock` moved into `CarBlockService::endEarly` — records the early release
-- [x] Inverted-window case fixed: a future block is cancelled, not ended
-- [x] `canAccess()` added with the matrix split
-- [x] `DeleteBulkAction` removed; row `unblock` is the preferred release
-- [x] Active-now / car / reason / window filters added; state shown
-- [x] Block and booking clashes surface as validation, not a database error
-- [x] `car_id` frozen on edit; clashes re-checked on extension
-- [x] `->actions(` → `->recordActions(`
-
 ## Verification
 
 ```bash

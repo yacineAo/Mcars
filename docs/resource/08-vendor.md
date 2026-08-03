@@ -104,14 +104,6 @@ If that is the answer, this resource correctly needs **no relation managers at a
 
 ## Checklist
 
-- [x] Remove `DeleteBulkAction`; add a deactivate action
-- [x] Filter the three vendor Selects to `is_active = true`, or drop the toggle
-- [x] Add the `type` and `is_active` filters; `defaultSort('name')`
-- [x] Badge `type` with its icon; add a `maintenance_logs_count` column
-- [x] Add an `expenses()` relation to the model
-- [x] Decide whether vendor history warrants a view page, or belongs in `expenseBreakdown()`
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `canAccess()` once a fleet permission exists
 - [ ] **Proposal:** bank / RIB / CCP fields for paying vendors
 
 ## Verification

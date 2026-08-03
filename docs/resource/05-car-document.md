@@ -190,26 +190,6 @@ This screen exists for the cross-fleet worklist view, not for per-car editing.
     as-built system — but Phase 10's branch scope has to reach this table through the car, so
     note it rather than discover it.
 
-## Checklist
-
-- [x] Add the expiry-window filter and default it to "expiring or expired";
-      `defaultSort('expiry_date')`
-- [x] Add a current-only `TernaryFilter` on `replaced_by_id`, defaulted to current
-- [x] Add type, car and branch (via `car`) filters; eager-load `car` + `withPostedToLedger`
-- [x] Add a **days remaining** column, coloured (`danger`/`warning`/`gray`), and a superseded icon
-- [x] Build the policy-checked media controller ADR-009 specifies — `DocumentMediaController` at
-      `GET /media/car-documents/{id}/download` with a `temporarySignedRoute` + `fleet.view` check;
-      then add `SpatieMediaLibraryFileUpload` for the `document` collection and a preview action
-- [x] Move `renew` into `RecordDocumentRenewalService::renew()`, inside one transaction
-- [x] Post the renewal cost through `AccountingService` (E42 / E42b / E42c) inside the same
-      transaction — `renew()` calls `MaintenancePoster::postDocumentRenewed()` when cost > 0
-- [x] Require `expiry_date` in the form schema
-- [x] Freeze `car_id` and `type` on edit via `->disabled(fn (... $operation === 'edit'))`;
-      superseded docs gated by `canEdit()`/`canDelete()` returning false
-- [x] Remove `DeleteBulkAction`; toolbar is empty
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `canAccess()` gated on `fleet.view`; `cost` gated on `reports.view_financials`
-
 ## Verification
 
 ```bash

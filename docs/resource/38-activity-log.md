@@ -151,31 +151,6 @@ No state-changing action belongs here.
 9. **🔵 `TranslatesModelLabel` is dead here** — the class declares its own `getModelLabel()` and
    `getPluralModelLabel()`. See [`36-alert-rule.md`](36-alert-rule.md) gap 7.
 
-## Checklist
-
-- [x] Stop logging `password`, `remember_token`, `two_factor_secret` and
-      `two_factor_recovery_codes` via `->logExcept([...])`, and add a test asserting a user
-      `created` activity row contains none of them
-- [x] Scrub the rows already written (migration `2026_08_07_000000_scrub_secrets_from_activity_log`)
-- [x] Redact those keys at render time as a second layer (`App\Support\ActivityChanges` + the
-      diff view)
-- [x] Decide `branch_id`: stamp it when activity is written — `Activity::creating` resolves the
-      subject's branch, then the causer's — and add a test that a user without `branches.view_all`
-      sees their own branch's rows rather than none
-- [x] Add `audit.view` to `RolePermissionSeeder` and re-gate `canAccess()` on it
-- [x] Add causer and `subject_type` filters
-- [x] Render `attribute_changes` as a per-field old → new table
-- [x] Hardcode or cache the `log_name` / `event` filter options
-- [x] Link the subject; add a tooltip to `description`
-- [x] Add a "History" row action on Booking, Car, Customer, User
-- [x] Add a test asserting this resource exposes no create, edit, delete or bulk action
-- [x] Drop the unused `TranslatesModelLabel` trait — already absent, nothing to drop
-
-
-> **Complete.** The first two items were implemented earlier and covered by
-> `tests/Feature/PrivilegeEscalationTest.php`; this round closed the rest, backed by
-> `tests/Feature/ActivityLogResourceTest.php`.
-
 ## Verification
 
 ```bash

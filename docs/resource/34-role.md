@@ -78,16 +78,6 @@ do what, so authorization is the only axis this file is about.
    `grants()` *and* `config/filament-shield.php`'s `custom_permissions` — the parity test is the
    reminder.
 
-## Checklist
-
-- [x] Add `canAccess()` on a seeded `roles.manage`, plus a test that a receptionist is refused
-- [x] Stop the save from stripping seeded permissions: custom tab on, `format_custom_permission_keys
-      => false`, `custom_permissions` == seeder list, generation off
-- [x] Remove the create page and both delete paths; freeze `name`; hide `guard_name`
-- [x] Decide on the 456 generated permissions: generation off — no policies exist to honour them
-- [x] Add a test asserting each seeded role's permission set still matches the matrix **after** a
-      save through the resource (also the seeder ↔ config parity test)
-
 ## Verification
 
 ```bash

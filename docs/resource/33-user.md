@@ -78,25 +78,6 @@ the whole system — nothing else grants anything.
    `remember_token`, `two_factor_secret`, `two_factor_recovery_codes`, and the
    `LogsActivity` exclusion keeps hashes out of `activity_log` — both pinned by tests.
 
-## Checklist
-
-- [x] Add `users.manage` to `RolePermissionSeeder` and re-gate `canAccess()` on it
-- [x] Move role assignment out of the form into a guarded action that cannot target the
-      acting user's own record, and cover it with a test asserting a manager cannot
-      self-assign `super_admin`
-- [x] Replace delete with deactivate; drop `DeleteBulkAction`
-- [x] Add `->unique(ignoreRecord: true)` to `phone` (two null phones stay allowed)
-- [x] Add `branch_id` to the form and a `branchUsers` relation manager on edit
-- [x] Add a reset-password action; wire `must_change_password` + `ForcePasswordChange`
-      + profile `afterSave()` clearing
-- [x] Register a `->profile()` page so staff can change their own locale and password
-- [x] Section the form; add the role / `is_active` / branch filters; `defaultSort('name')`
-- [x] Eager-load `roles` and `branch`; `->actions(` → `->recordActions(`
-- [x] Render roles through `UserRole` labels
-- [x] Add a test asserting the form and table expose none of `password`, `remember_token`,
-      `two_factor_secret`, `two_factor_recovery_codes`
-- [x] Wire `last_login_at` / `last_login_ip`; drop the dead `two_factor_confirmed_at`
-
 ## Verification
 
 ```bash

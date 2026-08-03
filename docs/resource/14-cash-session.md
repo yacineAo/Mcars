@@ -167,22 +167,6 @@ table to `occurred_on` then `id` so it reads in posting order.
    `@property CashSessionStatus $status` to the model docblock. Do **not** "fix" the
    comparison — it is correct.
 
-## Checklist
-
-- [x] Add a view page: float, opened/closed by, expected vs counted vs variance, notes
-- [x] Add the `transactions` relation manager to it, strictly read-only and gated
-- [x] Add expected and variance columns to the index, sourced from `CashRegisterService`
-- [x] Add open/status/date/account filters; surface `Disputed`
-- [x] Restrict or remove `DeleteAction`
-- [x] Reduce the edit page to `notes`, or remove it
-- [x] Keep one close action, not two
-- [x] Add `canAccess()`; decide operate-the-till versus see-the-variance
-- [x] Verify or remove the `ViewAction` until a view page exists
-- [x] Eager-load `financialAccount` and `openedBy`
-- [x] Add `@property CashSessionStatus $status` to the model
-- [x] Prevent a second open session on the same account, in `CashRegisterService`
-- [x] `->actions(` → `->recordActions(`
-
 ## Verification
 
 ```bash

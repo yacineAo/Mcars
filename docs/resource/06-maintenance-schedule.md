@@ -200,28 +200,6 @@ intervals are maintained, not history. See [`02-car.md`](02-car.md) §Relations.
     `->translateLabel()`, while `lang/fr.json` already carries the French. See
     [`03-car-owner.md`](03-car-owner.md) gap 10 — one panel-level fix.
 
-## Checklist
-
-- [x] Call `MaintenanceSchedulerService::recomputeSchedule()` when a maintenance log completes,
-      and add the test `docs/tasks/phase-02-fleet.md:62` already claims
-- [x] Decide category-level schedules: drop car_category_id from the form, require car_id, keep
-      the schema column as-is
-- [x] Move `log_maintenance` into a service that refuses a duplicate open log and sets
-      `branch_id` from the car
-- [x] Require exactly one of `car_id` / `car_category_id`, and at least one interval
-- [x] Add a partial unique index on `(car_id, task_type)`
-- [x] Add the due/overdue, task-type, active, car, category filters;
-      `defaultSort('next_due_at')`
-- [x] Add the category column, days-remaining and km-remaining columns; badge `task_type`
-- [x] Eager-load `car` and `carCategory`
-- [x] Freeze `car_id` / `car_category_id` and `task_type` on edit; make `next_due_*` read-only
-      once a service has been logged
-- [x] Attach `maintenanceSchedules` as a relation manager on `CarResource`'s edit page
-      (was already wired before this phase)
-- [x] Replace `DeleteBulkAction` with deactivation
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `canAccess()` once a maintenance permission exists
-
 ## Verification
 
 ```bash

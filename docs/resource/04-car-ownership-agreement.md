@@ -216,35 +216,6 @@ links.
     (`AdminPanelProvider.php:65-83`), while `lang/fr.json` already carries both strings. See
     [`03-car-owner.md`](03-car-owner.md) gap 10 — one panel-level fix covers the cluster.
 
-## Checklist
-
-- [x] Move `activate` into a service (`OwnerAgreementService::activate()`) that checks for an
-      overlapping active agreement and returns a validation message instead of a `QueryException`
-- [x] Move `end` into a service (`OwnerAgreementService::end()`) that validates
-      `end_date >= start_date` and waives future-period pending instalments
-- [x] Add a Generate-instalments row action that calls
-      `OwnerStatementService::generateForAgreement()` honouring `installments_count` and
-      `first_due_date` (gated on `reports.view_financials`)
-- [x] Remove `status` from the create form; new agreements default to `draft` via model
-      `$attributes`
-- [x] Make `model` `live()`; require the matching amount; cap `share_percentage` at 100
-- [x] Freeze car, owner, model, start date and amounts once active or once instalments exist
-      (via `->disabled()` closures in the resource form)
-- [x] Add status (default active), model, live-on-date (date-picker filter matching start/end),
-      owner and car filters; `defaultSort('start_date', 'desc')`
-- [x] Eager-load `car` and `carOwner` via `getEloquentQuery()`
-- [x] Badge `status` and `model` columns; render null `end_date` as "—"
-- [x] Add view page (`ViewCarOwnershipAgreement`) with parties, terms, schedule, notes and a
-      read-only `InstallmentsRelationManager` gated on `reports.view_financials`
-- [x] Add `@property AgreementStatus $status` / `@property AgreementModel $model` to
-      `CarOwnershipAgreement` docblock; leave the comparisons alone
-- [x] Extract shared form schema (`CarOwnershipAgreementResource::getTermFields()`) consumed by
-      both the resource and the two `AgreementsRelationManager` classes (CarResource and
-      CarOwnerResource)
-- [x] Remove `DeleteBulkAction`; keep single `DeleteAction` hidden when instalments exist
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `canAccess()` with `fleet.view` / `fleet.manage`
-
 ## Verification
 
 ```bash

@@ -71,20 +71,6 @@ commitments settled by marking a line paid or waived, never by deleting evidence
    cannot be moved into the past from the form; the form never lets customer, amount, sequence
    or status be typed.
 
-## Checklist
-
-- [x] Generator using `Money::allocate()` (the centime case is tested)
-- [x] Settlement path established: `mark_paid` posts E18 and allocates to the line
-- [x] `waive` and `reschedule` row actions, service-owned, unpaid-only
-- [x] `DeleteBulkAction` removed; `canDelete()` / `canCreate()` false
-- [x] Add `canAccess()` on `reports.view_financials`
-- [x] Overdue / due-this-month / status / customer filters
-- [x] Index grouped by `schedulable`; sequence shown as "n of N" (filter-safe)
-- [x] `reminder_sent_at` surfaced
-- [x] `schedulable` morph relation on the model
-- [x] Editing restricted to pending instalments
-- [x] Waiver audit: mandatory reason, `waived_at`, `waived_by_id`
-
 ## Verification
 
 ```bash

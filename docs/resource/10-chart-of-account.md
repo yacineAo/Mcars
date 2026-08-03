@@ -92,16 +92,6 @@ A postings table must match either leg (debit **or** credit), which is a query, 
    `lang/{fr,ar}.json`. Confirm which mechanism wins for account *names* on reports and PDFs,
    so the two do not disagree.
 
-## Checklist
-
-- [x] Remove `DeleteBulkAction`; guard single delete on postings and `is_system`
-- [x] Make `is_system` display-only in the form
-- [x] Freeze `code`, `type` and `normal_balance` once the account has postings
-- [x] Add `type` / `is_active` / `is_postable` / `is_system` filters
-- [x] Render the tree (group by type, or indent by parent)
-- [x] Decide on a view page carrying a read-only, gated postings table
-- [x] `->actions(` → `->recordActions(`
-
 ## Verification
 
 ```bash

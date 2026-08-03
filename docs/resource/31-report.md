@@ -101,14 +101,6 @@ None. A run is a leaf. The reverse direction — a saved definition's run histor
    resource sits behind `reports.view_financials`. Defensible — a till variance is money — but if a
    supervisor ever needs the cash audit without seeing profit, that gate is where it will bite.
 
-## Checklist
-
-- [x] Pass the requesting user's locale and `Locale::direction()` from `ExportJob` into the PDF views
-- [x] Replace `dir="ltr"` in the 8 templates under `resources/views/reports/pdf/`
-- [x] Add the seeded-fixture test comparing a rendered export's totals to the on-screen figures
-- [x] Add (or schedule) the long-range export timing test — scheduled as `slow`-group; run command above
-- [x] Decide whether the scope column's per-row lookups are worth batching — **no**: cold archive, PK lookups, see gap 3
-
 ## Verification
 
 ```bash

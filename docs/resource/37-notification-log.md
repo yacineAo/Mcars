@@ -133,20 +133,6 @@ No state-changing action belongs on this screen at all. That is the design, not 
 8. **✅ `TranslatesModelLabel` dropped** — the class declares its own `getModelLabel()` and
    `getPluralModelLabel()`.
 
-## Checklist
-
-- [x] Replace the branch pin with `User::accessibleBranchIds()`, matching `ActivityLogResource`
-- [x] Show `user.name` with `recipient` as fallback; keep `recipient` searchable
-- [x] Add the `created_at` range, `alertRule.type`, `alert_rule_id` and branch filters
-- [x] Link the subject and the alert rule on the index and the view page
-- [x] Take a retention decision and add a scheduled prune command — never a UI delete
-- [x] Decide how amount-bearing payload keys are handled: document the
-      `alerts.view_logs` / `reports.view_financials` coupling in `RolePermissionSeeder`
-- [x] Drop `LogsActivity` from `NotificationLog`
-- [x] Add a test asserting this resource exposes no create, edit, delete, bulk or resend action,
-      and that a user without `alerts.view_logs` is refused the whole resource
-- [x] Drop the unused `TranslatesModelLabel` trait
-
 ## Verification
 
 ```bash

@@ -128,20 +128,6 @@ strictly read-only — no create, no edit, no delete, no bulk actions — and ga
 6. **✅ RESOLVED — `description` truncated with no tooltip.** Tooltip added.
 7. **✅ RESOLVED — dead `form()` method.** Deleted.
 
-## Checklist
-
-- [x] Seed `reverse_transaction` (super_admin + accountant), covered by
-      `tests/Feature/PrivilegeEscalationTest.php`
-- [x] Add the `occurred_on` range, type, either-leg account, `is_reversal` and branch filters
-- [x] Eager-load `debitAccount`, `creditAccount`, `createdBy`
-- [x] Drop `->poll('30s')`
-- [x] Render `is_reversal` as an icon; add a tooltip to `description`
-- [x] Link the view page to the source document, and show reversal relationships
-      in both directions
-- [x] Delete the empty `form()`
-- [x] Assert in a test that this resource exposes no create, edit, delete or bulk action —
-      `tests/Feature/TransactionResourceTest.php`
-
 ## Verification
 
 ```bash

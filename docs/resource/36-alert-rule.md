@@ -129,19 +129,6 @@ and why, not as open items.
 7. **🔵 `TranslatesModelLabel` was dead here.** Dropped from `AlertRuleResource`,
    `NotificationLogResource` and `ActivityLogResource`.
 
-## Checklist
-
-- [x] Add `withoutBranchScope(): bool { return true; }` to `AlertRule`, with a test asserting a
-      global rule stays visible with `branches.enabled` on and a branch selected
-- [x] Freeze `template_key` on edit (or derive it from `type` and make it read-only)
-- [x] Validate uniqueness of `(type, branch_id)` among active rules on the create form
-- [x] Add `->placeholder(__('notifications.resources.alert_rule.global'))` to the branch Select
-- [x] Add `recipient_roles` badge column and a toggleable `template_key` column
-- [x] Add a deactivate/reactivate row action; make the delete confirmation name the alert type
-- [x] Add a "View deliveries" row action gated on `alerts.view_logs`
-- [x] Eager-load `branch`; consider showing `updated_by.name` / `updated_at`
-- [x] Drop the unused `TranslatesModelLabel` trait
-
 ## Verification
 
 ```bash

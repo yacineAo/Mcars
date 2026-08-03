@@ -94,17 +94,6 @@ The schema supports the audit trail properly too: `liability_determined_by_id`,
    came back as raw strings. Added the full cast set plus generic `@return BelongsTo<X, $this>`
    annotations (repo convention from `OwnerInstallment`).
 
-## Checklist
-
-- [x] Add `canAccess()`; restrict liability assignment specifically
-- [x] Remove `DeleteBulkAction`; guard single delete on being posted
-- [x] Freeze amounts, liability and customer once posted
-- [x] Default the index to pending liability; add type / date-range / car / customer filters
-- [x] Auto-match the booking from `car_id` + `violation_at` in the service
-- [x] Confirm `total_amount = amount + late_penalty_amount` is computed, not typed
-- [x] Add a view page with the liability decision trail and a gated postings table
-- [x] `->actions(` → `->recordActions(`
-
 ## Verification
 
 ```bash

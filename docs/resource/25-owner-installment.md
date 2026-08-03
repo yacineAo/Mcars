@@ -71,17 +71,6 @@ never a per-row sum, never a sum written in the resource.
 An owner's full instalment history belongs on `CarOwnerResource`'s view page rather than here —
 see the Fleet audit for that resource.
 
-## Checklist
-
-- [x] Add `canAccess()` on `reports.view_financials`
-- [x] Remove `DeleteBulkAction`; guard single delete on being accrued
-- [x] Freeze `amount_due`, `period_month`, owner and car once accrued
-- [x] Add unaccrued / overdue / period / owner / car filters
-- [x] Add accrued-indicator and derived paid columns (gated, from `ReportService`)
-- [x] Add a view page with the accrual posting and payments against it
-- [x] Resolve `total_installments = 999` — nullable open-ended
-- [x] `->actions(` → `->recordActions(`
-
 ## Verification
 
 ```bash

@@ -74,16 +74,6 @@ second category with the old slug and leave the cars pointing at the renamed one
    The `TernaryFilter` on the index gives staff manual control but the column is not wired into
    availability. Wired in or removed in Phase 9 if a business requirement emerges.
 
-## Checklist
-
-- [x] Remove `DeleteBulkAction`; add a single `DeleteAction` hidden while `cars_count > 0`
-- [x] Add `defaultSort('sort_order')`
-- [x] Add `TernaryFilter::make('is_active')`, defaulted to active
-- [x] Freeze `slug` on edit; derive it from `name` on create
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `canAccess()` once a fleet permission exists
-- [x] Keep `is_active` filter; defer availability wiring to Phase 9
-
 ## Verification
 
 ```bash

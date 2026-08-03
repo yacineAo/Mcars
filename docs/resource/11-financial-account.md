@@ -56,16 +56,8 @@ Strictly read-only, no bulk actions (ADR-003).
 
 ## Checklist
 
-- [x] Add `canAccess()`; decide the read/write split for bank details
-- [x] Remove `DeleteBulkAction`; guard single delete on postings
-- [x] Add a derived current-balance column, gated, with a batched query (no N+1)
 - [ ] Enforce a single `is_default_for_cash` in a service
 - [ ] Restrict `ledger_account_id` to sensible accounts (cash-equivalent)
-- [x] Show `rib` / `account_number` / `holder_name` conditionally on `type`
-- [x] Add `type` / `is_active` / branch filters
-- [x] Add a view page with read-only, gated transactions and cash-sessions tables
-- [x] Freeze `ledger_account_id` and `opening_balance` once postings exist
-- [x] `->actions(` → `->recordActions(`
 
 ## Verification
 

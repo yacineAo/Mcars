@@ -90,17 +90,6 @@ and `canViewForRecord` is the same check as the salary section's `visible()`.
 6. **`employee_number` typed rather than generated — fixed.** `SequenceGenerator` inside the
    same transaction as the insert (see Create).
 
-## Checklist
-
-- [x] Add `canAccess()` and a dedicated payroll-confidentiality permission; seed it
-- [x] Remove `base_salary` from the index; gate it on the view page
-- [x] Remove `DeleteBulkAction`; prefer `is_active`
-- [x] Add explicit `EditAction`
-- [x] Add a view page with the three gated relation managers
-- [x] Generate `employee_number` via `SequenceGenerator`, inside a transaction
-- [x] Decide on effective-dated salary changes, or confirm activity logging covers it
-- [x] Add department / job-title / active filters
-
 ## Verification
 
 ```bash

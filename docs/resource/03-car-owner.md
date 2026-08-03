@@ -167,24 +167,6 @@ called out in [`09-customer.md`](09-customer.md).
 
 ## Checklist
 
-- [x] Move agreement creation into a service (`OwnerAgreementService`) that validates
-      model-vs-amounts, requires the instalment fields, and turns the `EXCLUDE` violation
-      into a validation message
-- [x] Add a view page with identity, gated payment details, gated statement from
-      `ReportService::ownerStatement()`
-- [x] Add the four relation managers — `CarsRelationManager`, `PaymentsRelationManager`,
-      `InstallmentsRelationManager` read-only on view, `AgreementsRelationManager` editable on
-      edit — with the two money tables gated on `reports.view_financials`
-- [x] Replace the `car_id` Select with explicit options: cars without an active agreement
-- [x] Section the form (Identity, Contact, Payment Details gated, Status); make `type` `live()`;
-      move bank details into a gated section
-- [x] Add the type / is-active / has-active-agreement / wilaya filters and `defaultSort('created_at', 'desc')`
-- [x] Collapse the two name columns into one `full_name` column searchable across both fields
-- [x] Add a gated, toggleable `outstanding_balance` column from account-2200 ledger aggregation
-- [x] Remove `DeleteBulkAction`; keep single `DeleteAction` hidden while cars or agreements exist
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `canAccess()` with `fleet.view` / `fleet.manage`
-- [x] Freeze `type` on edit once an agreement exists
 - [ ] Decide whether `national_id` should be unique — deferred, needs migration
 
 ## Verification

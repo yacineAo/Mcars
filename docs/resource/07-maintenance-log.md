@@ -275,29 +275,6 @@ should appear read-only under a vendor — see [`08-vendor.md`](08-vendor.md) §
 
 ## Checklist
 
-- [x] Build `MaintenancePoster` and post E41 from the completion service; add its row to
-      [`../05-accounting-model.md`](../05-accounting-model.md) and correct
-      `docs/tasks/phase-04-ledger-cash-register.md:55,74`
-- [x] Move service start and completion into a service: the total, the car status via
-      `FleetStatusService`, the schedule recompute, and the ledger posting, in one transaction
-- [x] Make `total_cost` read-only and derived on the forms, or drop the column
-- [x] Route the car status change through `FleetStatusService::transition()`, and only when the
-      car was in `maintenance`
-- [x] Call `MaintenanceSchedulerService::recomputeSchedule()` on completion
-- [x] Remove `status` from the create and edit forms; add a cancel action
-- [x] Remove `next_due_date` / `next_due_odometer` from the form, and decide whether the columns
-       survive
-- [x] Add the status (default open), overdue, type, completion-date, vendor, car and branch
-       filters; `defaultSort('scheduled_for', 'desc')`
-- [x] Badge `type` and `status`; eager-load `car` and `vendor`
-- [x] Decide whether `total_cost` is gated, and record the decision
-- [x] Section the form; add `performed_by_id`; use `DateTimePicker` for the two timestamps
-- [x] Freeze a completed log; make a cancelled one read-only
-- [x] Remove `DeleteBulkAction`
-- [x] `->actions(` → `->recordActions(`
-- [x] Add `@property MaintenanceStatus $status` / `@property MaintenanceType $type` to the model
-       docblock; leave the comparisons alone
-- [x] Add `canAccess()` once a maintenance permission exists
 - [ ] Separate task, whole codebase: decide whether `MoneyCast` is adopted or removed
 
 ## Verification
