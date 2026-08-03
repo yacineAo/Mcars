@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Car;
 use App\Models\ConditionReport;
 use App\Models\Extra;
+use App\Support\Money;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 
@@ -31,9 +32,9 @@ class PricingService
     ): BookingQuote {
         $days = (int) ceil($period->getStartDate()->diffInDays($period->getEndDate()));
         $dailyRate = $car->daily_rate;
-        $subtotal = number_format((float) $dailyRate * $days, 2, '.', '');
+        $subtotal = Money::of($dailyRate)->times($days);
 
-        $extrasTotal = '0.00';
+        $extrasTotal = Money::zero();
         $extras = [];
 
         if (! empty($extraIds)) {
@@ -41,51 +42,47 @@ class PricingService
             foreach ($extraModels as $extra) {
                 $qty = 1;
                 $price = $extra->unit_price;
-                if ($extra->pricing_unit === 'per_day') {
-                    $total = number_format((float) $price * $days, 2, '.', '');
-                } elseif ($extra->pricing_unit === 'per_km') {
-                    $total = $price;
-                } else {
-                    $total = $price;
-                }
+                $total = $extra->pricing_unit === 'per_day'
+                    ? Money::of($price)->times($days)
+                    : Money::of($price);
                 $extras[] = [
                     'extra_id' => $extra->id,
                     'name' => $extra->name,
                     'quantity' => $qty,
                     'unit_price' => $price,
-                    'total' => $total,
+                    'total' => $total->toDecimal(),
                 ];
-                $extrasTotal = number_format((float) $extrasTotal + (float) $total, 2, '.', '');
+                $extrasTotal = $extrasTotal->plus($total);
             }
         }
 
         $discountAmount ??= '0.00';
         // No tax is charged, so the total is simply what is left after the
         // discount. The deposit follows the total, as before.
-        $totalAmount = number_format((float) $subtotal + (float) $extrasTotal - (float) $discountAmount, 2, '.', '');
-        $depositAmount = number_format((float) $totalAmount * (float) $this->depositRate, 2, '.', '');
+        $totalAmount = $subtotal->plus($extrasTotal)->minus(Money::of($discountAmount));
+        $depositAmount = $totalAmount->times($this->depositRate);
 
         return new BookingQuote(
             carId: $car->id,
             customerId: 0,
             dailyRate: $dailyRate,
             daysCount: $days,
-            subtotal: $subtotal,
-            extrasTotal: $extrasTotal,
+            subtotal: $subtotal->toDecimal(),
+            extrasTotal: $extrasTotal->toDecimal(),
             discountAmount: $discountAmount,
             discountReason: $discountReason,
-            totalAmount: $totalAmount,
-            securityDepositAmount: $depositAmount,
+            totalAmount: $totalAmount->toDecimal(),
+            securityDepositAmount: $depositAmount->toDecimal(),
             extras: $extras,
         );
     }
 
     public function closeout(Booking $booking, ConditionReport $checkin): CloseoutQuote
     {
-        $extraKmFee = '0.00';
-        $fuelShortfall = '0.00';
-        $lateFee = '0.00';
-        $cleaningFee = '0.00';
+        $extraKmFee = Money::zero();
+        $fuelShortfall = Money::zero();
+        $lateFee = Money::zero();
+        $cleaningFee = Money::zero();
 
         /** @var Car|null $car */
         $car = $booking->car;
@@ -99,11 +96,11 @@ class PricingService
             // constant. Hardcoding them billed every vehicle at 100 km/day and
             // 5 DZD/km regardless of what the customer was actually quoted.
             $perDay = (int) ($car->mileage_limit_per_day ?? self::DEFAULT_KM_PER_DAY);
-            $rate = (float) ($car->extra_km_price ?? self::DEFAULT_EXTRA_KM_PRICE);
+            $rate = $car->extra_km_price ?? self::DEFAULT_EXTRA_KM_PRICE;
             $allowedKm = $booking->days_count * $perDay;
 
             if ($kmDriven > $allowedKm) {
-                $extraKmFee = number_format(($kmDriven - $allowedKm) * $rate, 2, '.', '');
+                $extraKmFee = Money::of($rate)->times($kmDriven - $allowedKm);
             }
         }
 
@@ -119,11 +116,12 @@ class PricingService
 
             // A per-hour rate on the car overrides the pro-rata daily rate, since
             // a late hour costs more than a rented one.
-            $hourly = (float) ($car->late_hour_fee ?? 0) > 0
-                ? (float) $car->late_hour_fee
-                : (float) $booking->daily_rate / 24;
+            $carHourlyRate = $car->late_hour_fee !== null ? Money::of($car->late_hour_fee) : null;
+            $hourlyRate = $carHourlyRate?->isPositive() === true
+                ? $carHourlyRate
+                : Money::of($booking->daily_rate)->dividedBy(24);
 
-            $lateFee = number_format($lateHours * $hourly, 2, '.', '');
+            $lateFee = $hourlyRate->times($lateHours);
         }
 
         $fuelLevelIn = $checkin->fuel_level;
@@ -133,26 +131,23 @@ class PricingService
             $outVal = $fuelMap[$fuelLevelOut->value] ?? 3;
             $inVal = $fuelMap[$fuelLevelIn->value] ?? 3;
             if ($inVal < $outVal) {
-                $fuelShortfall = number_format(($outVal - $inVal) * 1000, 2, '.', '');
+                $fuelShortfall = Money::of(1000)->times($outVal - $inVal);
             }
         }
 
         if (! $checkin->is_clean) {
-            $cleaningFee = '3000.00';
+            $cleaningFee = Money::of('3000.00');
         }
 
-        $total = number_format(
-            (float) $extraKmFee + (float) $fuelShortfall + (float) $lateFee + (float) $cleaningFee,
-            2, '.', '',
-        );
+        $total = $extraKmFee->plus($fuelShortfall)->plus($lateFee)->plus($cleaningFee);
 
         return new CloseoutQuote(
             bookingId: $booking->id,
-            extraKmFee: $extraKmFee,
-            fuelShortfall: $fuelShortfall,
-            lateFee: $lateFee,
-            cleaningFee: $cleaningFee,
-            total: $total,
+            extraKmFee: $extraKmFee->toDecimal(),
+            fuelShortfall: $fuelShortfall->toDecimal(),
+            lateFee: $lateFee->toDecimal(),
+            cleaningFee: $cleaningFee->toDecimal(),
+            total: $total->toDecimal(),
         );
     }
 }

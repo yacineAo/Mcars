@@ -219,6 +219,64 @@ it('leaves a draft fully editable', function () {
         ->assertFormFieldEnabled('total_amount');
 });
 
+// -----------------------------------------------------------------------
+// customer_id — blacklisted customers are refused, not just flagged
+// -----------------------------------------------------------------------
+
+it('refuses to (re)assign a blacklisted customer to an unstarted booking', function () {
+    Auth::login($this->manager);
+
+    $booking = bookingForTest();
+    $blacklisted = Customer::factory()->create([
+        'branch_id' => $this->branch->id,
+        'is_blacklisted' => true,
+    ]);
+
+    Livewire::test(EditBooking::class, ['record' => $booking->getRouteKey()])
+        ->fillForm(['customer_id' => $blacklisted->id])
+        ->call('save')
+        ->assertHasFormErrors(['customer_id']);
+
+    expect($booking->fresh()->customer_id)->toBe($this->customer->id);
+});
+
+it('still allows an ordinary customer through the same edit', function () {
+    Auth::login($this->manager);
+
+    $booking = bookingForTest();
+    $otherCustomer = Customer::factory()->create(['branch_id' => $this->branch->id]);
+
+    Livewire::test(EditBooking::class, ['record' => $booking->getRouteKey()])
+        ->fillForm(['customer_id' => $otherCustomer->id])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($booking->fresh()->customer_id)->toBe($otherCustomer->id);
+});
+
+/**
+ * customer_id is frozen (disabled) once a booking has started, but a disabled
+ * field is still validated against its loaded value even though it is not
+ * dehydrated — so without CustomerNotBlacklisted's $alreadyStarted guard, a
+ * customer blacklisted *after* pickup would permanently block every future
+ * edit to that booking, on a field nobody is touching.
+ */
+it('allows editing an unrelated field on a started booking after its customer is blacklisted', function () {
+    Auth::login($this->manager);
+
+    $booking = checkedOutBooking($this->manager);
+    $booking->customer->update(['is_blacklisted' => true, 'blacklist_reason' => 'incident']);
+
+    // with_driver is not frozen on checkout (unlike car/customer/dates/pricing),
+    // so it is a genuinely unrelated field still open for editing here.
+    Livewire::test(EditBooking::class, ['record' => $booking->getRouteKey()])
+        ->fillForm(['with_driver' => true])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($booking->fresh()->with_driver)->toBeTrue();
+});
+
 /**
  * The disabled attribute is a UI property. What matters is that a submitted price is
  * ignored: the ledger rows referencing it are append-only and cannot follow an edit.

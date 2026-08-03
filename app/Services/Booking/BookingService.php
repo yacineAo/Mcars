@@ -37,6 +37,7 @@ class BookingService
         ?int $branchId = null,
     ): Booking {
         $days = (int) ceil($period->getStartDate()->diffInDays($period->getEndDate()));
+        $subtotal = Money::of($car->daily_rate)->times($days)->toDecimal();
 
         return Booking::create([
             'uuid' => (string) Str::uuid(),
@@ -50,8 +51,8 @@ class BookingService
             'expected_return_at' => $period->getEndDate(),
             'daily_rate' => $car->daily_rate,
             'days_count' => $days,
-            'subtotal' => number_format((float) $car->daily_rate * $days, 2, '.', ''),
-            'total_amount' => number_format((float) $car->daily_rate * $days, 2, '.', ''),
+            'subtotal' => $subtotal,
+            'total_amount' => $subtotal,
         ]);
     }
 

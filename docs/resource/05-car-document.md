@@ -118,77 +118,41 @@ This screen exists for the cross-fleet worklist view, not for per-car editing.
 
 ## Gaps and risks
 
-1. **🔴 There is no way to attach or read a document scan, so ADV-02 is unmet and ADR-009 is
-   half-built.** The model registers the private-disk collection and nothing uses it: grepped
-   all of `app/Filament/` — **zero** occurrences of `SpatieMediaLibraryFileUpload`. And ADR-009
-   specifies files "served through a **policy-checked controller** issuing short-lived signed
-   URLs"; `routes/web.php` contains exactly two application routes, `exports.download` and
-   `locale.switch`. No media controller exists.
+This section audited the resource as it stood before this round's fixes; **12 of the 13 findings
+below are now resolved**, verified against the running code rather than assumed from the
+checklist. Only gap 7 survived the check — the eager-load fix it describes was real and has been
+applied (see `withLedgerFlag()`).
 
-   **Investigated and downgraded: there is no open hole.** `php artisan route:list` shows
-   `GET|HEAD storage/{path}` with **no middleware**, and both the `local` and `private` disks
-   resolve to the same directory — verified, `Storage::disk('private')->path($p)` and
-   `Storage::disk('local')->path($p)` both return
-   `/var/www/html/storage/app/private/$p` (`config/filesystems.php:35-57`). That looks like a
-   private file served publicly, and it is not: Laravel's `ServeFile::hasValidSignature()`
-   requires `$request->hasValidRelativeSignature()` unless the disk declares
-   `visibility: public`, and `local` declares none. Probed against the running stack with a real
-   file under `storage/app/private` — an unsigned request returns **403**, not the bytes. So the
-   route is not the defect.
-
-   The residual gap is the one ADR-009 named: a signed URL is a *bearer token*, not a policy
-   check. Whoever holds the link gets the file for its lifetime regardless of role, and nothing
-   ties it to the record's permissions. Build the controller ADR-009 asked for, then add the
-   upload field and a preview action.
-2. **🔴 `renew` performs two writes with no transaction.**
-   `CarDocumentResource.php:110-122` creates the replacement document, then separately updates
-   the old row's `replaced_by_id`. If the second write fails, both documents are live and
-   `replaced_by_id` is null on the old one, so `CarDocumentExpiringDetector` alerts on both
-   forever and the mirror column takes whichever expiry is later. Wrap it, and move it out of
-   the resource — this is a two-row state transition, which is a service's job under ADR-013.
-3. **🔴 A renewal cost never reaches the ledger.** `renew` collects `cost`
-   (`CarDocumentResource.php:106-108`) and writes it to the row.
-   [`../05-accounting-model.md`](../05-accounting-model.md) posting **E42** says an insurance
-   renewal is `Dr 5050 Insurance / Cr 1010 or 2210` with `car` and `car_document` dimensions,
-   and `docs/tasks/phase-04-ledger-cash-register.md:74` records this as done — *"renewed car
-   documents now post expenses stamped with `car_id`"*. It is not done. Verified against the
-   live database: **24 car documents carrying 584,949 DZD of cost, and zero transactions with a
-   `source_type` referencing `CarDocument`**. Every 5040/5050-class posting in the ledger came
-   from a manually created `Expense`. Consequences: the business's insurance spend is invisible
-   in `ReportService::profitAndLoss()`, and the per-car expense figure on
-   [`02-car.md`](02-car.md)'s Profitability section is understated by whatever the paperwork
-   costs. Same root cause as [`07-maintenance-log.md`](07-maintenance-log.md) gap 1.
-4. **🔴 No expiry filter and no default sort on the renewals worklist.** The resource's stated
-   purpose is a list filterable by expiry; it has `->filters([])` (`:88`) and no ordering, so
-   the screen opens on an arbitrary slice of every document the fleet has ever had, current and
-   superseded together. See Index.
-5. **🟡 `expiry_date` is optional.** A document saved without one is excluded from the detector
-   by `whereNotNull('expiry_date')` and never alerts. Require it, or make the omission visible
-   on the index.
-6. **🟡 `DeleteBulkAction` on documents.** These are the evidence a car was insured on the day
-   of an accident. Soft deletes preserve them, but bulk-deleting them is not an office task, and
-   deleting a *replacement* nulls the predecessor's `replaced_by_id`
-   (`replaced_by_id` is `nullOnDelete`, `2026_07_28_160000_create_fleet_tables.php:169`) which
-   quietly puts the old document back into the alert set. Remove the bulk action.
-7. **🟡 N+1 on the index.** `car.registration_number` (`:71`) is a lookup per row;
-   `ListCarDocuments` is a bare stub with no eager loading.
-8. **🟡 `cost` is on an ungated form.** Minor next to gap 3, but a receptionist can read and
-   change what the business paid to insure the fleet.
-9. **🟡 No `canAccess()`.** Same cluster-wide position: Fleet is `read` for accountant,
-   receptionist and supervisor per
-   [`../02-filament-panels.md`](../02-filament-panels.md) §Role → visibility matrix, nothing
-   enforces it, and the live database holds four permissions with no Shield per-resource
-   permissions to gate on (README finding 2).
-10. **🟡 Deprecated `->actions([...])`** — README finding 3.
-11. **🔵 `car_id` and `type` editable after creation**, which can leave a stale mirror column.
-    See Edit.
-12. **🔵 Action label does not translate.** "Renew Document" is set with `->label()` and never
-    `->translateLabel()`; `lang/fr.json` already carries "Renouveler le document". See
-    [`03-car-owner.md`](03-car-owner.md) gap 10 — one panel-level fix.
-13. **🔵 No `branch_id` on `car_documents`.** Not a defect today — the detector scopes through
-    `car` (`CarDocumentExpiringDetector.php:45`) and ADR-004 is marked superseded for the
-    as-built system — but Phase 10's branch scope has to reach this table through the car, so
-    note it rather than discover it.
+1. ~~**🔴 There is no way to attach or read a document scan...**~~ → **Resolved.**
+   `DocumentMediaController` exists (`app/Http/Controllers/DocumentMediaController.php`), wired to
+   `GET /media/car-documents/{carDocument}/download` behind `temporarySignedRoute` in
+   `routes/web.php`. `SpatieMediaLibraryFileUpload` is on the create/edit form and a
+   **Preview scan** row action opens the signed URL.
+2. ~~**🔴 `renew` performs two writes with no transaction.**~~ → **Resolved.**
+   `App\Services\Fleet\RecordDocumentRenewalService::renew()` owns both writes inside one
+   transaction; the resource only calls it.
+3. ~~**🔴 A renewal cost never reaches the ledger.**~~ → **Resolved.**
+   `RecordDocumentRenewalService::renew()` posts through `MaintenancePoster::postDocumentRenewed()`
+   (E42 / E42b / E42c) in the same transaction as the two document writes.
+4. ~~**🔴 No expiry filter and no default sort...**~~ → **Resolved.** The expiry-window filter
+   (defaulted to "expired or expiring"), the current-only `TernaryFilter`, type/car/branch
+   filters and `defaultSort('expiry_date', 'asc')` are all in place.
+5. ~~**🟡 `expiry_date` is optional.**~~ → **Resolved.** `->required()` on the form.
+6. ~~**🟡 `DeleteBulkAction` on documents.**~~ → **Resolved.** No bulk action is registered.
+7. **🟡 N+1 on the index.** Still real on inspection — `withLedgerFlag()` eager-loaded `media`
+   but not `car`, so `car.registration_number` was a lookup per row. **Fixed in this round**:
+   `withLedgerFlag()` now does `->with(['car', 'media'])`; regression-tested in
+   `CarDocumentResourceTest.php` (constant query count at 3 and 8 rows, not scaling with N).
+8. ~~**🟡 `cost` is on an ungated form.**~~ → **Resolved.** `->visible(fn (): bool =>
+   Auth::user()?->can('reports.view_financials') ?? false)`.
+9. ~~**🟡 No `canAccess()`.**~~ → **Resolved.** Gates on `fleet.view`.
+10. ~~**🟡 Deprecated `->actions([...])`.**~~ → **Resolved.** Uses `->recordActions([...])`.
+11. ~~**🔵 `car_id` and `type` editable after creation.**~~ → **Resolved.** Both `->disabled()`
+    once `$operation === 'edit'`.
+12. ~~**🔵 Action label does not translate.**~~ → **Resolved.** `->label(__('Renew Document'))`,
+    with matching `fr.json`/`ar.json` entries.
+13. **🔵 No `branch_id` on `car_documents`.** Still accurate — not a defect today, but Phase 10's
+    branch scope has to reach this table through `car`, so note it rather than discover it.
 
 ## Verification
 
@@ -196,6 +160,8 @@ This screen exists for the cross-fleet worklist view, not for per-car editing.
 docker compose exec app ./vendor/bin/pest tests/Feature/FleetManagementTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/Phase8Test.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/CarDocumentResourceTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/MaintenancePostingTest.php
 ```
 
 `FleetManagementTest` covers the expiry-mirror observer on create, update and delete — all three

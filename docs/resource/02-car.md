@@ -277,9 +277,6 @@ doc's tab list does: **Documents**, **Maintenance** (logs + schedules), **Owner*
 
 Still open, and deliberately owned elsewhere:
 
-- [ ] Serve private media back to the browser through a signed, authorised route —
-      [`05-car-document.md`](05-car-document.md) gap 1. Uploads now land on the private disk;
-      reading them still goes through Filament's own component only.
 - [ ] E48 depreciation for company-owned cars, so a company car shows a cost of capital
       against a third-party car paying rent — [`../05-accounting-model.md`](../05-accounting-model.md).
 - [ ] `purchase_price` / `current_value` visibility if the fleet write role is ever widened

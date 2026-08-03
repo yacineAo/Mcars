@@ -14,16 +14,19 @@ whole history should be answerable without running a report.
 
 ## Current state
 
+This table described the resource before an earlier round of fixes and was left unupdated; it has
+now been checked against the running code and corrected (see Gaps and risks).
+
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 8 columns; `->filters([])` is **empty**; no default sort |
-| create | ✅ | flat form, **zero sections** — 25+ fields in one column |
+| index | ✅ | 8 columns, `full_name` collapsed and searchable across both fields, 4 filters, `defaultSort('created_at', 'desc')` |
+| create | ✅ | sectioned form — Identity / Driving Licence / Contact / Commercial / Status; `is_blacklisted` off the form entirely |
 | view | ✅ | 5 infolist sections; Financials correctly gated and correctly sourced |
-| edit | ✅ | same flat form as create; nothing frozen |
-| row actions | ✅ | `toggle_blacklist`, View, Edit — via deprecated `->actions([...])` |
-| header / toolbar actions | ✅ | `CreateAction` on index; `DeleteBulkAction` in a bulk group |
-| relation managers | 🟡 | 1 of 7 possible: `DocumentsRelationManager` only |
-| `canAccess()` | ❌ | absent — any staff role reaches it |
+| edit | ✅ | same sectioned form as create; `code` disabled + not dehydrated |
+| row actions | ✅ | `toggle_blacklist` (delegates to `CustomerService`), `view_history`, View, Edit — via `->recordActions([...])` |
+| header / toolbar actions | ✅ | `CreateAction` on index; `->bulkActions([])` |
+| relation managers | ✅ | 7 of 7: documents, bookings, contracts, payments, deposits, paymentSchedules, fines |
+| `canAccess()` | ✅ | gates on `fleet.view`; writes on `fleet.manage` |
 
 `ViewCustomer` is the one part in good shape: the Financials section is gated on
 `reports.view_financials` (`ViewCustomer.php:78`) and every figure comes from
@@ -117,48 +120,45 @@ contracts), **Money** (payments + deposits + schedules), **Fines**, **Documents*
 
 ## Gaps and risks
 
-1. **🔴 Blacklisting does nothing.** `is_blacklisted` is written by this resource and
-   **never read anywhere in the application** — verified by grepping all of `app/` outside
-   the model and this resource. A blacklisted customer can still be quoted, booked and
-   handed a car. Either the flag gains an enforcement point in `BookingService` /
-   `BookingAvailabilityService`, or the UI must stop implying protection it does not give.
-   This is the most serious finding on the screen.
-2. **🔴 No `canAccess()`.** Any staff role — including a maintenance officer — can open,
-   edit and bulk-delete customer records, which carry NIN, date of birth and address.
-   Reading should be broad (a receptionist needs it); creating, editing and deleting
-   should not be. Needs a policy or an explicit `canAccess()`.
-3. **🔴 The blacklist action holds business rules.** `CustomerResource.php:163-175` calls
-   `$record->update()` directly, setting three columns and inventing the audit semantics
-   inline. Per ADR-013 a Filament action defines UI and delegates; this should call a
-   service that owns the transition, records who did it, and can be extended to check
-   whether the customer has an active booking before blacklisting them.
-4. **🟡 `DeleteBulkAction` on customers.** Customers are referenced by bookings,
-   contracts and ledger rows. Soft deletes protect the data, but a bulk delete of
-   customers is not an operation a business wants one click away. Restrict to
-   super_admin, or drop it and keep single-record delete with a confirmation.
-5. **🟡 Empty `->filters([])`** on a table that grows without bound.
-6. **🟡 Deprecated `->actions([...])`** — should be `->recordActions([...])`.
-7. **🟡 No licence-expiry surfacing.** The data is there; nothing warns on it. Document
-   expiry alerts exist for cars (Phase 8) but not for customer licences — worth
-   confirming against REQ-04 whether that was intended.
-8. Note: `app/Actions/` **does not exist** in this codebase, so the Action layer named in
-   CLAUDE.md's layering table has no home yet. Point 3 should land in
-   `app/Services/CustomerService.php` unless the Action layer is introduced first.
+1. ~~**🔴 Blacklisting does nothing.**~~ → **Resolved.** **Decided: it blocks booking.**
+   `App\Rules\CustomerNotBlacklisted` is attached to `BookingResource`'s shared `customer_id`
+   field (used by both create and edit), so a blacklisted customer cannot be picked for a new
+   booking and cannot be assigned to an unstarted draft either. Refuses with a field error
+   (`This customer is blacklisted and cannot be booked.`), not a silent no-op or a raw
+   exception.
 
-## Checklist
-
-- [ ] Establish whether `is_blacklisted` should block booking, and wire it (or file a
-      decision that it is advisory only, and relabel the UI to match)
+   `disabled()` freezing `customer_id` once the rental starts is **not** what stops the rule
+   firing after that point — a disabled field is still validated against its loaded value even
+   though it is not submitted (Filament's `isValidatedWhenNotDehydrated` defaults `true`). Without
+   a guard, a customer blacklisted *after* pickup would permanently fail validation on every
+   future edit to that booking, on a field nobody is touching. The rule takes `$alreadyStarted`,
+   derived from the record loaded when the form was built (not from submitted data, so it cannot
+   be spoofed), and no-ops once true — that flag is load-bearing; do not drop it while
+   simplifying this attachment later. See `BookingResourceTest.php`.
+2. ~~**🔴 No `canAccess()`.**~~ → **Resolved.** Gates on `fleet.view`; `canCreate()`/`canEdit()`
+   on `fleet.manage`; `canDelete()` hardcoded `false`.
+3. ~~**🔴 The blacklist action holds business rules.**~~ → **Resolved.** The `toggle_blacklist`
+   row action delegates to `CustomerService::toggleBlacklist()`.
+4. ~~**🟡 `DeleteBulkAction` on customers.**~~ → **Resolved.** `->bulkActions([])`.
+5. ~~**🟡 Empty `->filters([])`.**~~ → **Resolved.** `is_blacklisted`, `is_active` (default
+   true), `source`, `wilaya`.
+6. ~~**🟡 Deprecated `->actions([...])`.**~~ → **Resolved.** Uses `->recordActions([...])`.
+7. ~~**🟡 No licence-expiry surfacing.**~~ → **Resolved.** The `license_expiry_date` column
+   carries a coloured icon (danger + warning triangle once past, success + check otherwise).
+8. Note: `app/Actions/` still does not exist in this codebase (README finding 5) — moot for
+   this resource now that point 3 landed in `CustomerService`, but still true generally.
 
 ## Verification
 
 ```bash
 docker compose exec app ./vendor/bin/pest tests/Feature/CustomerManagementTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/BookingResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
-docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/CustomerResource
+docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/CustomerResource app/Rules/CustomerNotBlacklisted.php
 ```
 
 By hand: open a customer as an accountant (has `reports.view_financials`) and confirm the
 Financials section and all money tables appear; repeat as a receptionist and confirm all
-of them are gone, not just the summary. Blacklist a customer with a reason, then attempt
-to create a booking for them and record what actually happens.
+of them are gone, not just the summary. Blacklist a customer with a reason, then try to
+create a booking for them — the customer field must refuse with a validation message, not
+let the booking through.

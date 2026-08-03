@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Enums\TransactionType;
 use App\Enums\UserRole;
 use App\Filament\Admin\Resources\FinancialAccountResource;
+use App\Filament\Admin\Resources\FinancialAccountResource\Pages\CreateFinancialAccount;
+use App\Filament\Admin\Resources\FinancialAccountResource\Pages\EditFinancialAccount;
 use App\Models\Branch;
 use App\Models\ChartOfAccount;
 use App\Models\FinancialAccount;
@@ -12,11 +14,16 @@ use App\Models\User;
 use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\TransactionDraft;
 use App\Services\CashRegisterService;
+use App\Services\FinancialAccountService;
 use Database\Seeders\ChartOfAccountSeeder;
 use Database\Seeders\FinancialAccountSeeder;
 use Database\Seeders\RolePermissionSeeder;
+use Filament\Forms\Components\Select;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -188,4 +195,132 @@ it('balancesBatch reflects ledger movements', function () {
 
     // Asset account (debit-normal) balance = 1500 - 500 = 1000
     expect($balances[$this->account->id])->toBe('1000.00');
+});
+
+// -----------------------------------------------------------------------
+// FinancialAccountService::makeDefaultForCash — single default for cash
+// -----------------------------------------------------------------------
+
+it('promotes an account to default for cash and demotes the previous holder', function () {
+    $other = FinancialAccount::factory()->create();
+
+    app(FinancialAccountService::class)->makeDefaultForCash($other, $this->admin);
+
+    expect(FinancialAccount::where('is_default_for_cash', true)->count())->toBe(1)
+        ->and($other->fresh()->is_default_for_cash)->toBeTrue()
+        ->and($this->account->fresh()->is_default_for_cash)->toBeFalse();
+});
+
+it('is a no-op when the account already holds the default flag', function () {
+    app(FinancialAccountService::class)->makeDefaultForCash($this->account, $this->admin);
+
+    expect($this->account->fresh()->is_default_for_cash)->toBeTrue();
+});
+
+it('refuses to make an inactive account the default for cash', function () {
+    $inactive = FinancialAccount::factory()->create(['is_active' => false]);
+
+    expect(fn () => app(FinancialAccountService::class)->makeDefaultForCash($inactive, $this->admin))
+        ->toThrow(DomainException::class)
+        ->and($this->account->fresh()->is_default_for_cash)->toBeTrue();
+});
+
+it('refuses to promote a default without a staff actor', function () {
+    $other = FinancialAccount::factory()->create();
+
+    expect(fn () => app(FinancialAccountService::class)->makeDefaultForCash($other, null))
+        ->toThrow(DomainException::class);
+});
+
+it('rejects a second row holding is_default_for_cash at the database level', function () {
+    $other = FinancialAccount::factory()->create();
+
+    expect(fn () => DB::table('financial_accounts')
+        ->where('id', $other->id)
+        ->update(['is_default_for_cash' => true]))
+        ->toThrow(QueryException::class);
+});
+
+it('promotes the default from the create form', function () {
+    $ledgerAccount = ChartOfAccount::factory()->cashEquivalent()->create();
+
+    Livewire::test(CreateFinancialAccount::class)
+        ->fillForm([
+            'ledger_account_id' => $ledgerAccount->id,
+            'name' => 'Safe',
+            'type' => 'cash_box',
+            'opened_on' => now()->toDateString(),
+            'is_default_for_cash' => true,
+            'is_active' => true,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(FinancialAccount::where('is_default_for_cash', true)->count())->toBe(1)
+        ->and($this->account->fresh()->is_default_for_cash)->toBeFalse();
+});
+
+it('promotes the default from the edit form', function () {
+    $other = FinancialAccount::factory()->create();
+
+    Livewire::test(EditFinancialAccount::class, ['record' => $other->getKey()])
+        ->fillForm(['is_default_for_cash' => true])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect(FinancialAccount::where('is_default_for_cash', true)->count())->toBe(1)
+        ->and($other->fresh()->is_default_for_cash)->toBeTrue()
+        ->and($this->account->fresh()->is_default_for_cash)->toBeFalse();
+});
+
+// -----------------------------------------------------------------------
+// ledger_account_id restricted to cash-equivalent, postable accounts
+// -----------------------------------------------------------------------
+
+it('excludes non-cash-equivalent accounts from the ledger account options', function () {
+    $revenueAccount = ChartOfAccount::where('code', '4010')->firstOrFail();
+
+    Livewire::test(CreateFinancialAccount::class)
+        ->assertFormFieldExists('ledger_account_id', function (Select $component) use ($revenueAccount): bool {
+            $options = $component->getOptions();
+
+            return ! array_key_exists($revenueAccount->id, $options);
+        });
+});
+
+// -----------------------------------------------------------------------
+// makeDefaultForCash failures surface as a friendly message, not a crash
+// -----------------------------------------------------------------------
+
+it('shows a field error instead of crashing when editing tries to default an inactive account', function () {
+    $inactive = FinancialAccount::factory()->create(['is_active' => false]);
+
+    Livewire::test(EditFinancialAccount::class, ['record' => $inactive->getKey()])
+        ->fillForm(['is_default_for_cash' => true])
+        ->call('save')
+        ->assertHasFormErrors(['is_default_for_cash']);
+
+    expect($inactive->fresh()->is_default_for_cash)->toBeFalse();
+});
+
+it('creates the account and notifies instead of crashing when it cannot also be made default', function () {
+    $ledgerAccount = ChartOfAccount::factory()->cashEquivalent()->create();
+
+    Livewire::test(CreateFinancialAccount::class)
+        ->fillForm([
+            'ledger_account_id' => $ledgerAccount->id,
+            'name' => 'Dormant Safe',
+            'type' => 'cash_box',
+            'opened_on' => now()->toDateString(),
+            'is_default_for_cash' => true,
+            'is_active' => false,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors()
+        ->assertNotified();
+
+    $account = FinancialAccount::where('name', 'Dormant Safe')->firstOrFail();
+
+    expect($account->is_default_for_cash)->toBeFalse()
+        ->and($this->account->fresh()->is_default_for_cash)->toBeTrue();
 });

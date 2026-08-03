@@ -25,6 +25,9 @@ class Vendor extends Model
         'phone',
         'email',
         'address',
+        'bank_account_number',
+        'rib',
+        'ccp_number',
         'notes',
         'is_active',
     ];

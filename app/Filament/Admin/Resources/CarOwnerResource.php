@@ -99,7 +99,8 @@ class CarOwnerResource extends Resource
                             ->hidden(fn (callable $get): bool => $get('type') !== 'company'),
                         TextInput::make('national_id')
                             ->label('NIN')
-                            ->maxLength(50),
+                            ->maxLength(50)
+                            ->unique(ignoreRecord: true),
                     ])
                     ->columns(2),
                 Section::make('Contact')

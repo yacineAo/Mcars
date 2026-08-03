@@ -1,7 +1,7 @@
 # 07 — MaintenanceLog (Fleet)
 
 **Model:** `App\Models\MaintenanceLog` · **Slug:** `/admin/maintenance-logs` ·
-**Status:** 🟡 mostly done — service start/complete/cancel, E41 posting, schedule recompute, car transitions all built; view page deferred until a ledger link is meaningful
+**Status:** ✅ done — service start/complete/cancel, E41 posting, schedule recompute, car transitions all built; view page deferred until a ledger link is meaningful (deliberate, not a gap)
 
 Closes **REQ-12** (last oil change, last tyre change, last service) with
 [`06-maintenance-schedule.md`](06-maintenance-schedule.md). This screen touches money, so read
@@ -275,7 +275,18 @@ should appear read-only under a vendor — see [`08-vendor.md`](08-vendor.md) §
 
 ## Checklist
 
-- [ ] Separate task, whole codebase: decide whether `MoneyCast` is adopted or removed
+**Decided: partial.** Full `MoneyCast` adoption across all 18 money-bearing models is out of
+scope for now — too large and cross-cutting to take on as a side effect of this file. What was
+fixed: the confirmed *live* float-arithmetic bug, found while scoping the decision.
+README finding 12's citation (`BookingAvailabilityService.php:129`) was itself stale — that method
+was already removed (see the file's own docblock at that line: `extend()` "used to live here...
+did money arithmetic in float... belongs in `BookingService::extend()`", which already uses
+`Money` correctly). The live equivalents were `PricingService::quote()` and `PricingService::closeout()`
+(reachable from `BookingService::checkInWithCharges()`, so its fees post to the ledger) and
+`BookingService::createDraft()` — all three did `(float)` casts / `number_format()` arithmetic on
+`decimal:2` strings. All three now use `App\Support\Money` throughout; `CloseoutPricingTest.php`
+and `BookingTest.php`'s existing exact-decimal assertions caught nothing broken. The other 17
+models' `decimal:2` casts are unchanged — that remains the open, larger decision.
 
 ## Verification
 
@@ -284,6 +295,8 @@ docker compose exec app ./vendor/bin/pest tests/Feature/FleetManagementTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/LedgerWiringTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/AccountingLedgerTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/CloseoutPricingTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/BookingTest.php
 docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/MaintenanceLogResource.php
 ```
 

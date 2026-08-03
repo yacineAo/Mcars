@@ -19,6 +19,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -80,6 +81,17 @@ class VendorResource extends Resource
                     ->maxLength(255),
                 Textarea::make('address')
                     ->maxLength(65535),
+                Section::make('Payment Details')
+                    ->visible(fn (): bool => Auth::user()?->can('reports.view_financials') ?? false)
+                    ->schema([
+                        TextInput::make('bank_account_number')
+                            ->maxLength(255),
+                        TextInput::make('rib')
+                            ->maxLength(50),
+                        TextInput::make('ccp_number')
+                            ->maxLength(50),
+                    ])
+                    ->columns(3),
                 Textarea::make('notes')
                     ->maxLength(65535),
                 Toggle::make('is_active')

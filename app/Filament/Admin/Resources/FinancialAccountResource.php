@@ -65,7 +65,7 @@ class FinancialAccountResource extends Resource
         return $schema
             ->schema([
                 Select::make('ledger_account_id')
-                    ->relationship('ledgerAccount', 'name', fn (Builder $query): Builder => $query->where('is_postable', true))
+                    ->relationship('ledgerAccount', 'name', fn (Builder $query): Builder => $query->where('is_postable', true)->where('is_cash_equivalent', true))
                     ->searchable()
                     ->required()
                     ->unique(ignoreRecord: true)

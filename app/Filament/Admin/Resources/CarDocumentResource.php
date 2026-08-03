@@ -132,15 +132,16 @@ class CarDocumentResource extends Resource
     }
 
     /**
-     * Selects `posted_to_ledger` once for the table and eager-loads media so the
-     * preview-scan action's visibility check does not N+1.
+     * Selects `posted_to_ledger` once for the table and eager-loads `car` (the
+     * index's own column) and `media` (the preview-scan action's visibility
+     * check) so neither N+1s across a page of documents.
      *
      * @param Builder<CarDocument> $query
      * @return Builder<CarDocument>
      */
     protected static function withLedgerFlag(Builder $query): Builder
     {
-        return $query->withPostedToLedger()->with('media');
+        return $query->withPostedToLedger()->with(['car', 'media']);
     }
 
     public static function table(Table $table): Table

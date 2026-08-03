@@ -19,15 +19,15 @@ that each piece stays reviewable on its own.
 |---|---|---|---|
 | [01](01-car-category.md) | **CarCategory** | Fleet | 🟡 audited — partial |
 | [02](02-car.md) | **Car** | Fleet | 🔴 audited — needs work |
-| [03](03-car-owner.md) | **CarOwner** | Fleet | 🔴 audited — needs work |
+| [03](03-car-owner.md) | **CarOwner** | Fleet | ✅ done |
 | [04](04-car-ownership-agreement.md) | **CarOwnershipAgreement** | Fleet | 🔴 audited — needs work |
-| [05](05-car-document.md) | **CarDocument** | Fleet | 🔴 audited — needs work |
+| [05](05-car-document.md) | **CarDocument** | Fleet | ✅ done |
 | [06](06-maintenance-schedule.md) | **MaintenanceSchedule** | Fleet | 🔴 audited — needs work |
-| [07](07-maintenance-log.md) | **MaintenanceLog** | Fleet | 🔴 audited — needs work |
-| [08](08-vendor.md) | **Vendor** | Fleet | 🟡 audited — partial |
-| [09](09-customer.md) | **Customer** | CRM | 🔴 audited — needs work |
+| [07](07-maintenance-log.md) | **MaintenanceLog** | Fleet | ✅ done |
+| [08](08-vendor.md) | **Vendor** | Fleet | ✅ done |
+| [09](09-customer.md) | **Customer** | CRM | ✅ done |
 | [10](10-chart-of-account.md) | **ChartOfAccount** | Accounting | 🔴 audited — needs work |
-| [11](11-financial-account.md) | **FinancialAccount** | Accounting | 🟡 audited — partial |
+| [11](11-financial-account.md) | **FinancialAccount** | Accounting | ✅ done |
 | [12](12-expense-category.md) | **ExpenseCategory** | Accounting | ✅ audited — fine |
 | [13](13-transaction.md) | **Transaction** | Accounting | ✅ audited — fine |
 | [14](14-cash-session.md) | **CashSession** | Accounting | ✅ audited — fine |
@@ -122,8 +122,11 @@ None is a presentation issue. All four were verified against the running applica
   a `$2y$12$…` hash, including `manager@mcars.dz`'s. See [38](38-activity-log.md).
 - **✅ FIXED — the ledger's only correction path was unreachable.** `reverse_transaction` is now
   seeded to super_admin and accountant. See finding 8 and [13](13-transaction.md).
-- **⬜ OPEN — the Phase 0 money-safety layer was built and never adopted** — `MoneyCast` in zero models,
-  `Money::allocate()` never called, float arithmetic on money in a service. See finding 12.
+- **⬜ OPEN (partially addressed) — the Phase 0 money-safety layer was built and largely not
+  adopted.** `MoneyCast` is still in zero models — that decision was explicitly deferred (too
+  large to fold into another task). `Money::allocate()` is now called (finding 9, resolved by
+  [24](24-payment-schedule.md)). The specific float-arithmetic-in-a-service example this finding
+  cited has been fixed, though it had moved by the time it was checked — see finding 12.
 
 ## Findings that span the whole panel
 
@@ -202,15 +205,19 @@ fixing them 38 times, so they are recorded here rather than repeated in every fi
    (Booking, Payment, Deposit, Expense, Transaction, Fine, Contract, Car, CashSession,
    MaintenanceLog, OwnerInstallment, Extra, BookingExtra, FinancialAccount, CarDocument,
    CarOwnershipAgreement, CashRegisterEntry, NotificationLog) cast money as `'decimal:2'`,
-   which returns a **string**.
-   The consequence is not theoretical. `app/Services/Booking/BookingAvailabilityService.php:129`
-   reprices a rental as
-   `$booking->total_amount = $booking->daily_rate * $booking->days_count + $booking->extras_total - $booking->discount_amount;`
-   — four `decimal:2` strings coerced to float, multiplied and subtracted, then written back
-   to a money column. Together with finding 9 (`Money::allocate()` never called), the entire
-   money-safety layer was built in Phase 0 and never adopted.
-   This belongs in its own task outside this directory; it is recorded here because the audit
-   is what surfaced it and several resource files depend on the outcome.
+   which returns a **string**. **Still true and still open** — no model was moved onto
+   `MoneyCast`; that remains its own, larger task.
+   **🟡 PARTIALLY FIXED — the specific consequence cited here was stale, and the real one is
+   fixed.** The quoted line, `app/Services/Booking/BookingAvailabilityService.php:129`, no
+   longer exists — that code was already moved into `BookingService::extend()`, which already
+   used `Money` correctly (see that file's own docblock at `:129` explaining the move). The
+   *live* equivalents were `PricingService::quote()`, `PricingService::closeout()` (reachable
+   from `BookingService::checkInWithCharges()`, so its fees post to the ledger) and
+   `BookingService::createDraft()` — all three did the same `(float)` / `number_format()`
+   arithmetic on `decimal:2` strings this finding describes. All three now use `Money`
+   throughout; see [`07-maintenance-log.md`](07-maintenance-log.md). Money arithmetic
+   elsewhere in the codebase (`ReportService`'s read-only aggregation, for instance) is
+   unchanged and outside this fix's scope.
 
 13. **No authorization layer exists at all — this is the root cause of most of finding 2.**
    `app/Policies/` **does not exist**, and Shield's `shield:generate` was never run, so no

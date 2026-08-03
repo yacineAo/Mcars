@@ -13,6 +13,7 @@ use App\Filament\Admin\Resources\BookingResource\RelationManagers;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\FinancialAccount;
+use App\Rules\CustomerNotBlacklisted;
 use App\Services\Booking\BookingService;
 use App\Services\Payment\PaymentService;
 use BackedEnum;
@@ -121,6 +122,9 @@ class BookingResource extends Resource
                                         ->toArray())
                                     ->searchable()
                                     ->required()
+                                    ->rule(fn (?Booking $record): CustomerNotBlacklisted => new CustomerNotBlacklisted(
+                                        alreadyStarted: $record?->hasStarted() ?? false,
+                                    ))
                                     ->disabled(fn (?Booking $record): bool => $record?->hasStarted() ?? false),
                                 Select::make('car_id')
                                     ->relationship('car', 'registration_number')

@@ -1,6 +1,6 @@
 # 11 — FinancialAccount (Accounting)
 
-**Model:** `App\Models\FinancialAccount` · **Slug:** `/admin/financial-accounts` · **Status:** 🟡 partial
+**Model:** `App\Models\FinancialAccount` · **Slug:** `/admin/financial-accounts` · **Status:** ✅ done
 
 Closes **REQ-09**. See [`../05-accounting-model.md`](../05-accounting-model.md).
 
@@ -31,12 +31,22 @@ derived through `CashRegisterService` / `ReportService`. The index uses
 
 ## What remains
 
-1. **Enforce a single `is_default_for_cash` in a service.** Partially done — `CreateFinancialAccount`
-   and `EditFinancialAccount` mutate form data to reset other defaults. Belongs in a dedicated
-   action/service when the pattern is established elsewhere.
-2. **Restrict `ledger_account_id` to cash-equivalent accounts.** Currently filtered to
-   `is_postable` accounts only, which excludes revenue accounts but still allows pointing a
-   till at a payable. Should also filter to `is_cash_equivalent` where the type implies it.
+Both resolved. `FinancialAccountService::makeDefaultForCash()` is now the only sanctioned way the
+flag moves — it mirrors `BranchService::makeDefault()`: refuses an inactive account, no-ops if
+already default, and clears every other row (including trashed) inside one transaction. The
+partial unique index `financial_accounts_single_default_for_cash` (`WHERE is_default_for_cash AND
+deleted_at IS NULL`) backs it at the database level, mirroring `branches_single_default`.
+`CreateFinancialAccount` defers the promotion to `afterCreate()` since the row does not exist yet
+at `mutateFormDataBeforeCreate()` time; `EditFinancialAccount` only routes through the service when
+the flag is being turned **on** — turning it off stays a plain field edit. `ledger_account_id` now
+also filters to `is_cash_equivalent` accounts, alongside the existing `is_postable` filter.
+
+`makeDefaultForCash()`'s `DomainException` (e.g. promoting an inactive account) is never left
+uncaught: `EditFinancialAccount` converts it to a `ValidationException` on `is_default_for_cash`
+(nothing has saved yet, so the whole form re-renders with the error); `CreateFinancialAccount`
+shows a danger `Notification` instead, since by the time it can fire in `afterCreate()` the
+account already exists — the record was created, just not promoted, and a validation error would
+be the wrong shape for that.
 
 ## Relations
 
@@ -54,17 +64,13 @@ Strictly read-only, no bulk actions (ADR-003).
 | `ViewAction` | row | always | `reports.view_financials` on resource | — |
 | `EditAction` | row | always | `reports.view_financials` on resource | `ledger_account_id` + `opening_balance` frozen once posted |
 
-## Checklist
-
-- [ ] Enforce a single `is_default_for_cash` in a service
-- [ ] Restrict `ledger_account_id` to sensible accounts (cash-equivalent)
-
 ## Verification
 
 ```bash
 docker compose exec app ./vendor/bin/pest tests/Feature/AccountingLedgerTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/SchemaConventionsTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/FinancialAccountTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/MaintenancePostingTest.php
 ```
 
 `SchemaConventionsTest` asserts the banned stored-balance columns do not exist — it must stay

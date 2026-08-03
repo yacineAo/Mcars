@@ -150,11 +150,12 @@ called out in [`09-customer.md`](09-customer.md).
 7. ~~**🟡 No `canAccess()`.**~~ → **Resolved.** `fleet.view` / `fleet.manage` seeded;
    `canAccess()`, `canCreate()`, `canEdit()`, `canDelete()` added.
 8. ~~**🟡 Deprecated `->actions([...])`**~~ → **Resolved.** Uses `->recordActions([...])`.
-9. **🔵 `national_id` has no unique constraint.** `car_owners.national_id` is a nullable
-   `string` with no index (`2026_07_28_160000_create_fleet_tables.php:46`). Customers got
-   `2026_07_28_171000_add_customer_unique_constraints.php`; owners did not, so the same person
-   can be entered twice and their instalments split across two records. Worth confirming
-   against REQ-03 whether that was deliberate. **Deferred** — needs a migration.
+9. ~~**🔵 `national_id` has no unique constraint.**~~ → **Resolved.** Decided yes, unique — a
+   national ID card number is unique per person in reality; the column stays nullable.
+   `car_owners_national_id_unique` (partial index, `WHERE national_id IS NOT NULL`) mirrors
+   `customers_national_id_unique`, and the form's `->unique(ignoreRecord: true)` turns a
+   collision into a field error rather than a `QueryException`. Two owners with no national ID
+   on file still coexist. See `CarOwnerResourceTest.php`.
 10. **🔵 Action labels do not translate.** "New Agreement" is set with `->label()` and never
     `->translateLabel()`. Filament's `HasLabel::getLabel()` only calls `__()` when
     `$shouldTranslateLabel` is true (default `false`), and `AdminPanelProvider` configures
@@ -165,16 +166,13 @@ called out in [`09-customer.md`](09-customer.md).
     one `Action::configureUsing(fn (Action $a) => $a->translateLabel())` in the panel
     provider, not ten per-file edits. **Unchanged** — cross-cutting fix outside this resource.
 
-## Checklist
-
-- [ ] Decide whether `national_id` should be unique — deferred, needs migration
-
 ## Verification
 
 ```bash
 docker compose exec app ./vendor/bin/pest tests/Feature/FleetManagementTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/Phase9Test.php
+docker compose exec app ./vendor/bin/pest tests/Feature/CarOwnerResourceTest.php
 docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/CarOwnerResource.php
 ```
 

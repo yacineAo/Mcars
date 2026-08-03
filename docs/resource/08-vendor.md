@@ -1,6 +1,6 @@
 # 08 — Vendor (Fleet)
 
-**Model:** `App\Models\Vendor` · **Slug:** `/admin/vendors` · **Status:** 🟢 done — bank/RIB proposal deferred
+**Model:** `App\Models\Vendor` · **Slug:** `/admin/vendors` · **Status:** ✅ done
 
 Supporting master data for **REQ-12** (maintenance) and **REQ-08** (expenses). See
 [`../tasks/phase-02-fleet.md`](../tasks/phase-02-fleet.md).
@@ -44,9 +44,11 @@ is worth considering — `Vendor` uses `BelongsToBranch` (`Vendor.php:18`), so v
 branch-stamped whether anyone filters on it or not.
 
 ### Create
-Eight flat fields is right for a contact record. **Proposal:** add the bank / RIB / CCP fields an
-accountant needs to pay a garage, as `car_owners` already carries; today they live in the `notes`
-textarea. The docs never asked for this.
+Nine flat fields plus a gated **Payment Details** section. **Decided: yes, add them.**
+`bank_account_number`, `rib` and `ccp_number` mirror `car_owners`' Payment Details, gated the same
+way (`->visible(fn (): bool => Auth::user()?->can('reports.view_financials') ?? false)`) since
+`VendorType` carries no bank/CCP dimension the way `FinancialAccountType` does — all three stay
+always-visible and optional rather than conditional on a select.
 
 ### View
 **Not needed as it stands** — eight fields of contact detail that a view page would only repeat.
@@ -99,18 +101,15 @@ If that is the answer, this resource correctly needs **no relation managers at a
    check until a fleet permission pair is seeded. README finding 2.
 4. **🟡 Empty `->filters([])`, no default sort.**
 5. **🟡 Deprecated `->actions([...])`** — README finding 3.
-6. **🔵 No `expenses()` relation on the model**, despite the column existing — any vendor-spend
-   query has to be written by hand.
-
-## Checklist
-
-- [ ] **Proposal:** bank / RIB / CCP fields for paying vendors
+6. ~~**🔵 No `expenses()` relation on the model**~~ → **Resolved.** `Vendor::expenses(): HasMany`
+   exists (`Vendor.php`) — the model already had it by the time this line was last checked.
 
 ## Verification
 
 ```bash
 docker compose exec app ./vendor/bin/pest tests/Feature/FleetManagementTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/VendorResourceTest.php
 ```
 
 `FleetManagementTest` asserts `VendorSeeder` produces at least three rows — that must stay green.
