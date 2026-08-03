@@ -7,6 +7,7 @@ namespace App\Filament\Admin\Resources;
 use App\Enums\CustomerGender;
 use App\Enums\CustomerSource;
 use App\Enums\CustomerType;
+use App\Enums\Wilaya;
 use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CustomerResource\Pages\CreateCustomer;
 use App\Filament\Admin\Resources\CustomerResource\Pages\EditCustomer;
@@ -140,8 +141,9 @@ class CustomerResource extends Resource
                             ->maxLength(65535),
                         TextInput::make('city')
                             ->maxLength(255),
-                        TextInput::make('wilaya')
-                            ->maxLength(100),
+                        Select::make('wilaya')
+                            ->options(Wilaya::options())
+                            ->searchable(),
                         TextInput::make('country')
                             ->maxLength(100)
                             ->default('Algeria'),
@@ -213,7 +215,7 @@ class CustomerResource extends Resource
                 SelectFilter::make('source')
                     ->options(CustomerSource::options()),
                 SelectFilter::make('wilaya')
-                    ->options(fn (): array => Customer::distinct()->whereNotNull('wilaya')->pluck('wilaya', 'wilaya')->toArray()),
+                    ->options(Wilaya::options()),
             ])
             ->defaultSort('created_at', 'desc')
             ->recordActions([

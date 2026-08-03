@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\Wilaya;
 use App\Models\Branch;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -26,7 +27,9 @@ class BranchFactory extends Factory
             'code' => strtoupper(fake()->unique()->bothify('??##')),
             'address' => fake()->streetAddress(),
             'city' => $city,
-            'wilaya' => $city,
+            // The wilaya column is constrained to Wilaya enum values (Round 35);
+            // the display city is free text, the wilaya is not.
+            'wilaya' => fake()->randomElement(Wilaya::values()),
             'phone' => '0'.fake()->numerify('#########'),
             'email' => fake()->unique()->companyEmail(),
             'timezone' => 'Africa/Algiers',

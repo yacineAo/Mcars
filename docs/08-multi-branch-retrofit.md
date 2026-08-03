@@ -58,8 +58,11 @@ timezone (default Africa/Algiers),
 is_active (default true), is_default (default false),
 timestamps, softDeletes
 ```
-Partial unique index so only one row can be the default:
-`CREATE UNIQUE INDEX branches_one_default ON branches (is_default) WHERE is_default;`
+Partial unique index so only one row can be the default — as built it is
+`CREATE UNIQUE INDEX branches_single_default ON branches (is_default) WHERE is_default`,
+and since Round 35 the predicate also ignores soft-deleted rows (a deleted default branch
+must not keep holding the flag):
+`ON branches (is_default) WHERE is_default AND deleted_at IS NULL;`
 
 **`seed_default_branch`** — a **data migration**, not a seeder. Seeders do not run on deploy; this must
 execute in production automatically and exactly once. Inserts `Main Branch` / code `MAIN` /

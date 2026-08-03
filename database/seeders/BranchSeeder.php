@@ -22,7 +22,7 @@ class BranchSeeder extends Seeder
             [
                 'name' => 'Main Branch',
                 'city' => 'Alger',
-                'wilaya' => 'Alger',
+                'wilaya' => 'alger',
                 'timezone' => 'Africa/Algiers',
                 'is_active' => true,
                 'is_default' => true,

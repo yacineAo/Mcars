@@ -51,7 +51,7 @@ that each piece stays reviewable on its own.
 | [32](32-report-definition.md) | **ReportDefinition** | Reports | ✅ done |
 | [33](33-user.md) | **User** | Settings | ✅ done |
 | [34](34-role.md) | **Role** | Settings | ✅ done |
-| [35](35-branch.md) | **Branch** | Settings | 🔴 audited — needs work |
+| [35](35-branch.md) | **Branch** | Settings | ✅ done |
 | [36](36-alert-rule.md) | **AlertRule** | Settings | 🟡 audited — partial |
 | [37](37-notification-log.md) | **NotificationLog** | Settings | 🟡 audited — partial |
 | [38](38-activity-log.md) | **ActivityLog** | Settings | 🔴 audited — needs work |
@@ -83,7 +83,7 @@ All 38 resources audited.
 |---|---|---|
 | 🔴 needs work | 21 |
 | 🟡 partial | 11 |
-| ✅ fine | 7 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md), [15 Expense](15-expense.md), [16 Extra](16-extra.md), [22 Payment](22-payment.md), [23 Deposit](23-deposit.md) |
+| ✅ fine | 8 — [31 Report](31-report.md), [12 ExpenseCategory](12-expense-category.md), [13 Transaction](13-transaction.md), [15 Expense](15-expense.md), [16 Extra](16-extra.md), [22 Payment](22-payment.md), [23 Deposit](23-deposit.md), [35 Branch](35-branch.md) |
 
 Four themes account for most of it, and each is one sweep rather than 38 fixes:
 

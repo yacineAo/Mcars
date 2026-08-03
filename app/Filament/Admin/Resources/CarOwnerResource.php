@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
+use App\Enums\Wilaya;
 use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CarOwnerResource\Pages\CreateCarOwner;
 use App\Filament\Admin\Resources\CarOwnerResource\Pages\EditCarOwner;
@@ -115,8 +116,9 @@ class CarOwnerResource extends Resource
                             ->maxLength(255),
                         Textarea::make('address')
                             ->maxLength(65535),
-                        TextInput::make('wilaya')
-                            ->maxLength(100),
+                        Select::make('wilaya')
+                            ->options(Wilaya::options())
+                            ->searchable(),
                     ])
                     ->columns(2),
                 Section::make('Payment Details')
@@ -209,12 +211,7 @@ class CarOwnerResource extends Resource
                     ->toggle()
                     ->query(fn (Builder $query): Builder => $query->whereHas('agreements', fn (Builder $q) => $q->where('status', 'active'))),
                 SelectFilter::make('wilaya')
-                    ->options(fn (): array => CarOwner::query()
-                        ->whereNotNull('wilaya')
-                        ->distinct()
-                        ->orderBy('wilaya')
-                        ->pluck('wilaya', 'wilaya')
-                        ->toArray()),
+                    ->options(Wilaya::options()),
             ])
             ->defaultSort('created_at', 'desc')
             ->recordActions([

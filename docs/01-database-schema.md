@@ -52,8 +52,12 @@ erDiagram
 ```
 
 ### `branches` — ADV-06
-`id`, `name`, `code` (unique, used in document numbering), `address`, `city`, `wilaya`, `phone`,
-`email`, `manager_id` → users, `timezone`, `is_active`, `is_default`.
+`id`, `name`, `code` (unique, `varchar(8)`, used in document numbering), `address`, `city`,
+`wilaya` (check-constrained to the `Wilaya` enum — Round 35), `phone`, `email`,
+`manager_user_id` → users, `timezone`, `is_active`, `is_default`.
+Exactly one **live** default branch: partial unique index
+`branches_single_default ON branches (is_default) WHERE is_default AND deleted_at IS NULL`
+(soft-deleted tombstones do not hold the flag — Round 35).
 **1-M** → almost everything.
 
 ### `car_categories`
@@ -66,6 +70,9 @@ erDiagram
 `phone`, `whatsapp`, `email`, `address`, `wilaya`,
 `bank_name`, `bank_rib`, `ccp_account`, `baridimob_number`,
 `notes`, `is_active`.
+
+- `wilaya` is check-constrained to the `Wilaya` enum (Round 35), shared with
+  `branches` and `customers`.
 
 - **1-M** → `car_ownership_agreements`, `owner_installments`
 - **1-1 (nullable)** → `users` — a `car_owner` role user, gateway to the owner panel
@@ -196,7 +203,8 @@ erDiagram
 *Licence* — `driving_license_number`, `license_category`, `license_issue_date`,
 `license_expiry_date`, `license_issued_at`,
 
-*Contact* — `phone`, `phone_secondary`, `whatsapp`, `email`, `address`, `city`, `wilaya`, `country`,
+*Contact* — `phone`, `phone_secondary`, `whatsapp`, `email`, `address`, `city`,
+`wilaya` (check-constrained to the `Wilaya` enum — Round 35), `country`,
 
 *Commercial* — `rating` (1–5), `is_blacklisted`, `blacklist_reason`, `blacklisted_at`,
 `source` (`walk_in | referral | website | facebook | instagram | partner | other`),

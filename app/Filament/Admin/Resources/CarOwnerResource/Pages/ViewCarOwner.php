@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources\CarOwnerResource\Pages;
 
+use App\Enums\Wilaya;
 use App\Filament\Admin\Resources\CarOwnerResource;
 use App\Filament\Admin\Resources\CarOwnerResource\RelationManagers\CarsRelationManager;
 use App\Filament\Admin\Resources\CarOwnerResource\RelationManagers\InstallmentsRelationManager;
@@ -66,7 +67,10 @@ class ViewCarOwner extends ViewRecord
                             ->placeholder('—')
                             ->columnSpanFull(),
                         TextEntry::make('wilaya')
-                            ->placeholder('—'),
+                            ->placeholder('—')
+                            ->formatStateUsing(fn (?string $state): ?string => $state === null
+                                ? null
+                                : (Wilaya::tryFrom($state)?->getLabel() ?? $state)),
                     ])
                     ->columns(3),
                 Section::make('Payment Details')

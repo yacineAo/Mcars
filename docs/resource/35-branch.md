@@ -1,6 +1,6 @@
 # 35 — Branch (Settings)
 
-**Model:** `App\Models\Branch` · **Slug:** `/admin/branches` · **Status:** 🔴 needs work
+**Model:** `App\Models\Branch` · **Slug:** `/admin/branches` · **Status:** ✅ done
 
 Serves **ADV-06**. Read [`../06-design-decisions.md`](../06-design-decisions.md) ADR-004 and
 [`../08-multi-branch-retrofit.md`](../08-multi-branch-retrofit.md) before changing anything
@@ -15,160 +15,87 @@ resort is `Branch::defaultId()`; and every document number embeds `branches.code
 (`SequenceGenerator::next($key, $branch->id, $branch->code)` → `CTR-MAIN-2026-000123`). A
 super_admin opens it once at setup and then only to add a location.
 
-## Current state
+## Current state (after Round 35)
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 5 columns (name, code, city, `is_active`, `is_default`); `->filters([])` **empty**; no default sort |
-| create | ✅ | flat 12-field form, no sections |
-| view | ❌ | — |
-| edit | ✅ | same form; `created_at` Placeholder hidden on create; nothing frozen |
-| row actions | ✅ | `EditAction` only, via deprecated `->actions([...])` |
-| header / toolbar actions | ✅ | `CreateAction` (index), `DeleteAction` (edit), `DeleteBulkAction` |
-| relation managers | ❌ | none — `users` is unreachable from here |
-| `canAccess()` | ✅ | `branches.view_all` (`BranchResource.php:44`) |
+| index | ✅ | name, code (badge), `manager.name`, `users_count` (`->counts('users')`), `wilaya` (display label), `is_default` badge on the one default row, `is_active` badge; filters: `TernaryFilter` on `is_active` (defaults to active) + `SelectFilter` on `wilaya`; `defaultSort('name')` |
+| create | ✅ | sectioned: **Identity** (name, code) · **Location** (address, city, wilaya, timezone) · **Contact** (phone, email) · **Management** (manager, `is_active`) · **Notes**; no `is_default` field |
+| view | ❌ | deliberately — see the old "Should be" §View, unchanged |
+| edit | ✅ | same sectioned form; `code` **disabled** once any `sequences` row exists for the branch; guarded delete header action |
+| row actions | ✅ | `EditAction` + **Make default** + **Deactivate/Reactivate**, via `->recordActions([...])` |
+| header / toolbar actions | ✅ | `CreateAction` (index) only — **no bulk actions**; delete is the guarded header action on edit |
+| relation managers | ✅ | `UsersRelationManager` on edit: read-only `users` (`hasMany` — the staff whose home branch this is), name/email/roles/is_active, gated on `users.manage` |
+| `canAccess()` | ✅ | `branches.view_all` (`BranchResource.php`) — super_admin + manager, unchanged |
 
-The gate is right here, and worth contrasting with [`33-user.md`](33-user.md): on *this*
-resource `branches.view_all` is literally the subject matter, and the role set it resolves to
-(super_admin + manager) matches phase-01's "`BranchResource` restricted to `manager` /
-`super_admin`". PHPStan is clean.
+## Decisions taken (Round 35)
 
-Note that `config('branches.enabled')` is **false** in the live environment, so `BranchScope` is
-currently a no-op — despite phase-10 marking the flip as done. Nothing on this screen depends on
-it, but [`36-alert-rule.md`](36-alert-rule.md) gap 1 does.
+1. **Deletion is a guarded soft delete, never bulk.** `DeleteBulkAction` and the unguarded
+   `DeleteAction` are gone (gap 1 + 2). The only delete is a confirmation action on the edit
+   page that delegates to `BranchService::delete()`, which refuses:
+   - the **default** branch — the flag must land somewhere;
+   - any branch with **rows still pointing at it**. The guard scans
+     `information_schema.columns` for every `branch_id` column and counts — schema-driven, so a
+     branch_id added by a later phase is picked up without touching the service. Because every
+     branch_id foreign key is `nullOnDelete` (the append-only ledger included), a soft-deleted
+     branch with live rows would silently un-attribute history; deletion is for a wound-down
+     branch only, and the sibling Deactivate/Reactivate action is the path operators actually
+     want. `sequences.branch_id` stays `ON DELETE CASCADE` (it never fires on soft delete).
+2. **The single-default index ignores tombstones.** `2026_08_18_000000` recreates
+   `branches_single_default` as `ON branches (is_default) WHERE is_default AND deleted_at IS NULL`,
+   so a soft-deleted default branch stops blocking its successor. `BranchService::makeDefault()`
+   is the only writer of the flag: it clears `is_default` **withTrashed()** (the tombstone must
+   not keep claiming the title) and promotes the new holder inside one transaction, then logs an
+   activity row `made_default` with the actor. See the regression test below.
+3. **`code` is validated and frozen.** → `maxLength(8)`, `alphaDash()`, and
+   `App\Rules\UniqueBranchCode` — case-insensitive uniqueness, as a `ValidationRule` so a
+   duplicate surfaces as a form error instead of the `branches_code_unique` QueryException (gap 3).
+   Once a `sequences` row exists the field is `disabled()` (non-dehydrated, server-side), because
+   renaming the code would split one year's documents into two prefixes with no gap to signal it.
+   Frozen or not, the `setCodeAttribute` mutator still upper-cases.
+4. **`wilaya` is a real vocabulary.** `App\Enums\Wilaya` — all 58, backed enum with
+   `HasEnumMeta`, labels via a `getLabel()` match (proper nouns, not translated). Migration
+   `2026_08_19_000000` adds check constraints on `branches`, `customers` and `car_owners`
+   (`wilaya IS NULL OR wilaya IN (...)`), normalising only the three values the old hardcoded
+   Select could have stored — anything else stops the migration loudly, which is honest
+   pre-go-live. The three resources (and their view infolists and table filters) all use
+   `Wilaya::options()` / `Wilaya::tryFrom()` for labels. Factories and seeders that stored
+   free text were realigned to enum values (gap 7).
+5. **`timezone` is on the form** as an Africa-first Select defaulting to `Africa/Algiers`
+   (gap 8) — a non-Algiers branch no longer silently runs on Algiers time.
+6. **`manager_user_id` says manager, grants nothing** (helper text) — the capability is the
+   `manager` role, not the column.
+7. **No `HasAuditColumns`** (gap 9): left as designed; `LogsActivity` already answers "who did
+   what to this branch", and `branches.created_by` was never asked for.
 
-## Should be
+## Gaps and risks (closed)
 
-### Index
+1. **🔴** Unguarded delete + no `deleted_at` index predicate → *fixed* by 1 + 2 above. Regressions
+   covered in `tests/Feature/BranchResourceTest.php`:
+   `it('promotes a new default after the previous one was soft-deleted')`,
+   `it('refuses to delete the default branch')`,
+   `it('refuses to delete a branch that still has rows pointing at it')`.
+2. **🔴** Nothing checked dependent rows → *fixed* by the schema-driven count in `BranchService`.
+3. **🟡** `code` 10-into-8 + pre-mutator uniqueness → *fixed* (decision 3).
+4. **🟡** `is_default` form toggle → *fixed* (decision 2; the create form asserts
+   `assertFormFieldDoesNotExist('is_default')`).
+5. **🟡** Empty filters / no sort / no manager or staff column → *fixed*.
+6. **🟡** Deprecated `->actions()` → *fixed* (`->recordActions([...])`).
+7. **🔵** wilaya 3-of-58 + three representations → *fixed* (decision 4).
+8. **🔵** `timezone` absent → *fixed* (decision 5).
+9. **🔵** No `HasAuditColumns` → left as designed (decision 7).
 
-Add `manager.name`, a `users_count` (via `->counts('users')`, not a per-row query), and
-`wilaya`. Filters: `TernaryFilter` on `is_active` defaulting to active, `SelectFilter` on
-`wilaya`. `defaultSort('name')`. `is_default` should read as a badge on the one default row
-rather than a boolean icon on every row — there is exactly one, by database constraint.
-
-### Create
-
-Section it: **Identity** (name, code) · **Location** (address, city, wilaya, timezone) ·
-**Contact** (phone, email) · **Management** (manager, `is_active`) · **Notes**.
-
-`code` must be validated to `maxLength(8)`: the column is `varchar(8)` and the form allows
-**10**, so a 9- or 10-character code passes validation and fails in Postgres. It also needs
-`->rule('alpha_dash')` or similar and case-insensitive uniqueness — `Branch::setCodeAttribute()`
-upper-cases the value *after* Laravel's `unique` rule has run, so entering `main` passes
-validation and then collides with `MAIN` on `branches_code_unique`.
-
-`timezone` is fillable and has a database default of `Africa/Algiers`, but is absent from the
-form; add it (read-only would be fine) so a second-wilaya branch is not silently on Algiers
-time. `wilaya` is a Select hardcoded to **three** of Algeria's 58, while `CustomerResource` and
-`CarOwnerResource` use a free-text `TextInput` for the same field — pick one and apply it in all
-three places. There is no `Wilaya` enum yet; adding one is the honest fix.
-
-`is_default` must come out of the form entirely. It is a property of the *set*, not of a row,
-and a toggle invites the failure in gap 1. Make it an action (see Actions).
-
-`manager_user_id` is an unfiltered user Select. Worth stating in the helper text that naming
-someone branch manager grants **nothing** — authorization is the `manager` role and the four
-seeded permissions, not this column.
-
-### View
-
-Not needed. `Branch` declares two relations (`manager`, `users`) and a dozen scalar columns;
-an infolist would restate the edit form. The one thing an admin wants before deactivating a
-branch — who and what is attached to it — is better served by the counts on the index and the
-`users` table on edit.
-
-### Edit
-
-**`code` must freeze once any document has been numbered under it.** The sequence counter is
-keyed on `(key, branch_id, year)`, not on the code, so renaming the code does not reset the
-counter but does change the prefix — splitting one year's contracts into `CTR-MAIN-2026-…` and
-`CTR-ALGR-2026-…` with no gap to signal it. Freeze it when a `sequences` row exists for the
-branch, or unconditionally after creation.
-
-`is_default` is not editable here (see above). Everything else stays editable.
-
-### Relations
-
-One, and it belongs on **edit**: **`users`** (`hasMany`), read-only, showing name, email, roles
-and `is_active`. It is the answer to "who am I about to cut off", which is the question an admin
-has immediately before deactivating a branch. No gate — no money on this screen.
-
-The `branch_user` pivot is the *other* half of branch membership and has no UI anywhere; that
-belongs on the user record, not here — see [`33-user.md`](33-user.md) Relations. Cars, bookings
-and transactions per branch are reports, and belong in `ReportResource`, not on a relation
-manager over an unbounded table.
-
-### Actions
-
-| Action | Placement | Visible when | Guarded by | Delegates to | Notes |
-|---|---|---|---|---|---|
-| Make default | row | `! $record->is_default` and active | `branches.view_all` | `BranchService` | clears the old flag and sets the new one in one transaction |
-| Deactivate / reactivate | row | on `is_active` | `branches.view_all` | `BranchService` | the intended alternative to delete |
-| Delete | row / edit header | never on the default branch, never when rows point at it | `branches.view_all` | `BranchService` | see gap 1 |
-
-## Gaps and risks
-
-1. **🔴 Deleting the default branch is unrecoverable through the UI, and the UI offers it.**
-   `EditBranch.php:18` has an unguarded `DeleteAction` and the table an unguarded
-   `DeleteBulkAction`. Nothing checks `is_default` — not the resource, not the model, and no
-   observer or policy exists. Because `Branch` soft-deletes, the tombstone keeps
-   `is_default = true`, and the partial unique index has **no `deleted_at` predicate**:
-   `CREATE UNIQUE INDEX branches_single_default ON branches (is_default) WHERE is_default`
-   (read from `pg_indexes`). Verified in a rolled-back transaction: after soft-deleting the
-   default branch, promoting the surviving branch fails with
-   `duplicate key value violates unique constraint "branches_single_default"`. Meanwhile
-   `Branch::defaultId()` honours the SoftDeletes scope and returns **null**, so
-   `BelongsToBranch::resolveBranchId()` stops filling `branch_id` for every user without a home
-   branch. One click leaves the system with no default branch and no way to appoint one.
-   Fix all three layers: guard the action, add `AND deleted_at IS NULL` to the index, and give
-   `BranchService` a `makeDefault()` that is the only writer of the flag.
-2. **🔴 Nothing checks whether rows point at the branch.** Soft deletion means the foreign keys
-   never fire, so cars, bookings, transactions and cash sessions keep pointing at a branch that
-   no longer appears in any list — silently, with no error. Delete must refuse while dependent
-   rows exist; deactivate is what the operator actually wants. (Related, and latent because no
-   force-delete UI exists: `sequences.branch_id` is `ON DELETE CASCADE`, so a hard delete would
-   drop the branch's document counters and restart numbering at 1.)
-3. **🟡 `code` accepts 10 characters into a `varchar(8)` column**, and `unique` runs before the
-   upper-casing mutator. Both surface as raw database errors.
-4. **🟡 `is_default` is a form toggle.** Two admins editing two branches can each tick it; one
-   save wins and the other is a `QueryException`. It is a set-level invariant and needs an
-   action, not a field.
-5. **🟡 Empty `->filters([])`, no default sort, no manager or user-count column.**
-6. **🟡 Deprecated `->actions([...])`** — panel-wide finding 3 in [`README.md`](README.md).
-7. **🔵 `wilaya` offers 3 of 58**, and disagrees with the two other resources that store the
-   same field.
-8. **🔵 `timezone` is fillable but not on the form.**
-9. **🔵 No `HasAuditColumns`.** `Branch` uses `LogsActivity` but not `HasAuditColumns`, and
-   `branches` has no `created_by_id` / `updated_by_id`. Deliberate or not, "who created this
-   branch" is answerable only through the activity log. Leave it unless the audit trail is
-   asked to answer it cheaply.
-
-## Checklist
-
-- [ ] Guard delete: refuse on the default branch and while dependent rows exist; prefer
-      deactivate
-- [ ] Migration: add `AND deleted_at IS NULL` to `branches_single_default`
-- [ ] Move `is_default` out of the form into a `BranchService::makeDefault()` action, and add a
-      test that soft-deleting the default branch then promoting another one succeeds
-- [ ] `code`: `maxLength(8)`, case-insensitive uniqueness, frozen on edit once `sequences` rows
-      exist
-- [ ] Add a read-only `users` relation manager on edit, and `users_count` + `manager.name` to
-      the index
-- [ ] Add the `is_active` and `wilaya` filters and `defaultSort('name')`
-- [ ] Add `timezone` to the form; decide the `wilaya` representation and apply it to Customer
-      and CarOwner too
-- [ ] Section the form; `->actions(` → `->recordActions(`
-- [ ] Note in helper text that `manager_user_id` grants no permissions
+A remaining, explicit non-goal: `branch_user` pivot membership stays on the user record
+(`UserResource` → BranchUsersRelationManager), not here — see the old "Should be" § Relations.
 
 ## Verification
 
 ```bash
+docker compose exec app ./vendor/bin/pest tests/Feature/BranchResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/FoundationTest.php
-docker compose exec app ./vendor/bin/pest tests/Feature/SequenceGeneratorTest.php
-docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/BranchResource.php app/Filament/Admin/Resources/BranchResource
+docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/BranchResource.php app/Services/BranchService.php app/Enums/Wilaya.php
 ```
 
-By hand, on a throwaway database: create a second branch, delete the default one from its edit
-page, then try to make the second one default. Today the first step succeeds and the second
-fails with a unique-constraint error, and creating any record afterwards leaves `branch_id`
-null. Both steps must succeed after the fix.
+Manual check (throwaway DB): soft-delete the default branch, promote another → succeeds; create a
+second branch, attach a staff row to it, attempt delete → refused with a notification; the default
+branch carries no delete action on its edit page and no deactivate action on its list row.

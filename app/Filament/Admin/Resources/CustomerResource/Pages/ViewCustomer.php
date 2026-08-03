@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources\CustomerResource\Pages;
 
+use App\Enums\Wilaya;
 use App\Filament\Admin\Resources\CustomerResource;
 use App\Filament\Admin\Resources\CustomerResource\RelationManagers\BookingsRelationManager;
 use App\Filament\Admin\Resources\CustomerResource\RelationManagers\ContractsRelationManager;
@@ -115,7 +116,10 @@ class ViewCustomer extends ViewRecord
                         TextEntry::make('email'),
                         TextEntry::make('address'),
                         TextEntry::make('city'),
-                        TextEntry::make('wilaya'),
+                        TextEntry::make('wilaya')
+                            ->formatStateUsing(fn (?string $state): ?string => $state === null
+                                ? null
+                                : (Wilaya::tryFrom($state)?->getLabel() ?? $state)),
                         TextEntry::make('country'),
                     ])
                     ->columns(3),

@@ -6,6 +6,7 @@ namespace App\Services\Notification\Detectors;
 
 use App\Enums\AlertType;
 use App\Models\AlertRule;
+use App\Models\PendingExport;
 use App\Models\ReportDefinition;
 use App\Services\Notification\AlertSubject;
 use App\Services\Notification\Contracts\AlertDetector;
@@ -45,10 +46,10 @@ final class ScheduledReportFailedDetector implements AlertDetector
         }
 
         foreach ($query->lazyById(100) as $definition) {
-            /** @var \App\Models\PendingExport|null $latestFailedRun */
+            /** @var PendingExport|null $latestFailedRun */
             $latestFailedRun = $definition->pendingExports->first();
 
-            /** @var \Carbon\CarbonImmutable|null $failedAt */
+            /** @var CarbonImmutable|null $failedAt */
             $failedAt = $latestFailedRun?->failed_at;
 
             yield new AlertSubject(

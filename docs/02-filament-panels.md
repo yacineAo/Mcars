@@ -107,6 +107,16 @@ drift apart. It is edit-only: no create (the role list is the `UserRole` enum), 
 the app enforces (a parity test pins seeder ↔ `config/filament-shield.php`). See
 [34](resource/34-role.md).
 
+`BranchResource` stays gated on `branches.view_all` — here that permission *is* the subject
+matter, unlike on UserResource. Round 35 (see [35](resource/35-branch.md)) made the screen
+safe to use: delete is a guarded `BranchService` soft delete (never the default branch, never
+while any `branch_id` row points at it — no bulk actions), `is_default` left the form
+entirely in favour of a Make-default row action, `code` is frozen once documents have been
+numbered under it (renaming would split one year's numbering into two prefixes), and the
+`wilaya` vocabulary became `App\Enums\Wilaya` (58, check-constrained) shared with Customer
+and CarOwner. A read-only Staff relation manager on edit answers "who am I about to cut
+off". `manager_user_id` grants nothing — the `manager` role does.
+
 ### Role → visibility matrix (REQ-20)
 
 | Cluster | manager | accountant | receptionist | maintenance | supervisor |

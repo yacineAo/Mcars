@@ -284,6 +284,30 @@ the queue is one the recipient is about to get.
 
 ---
 
+## Geography
+
+### `Wilaya` — Round 35
+The 58 wilayas, in the same order as the official numbering, values accent-stripped slugs
+(`bejaia`, not `Béjaïa`) because they are persisted and matched. Backed onto three columns —
+`branches.wilaya`, `customers.wilaya`, `car_owners.wilaya` — each carrying a check constraint,
+so every resource shares one vocabulary (the old branch form offered 3 of 58 while customers and
+owners typed anything).
+
+Unlike every other enum, `getLabel()` is a `match` on the canonical French/Arabic names — proper
+nouns, so they are deliberately not routed through `lang/*/enums.php`. Do **not** rename a value
+after go-live: it is persisted (naming rule 3).
+
+All 58 values: `adrar · chlef · laghouat · oum_el_bouaghi · batna · bejaia · biskra · bechar ·
+blida · bouira · tamanrasset · tebessa · tlemcen · tiaret · tizi_ouzou · alger · djelfa ·
+jijel · setif · saida · skikda · annaba · guelma · constantine · medea · mostaganem · msila ·
+mascara · ouargla · oran · el_bayadh · illizi · bordj_bou_arreridj · boumerdes · el_tarf ·
+tindouf · tissemsilt · el_oued · khenchela · souk_ahras · tipaza · mila · ain_defna · naama ·
+ain_temouchent · ghardaia · relizane · sidi_bel_abbes · timimoun · bordj_badji_mokhtar ·
+ouled_djellal · beni_abbes · in_salah · in_guezzam · touggourt · djanet · el_mghair ·
+el_meniaa`
+
+---
+
 ## Access & System
 
 ### `UserRole` *(seeded Spatie roles, mirrored as an enum for type-safe checks)*

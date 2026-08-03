@@ -334,7 +334,7 @@ class DemoDataSeeder extends Seeder
                 'company_name' => $company,
                 'phone' => '05'.fake()->numerify('########'),
                 'email' => fake()->safeEmail(),
-                'wilaya' => fake()->randomElement(['Alger', 'Oran', 'Blida', 'Constantine']),
+                'wilaya' => fake()->randomElement(['alger', 'oran', 'blida', 'constantine']),
                 'ccp_account' => fake()->numerify('##########'),
                 'is_active' => true,
             ]);
@@ -480,7 +480,7 @@ class DemoDataSeeder extends Seeder
 
     private function people(): void
     {
-        $wilayas = ['Alger', 'Oran', 'Constantine', 'Blida', 'Sétif', 'Annaba', 'Tizi Ouzou', 'Béjaïa'];
+        $wilayas = ['alger', 'oran', 'constantine', 'blida', 'setif', 'annaba', 'tizi_ouzou', 'bejaia'];
 
         for ($i = 0; $i < self::CUSTOMERS; $i++) {
             $company = $i % 7 === 0;

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A physical location: its own fleet, staff and cash register.
@@ -88,5 +89,20 @@ class Branch extends Model
     public function setCodeAttribute(string $value): void
     {
         $this->attributes['code'] = strtoupper(trim($value));
+    }
+
+    /**
+     * Whether any document number has ever been issued for this branch.
+     *
+     * Document numbers read via the branch code — "CTR-MAIN-2026-000123" — so a
+     * rename after the fact would silently mislabel every document an office has
+     * ever printed. The form freezes the code once this becomes true.
+     *
+     * There is no Sequence model: the sequences counter is written directly by
+     * App\Support\Sequences\SequenceGenerator, hence the query here.
+     */
+    public function hasNumberedDocuments(): bool
+    {
+        return DB::table('sequences')->where('branch_id', $this->id)->exists();
     }
 }
