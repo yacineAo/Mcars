@@ -731,10 +731,15 @@ reads it, so it could only lie.
 
 ### Spatie Permission tables — REQ-20
 `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`.
-Permissions generated per-resource by Filament Shield.
+Permissions are created by `RolePermissionSeeder` only — `permissions.generate` is off, so
+Filament Shield no longer fabricates per-resource rows (Round 34). The seeded set is
+`RolePermissionSeeder::permissionNames()` (23 entries, incl. `users.manage`, `roles.manage`,
+`cash_sessions.operate`, `reverse_transaction`); `config/filament-shield.php`'s
+`custom_permissions` must stay identical, and the RoleResourceTest parity test enforces it.
 
-Seeded roles: `super_admin`, `manager`, `accountant`, `receptionist`, `maintenance_officer`,
-`supervisor`, `car_owner`, `client`.
+Seeded roles: the six `UserRole` cases — `super_admin`, `manager`, `accountant`,
+`receptionist`, `maintenance_officer`, `supervisor` (`car_owner`/`client` were removed in the
+Phase 8 scope decision).
 
 ### `settings` (spatie/laravel-settings)
 Company identity, logo, currency, default alert lead times, contract terms text,

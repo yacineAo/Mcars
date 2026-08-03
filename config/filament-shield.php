@@ -24,10 +24,10 @@ return [
         'show_model_path' => true,
         'cluster' => null,
         'tabs' => [
-            'pages' => true,
-            'widgets' => true,
-            'resources' => true,
-            'custom_permissions' => false,
+            'pages' => false,
+            'widgets' => false,
+            'resources' => false,
+            'custom_permissions' => true,
         ],
     ],
 
@@ -118,9 +118,13 @@ return [
 
     'permissions' => [
         'separator' => ':',
+        // Inert while generate and format_custom_permission_keys are off: the
+        // seeded names ('fleet.view') are used as-is. Re-enable deliberately —
+        // a generator run would fabricate 'View:Fleet'-style rows the app never
+        // checks and the RoleResourceTest parity test would flag them.
         'case' => 'pascal',
-        'generate' => true,
-        'format_custom_permission_keys' => true,
+        'generate' => false,
+        'format_custom_permission_keys' => false,
     ],
 
     /*
@@ -250,10 +254,43 @@ return [
     | Keys are formatted per the Permission Builder settings above; set
     | permissions.format_custom_permission_keys to false to use them as-is.
     |
+    | These are the only permissions the application actually enforces — every
+    | `->can('perm')` / `$user->can()` gate in app/ resolves from this list,
+    | and RolePermissionSeeder is its source of truth. It was empty in effect
+    | until Round 34: Shield's 456 generated `View:Car`-style checkboxes are
+    | inert (no policy checks them), and the four real permissions rendered
+    | nowhere, so saving any role stripped them all. Generation is off
+    | (`permissions.generate => false`) and this list names every seeded
+    | permission so the role edit form can render — and therefore preserve —
+    | the set the app enforces. docs/resource/34-role.md pins the two lists
+    | together with a test, so a permission added to the seeder without this
+    | list fails loudly instead of silently disappearing on the next save.
     */
 
     'custom_permissions' => [
+        'alerts.manage',
+        'alerts.view_logs',
+        'bookings.manage',
+        'bookings.operate',
+        'bookings.view',
         'branches.view_all',
+        'cash_sessions.operate',
+        'contracts.sign',
+        'expenses.approve',
+        'expenses.pay',
+        'expenses.record',
+        'fines.manage',
+        'fines.view',
+        'fleet.manage',
+        'fleet.manage_maintenance',
+        'fleet.view',
+        'hr.manage',
+        'hr.view',
+        'hr.view_salary',
+        'reports.view_financials',
+        'reverse_transaction',
+        'roles.manage',
+        'users.manage',
     ],
 
     /*

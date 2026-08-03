@@ -20,8 +20,45 @@ class RolePermissionSeeder extends Seeder
             Role::findOrCreate($roleEnum->value, 'web');
         }
 
-        // Permission => the roles that hold it.
-        $grants = [
+        $grants = self::grants();
+
+        foreach ($grants as $permissionName => $roles) {
+            $permission = Permission::findOrCreate($permissionName, 'web');
+
+            foreach ($roles as $roleEnum) {
+                $role = Role::findByName($roleEnum->value);
+
+                if (! $role->hasPermissionTo($permission)) {
+                    $role->permissions()->attach($permission);
+                }
+            }
+        }
+    }
+
+    /**
+     * Every permission the application enforces — the exact list the role edit
+     * screen must be able to render (and therefore preserve). config/filament-shield.php
+     * `custom_permissions` must match this array; tests/Feature/RoleResourceTest.php
+     * pins the two together, so a permission added here without a config entry
+     * fails loudly instead of silently disappearing from roles on the next save.
+     *
+     * @return list<string>
+     */
+    public static function permissionNames(): array
+    {
+        return array_keys(self::grants());
+    }
+
+    /**
+     * Permission => the roles that hold it. The seeder is the source of truth
+     * for who may do what; docs/02-filament-panels.md §Role → visibility matrix
+     * is its human-readable rendering.
+     *
+     * @return array<string, list<UserRole>>
+     */
+    private static function grants(): array
+    {
+        return [
             'branches.view_all' => [
                 UserRole::SuperAdmin,
                 UserRole::Manager,
@@ -56,6 +93,17 @@ class RolePermissionSeeder extends Seeder
             // This replaces UserResource's old gate on branches.view_all, which governs
             // cross-branch visibility and only granted account management by accident.
             'users.manage' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
+            // The role/permission screen itself. docs/02-filament-panels.md §Role →
+            // visibility matrix gives Settings & Access to the manager alone, and the
+            // whole finding in docs/resource/34-role.md is that the role list was open
+            // to *every* staff role — no canAccess(), no policy, and Filament's `can()`
+            // treats a missing policy as granted. Who may change who-can-do-what is the
+            // most sensitive gate in the panel, so it follows users.manage exactly:
+            // the same two roles, so the pair of screens can never drift apart.
+            'roles.manage' => [
                 UserRole::SuperAdmin,
                 UserRole::Manager,
             ],
@@ -235,17 +283,5 @@ class RolePermissionSeeder extends Seeder
                 UserRole::Manager,
             ],
         ];
-
-        foreach ($grants as $permissionName => $roles) {
-            $permission = Permission::findOrCreate($permissionName, 'web');
-
-            foreach ($roles as $roleEnum) {
-                $role = Role::findByName($roleEnum->value);
-
-                if (! $role->hasPermissionTo($permission)) {
-                    $role->permissions()->attach($permission);
-                }
-            }
-        }
     }
 }

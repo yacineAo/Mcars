@@ -98,6 +98,15 @@ own assignable roles, own-record actions hidden), delete is replaced by deactiva
 locale/password on the registered `->profile(EditProfile::class)` page (plus optional
 Filament AppAuthentication 2FA). See [33](resource/33-user.md).
 
+`RoleResource` (Shield-backed) is gated on the dedicated `roles.manage` permission — the
+**same spread as `users.manage`**, on purpose: the pair of access-control screens can never
+drift apart. It is edit-only: no create (the role list is the `UserRole` enum), no delete
+(the seeder is the only writer, and deleting a role locks its holders out of the panel),
+`name` frozen, `guard_name` hidden. The form renders the custom-permissions tab with exactly
+`RolePermissionSeeder::permissionNames()` — a save can only ever re-assign the permissions
+the app enforces (a parity test pins seeder ↔ `config/filament-shield.php`). See
+[34](resource/34-role.md).
+
 ### Role → visibility matrix (REQ-20)
 
 | Cluster | manager | accountant | receptionist | maintenance | supervisor |
