@@ -23,6 +23,17 @@ return [
         ],
         'filters' => [
             'date_range' => 'نطاق التاريخ',
+            'causer' => 'المستخدم',
+            'subject_type' => 'نوع الموضوع',
+            'subject_id' => 'رقم الموضوع',
+        ],
+        'actions' => [
+            'view_history' => 'السجل',
+        ],
+        'diff' => [
+            'field' => 'الحقل',
+            'before' => 'قبل',
+            'after' => 'بعد',
         ],
     ],
 ];

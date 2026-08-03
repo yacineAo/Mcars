@@ -208,6 +208,18 @@ class UserResource extends Resource
                 self::assignRolesAction(),
                 self::resetPasswordAction(),
                 self::setActiveAction(),
+                // The change trail for this record, pre-filtered to it (ADV-03).
+                Action::make('view_history')
+                    ->label(__('activity_log.resource.actions.view_history'))
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('gray')
+                    ->url(fn (User $record): string => ActivityLogResource::getUrl('index', [
+                        'tableFilters' => [
+                            'subject_type' => ['value' => User::class],
+                            'subject_id' => ['subject_id' => $record->getKey()],
+                        ],
+                    ], panel: 'admin'))
+                    ->visible(fn (): bool => (bool) (Auth::user()?->can('audit.view') ?? false)),
             ])
             // No bulk delete: staff accounts are parked, not destroyed — the audit
             // trail and the ledger attribution point at them.

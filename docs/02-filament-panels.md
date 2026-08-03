@@ -87,8 +87,8 @@ There is deliberately no second page listing the same runs. `ReportsHubPage` and
 
 ### Cluster: Settings & Access — REQ-20, ADV-03, ADV-06
 Built: `UserResource`, `RoleResource` (Shield), `BranchResource`, `AlertRuleResource`,
-`NotificationLogResource`.
-Not built (Phase 10): `SettingsPage`, `ActivityLogResource`, `BackupsPage`.
+`NotificationLogResource`, `ActivityLogResource`.
+Not built (Phase 10): `SettingsPage`, `BackupsPage`.
 
 `UserResource` is gated on the dedicated `users.manage` permission (super_admin, manager) —
 **not** `branches.view_all`, which means "see other branches' data", not "administer

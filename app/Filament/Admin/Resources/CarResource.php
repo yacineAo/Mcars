@@ -457,6 +457,18 @@ class CarResource extends Resource
                 // $record->bookings()->exists() here would be one query per row.
                 DeleteAction::make()
                     ->hidden(fn (Car $record): bool => (bool) $record->getAttribute('bookings_exists')),
+                // The change trail for this record, pre-filtered to it (ADV-03).
+                Action::make('view_history')
+                    ->label(__('activity_log.resource.actions.view_history'))
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('gray')
+                    ->url(fn (Car $record): string => ActivityLogResource::getUrl('index', [
+                        'tableFilters' => [
+                            'subject_type' => ['value' => Car::class],
+                            'subject_id' => ['subject_id' => $record->getKey()],
+                        ],
+                    ], panel: 'admin'))
+                    ->visible(fn (): bool => (bool) (Auth::user()?->can('audit.view') ?? false)),
             ]);
     }
 

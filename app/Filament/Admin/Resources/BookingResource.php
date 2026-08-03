@@ -511,6 +511,18 @@ class BookingResource extends Resource
                 // page, and a table action runs in place without visiting one.
                 DeleteAction::make()
                     ->visible(fn (Booking $record): bool => static::canDelete($record)),
+                // The change trail for this record, pre-filtered to it (ADV-03).
+                Action::make('view_history')
+                    ->label(__('activity_log.resource.actions.view_history'))
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('gray')
+                    ->url(fn (Booking $record): string => ActivityLogResource::getUrl('index', [
+                        'tableFilters' => [
+                            'subject_type' => ['value' => Booking::class],
+                            'subject_id' => ['subject_id' => $record->getKey()],
+                        ],
+                    ], panel: 'admin'))
+                    ->visible(fn (): bool => (bool) (Auth::user()?->can('audit.view') ?? false)),
             ])
             ->bulkActions([])
             ->defaultSort('created_at', 'desc');

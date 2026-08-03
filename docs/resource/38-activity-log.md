@@ -1,6 +1,6 @@
 # 38 — ActivityLog (Settings)
 
-**Model:** `App\Models\Activity` · **Slug:** `/admin/activity-logs` · **Status:** 🔴 needs work
+**Model:** `App\Models\Activity` · **Slug:** `/admin/activity-logs` · **Status:** ✅ done
 
 Closes **ADV-03** (audit log for every edit/delete). See
 [`../tasks/phase-10-portals-audit-backups.md`](../tasks/phase-10-portals-audit-backups.md).
@@ -19,14 +19,14 @@ measured by whether the before/after values are there and legible.
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 7 columns, 3 filters, `defaultSort('created_at','desc')`, eager-loads `causer`, `branch` |
+| index | ✅ | 7 columns, 6 filters, `defaultSort('created_at','desc')`, eager-loads `causer`, `branch` |
 | create | ❌ | `canCreate()` returns false — correct |
-| view | ✅ | Details (8 entries) + Changes (`attribute_changes` as `KeyValueEntry`) |
+| view | ✅ | Details (8 entries) + Changes (per-field old → new diff table, redacted at render) |
 | edit | ❌ | `canEdit()` returns false — correct |
 | row actions | ✅ | `ViewAction` only, via `->recordActions([...])` |
 | header / toolbar actions | ❌ | none — correct |
-| relation managers | ❌ | none, and none belongs here |
-| `canAccess()` | 🟡 | present, but on `alerts.view_logs` (`ActivityLogResource.php:51`) — see gap 3 |
+| relation managers | ❌ | none, and none belongs here — the "History" row actions on Booking / Car / Customer / User deep-link here instead |
+| `canAccess()` | ✅ | on `audit.view` (see gap 3) |
 
 **There is no write surface, and that was checked field by field.** `canCreate()`, `canEdit()` and
 `canDelete()` all return false; `getPages()` registers only `index` and `view`; `ViewAction` is the
@@ -36,7 +36,10 @@ denies explicitly with `whereRaw('1 = 0')` when a user resolves to no branches, 
 careful version of the same code in [`37-notification-log.md`](37-notification-log.md) gap 1.
 PHPStan is clean.
 
-That is the whole of the good news. The two findings below are the reason the status is red.
+Everything in that paragraph still holds; what follows describes the state the audit found, and
+every checklist item below is now ticked — the secrets hole (gap 1), the unwritten `branch_id`
+(gap 2) and the accidental `alerts.view_logs` gate (gap 3) are what turned the status from green,
+and all three are fixed.
 
 ## Should be
 
@@ -154,35 +157,39 @@ No state-changing action belongs here.
       `two_factor_recovery_codes` via `->logExcept([...])`, and add a test asserting a user
       `created` activity row contains none of them
 - [x] Scrub the rows already written (migration `2026_08_07_000000_scrub_secrets_from_activity_log`)
-- [ ] Redact those keys at render time as a second layer
-- [ ] Decide `branch_id`: stamp it when activity is written, or remove the column, index, filter
-      and display — and add a test that a user without `branches.view_all` sees their own branch's
-      rows rather than none
-- [ ] Add `audit.view` to `RolePermissionSeeder` and re-gate `canAccess()` on it
-- [ ] Add causer and `subject_type` filters
-- [ ] Render `attribute_changes` as a per-field old → new table
-- [ ] Hardcode or cache the `log_name` / `event` filter options
-- [ ] Link the subject; add a tooltip to `description`
-- [ ] Add a "History" row action (or read-only relation manager) on the resources whose records
-      matter most: Booking, Car, Customer, User
-- [ ] Add a test asserting this resource exposes no create, edit, delete or bulk action
-- [ ] Drop the unused `TranslatesModelLabel` trait
+- [x] Redact those keys at render time as a second layer (`App\Support\ActivityChanges` + the
+      diff view)
+- [x] Decide `branch_id`: stamp it when activity is written — `Activity::creating` resolves the
+      subject's branch, then the causer's — and add a test that a user without `branches.view_all`
+      sees their own branch's rows rather than none
+- [x] Add `audit.view` to `RolePermissionSeeder` and re-gate `canAccess()` on it
+- [x] Add causer and `subject_type` filters
+- [x] Render `attribute_changes` as a per-field old → new table
+- [x] Hardcode or cache the `log_name` / `event` filter options
+- [x] Link the subject; add a tooltip to `description`
+- [x] Add a "History" row action on Booking, Car, Customer, User
+- [x] Add a test asserting this resource exposes no create, edit, delete or bulk action
+- [x] Drop the unused `TranslatesModelLabel` trait — already absent, nothing to drop
 
 
-> **Partly done.** The items ticked above were implemented and covered by
-> `tests/Feature/PrivilegeEscalationTest.php`. The rest of the checklist is untouched.
+> **Complete.** The first two items were implemented earlier and covered by
+> `tests/Feature/PrivilegeEscalationTest.php`; this round closed the rest, backed by
+> `tests/Feature/ActivityLogResourceTest.php`.
 
 ## Verification
 
 ```bash
-docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/ActivityLogResource.php app/Filament/Admin/Resources/ActivityLogResource
+docker compose exec app ./vendor/bin/pest tests/Feature/ActivityLogResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
+docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/ActivityLogResource.php app/Models/Activity.php app/Support/ActivityChanges.php
 ```
 
-`ResourcePagesRenderTest` does not currently cover this resource and only ever acts as super_admin;
-both need fixing before the branch behaviour in gap 2 can be asserted.
+`ActivityLogResourceTest` covers the read-only contract, the `audit.view` gate, the `branch_id`
+stamp, the branch pin (pivot and orphan cases) and render-time redaction. `ResourcePagesRenderTest`
+now seeds an `Activity` row, so the index and view pages — subject link and diff table included —
+render against real data.
 
-Confirm gap 1 in one command, before and after the fix:
+Confirm the scrub held, and that no new secrets are being written:
 
 ```bash
 docker compose exec pgsql psql -U mcars -d mcars -c \
@@ -190,5 +197,6 @@ docker compose exec pgsql psql -U mcars -d mcars -c \
 ```
 
 By hand: as `manager@mcars.dz`, open `/admin/activity-logs`, filter to a `User` subject, open the
-row, and read the Changes section — the bcrypt hash is currently on screen. Then confirm
-`accountant@mcars.dz` is refused the whole resource.
+row, and read the Changes section — a per-field table, with nothing but the event's fields in it.
+Open a booking on the list, use its "History" row action, and confirm the log arrives pre-filtered
+to that booking. Then confirm `accountant@mcars.dz` is refused the whole resource.

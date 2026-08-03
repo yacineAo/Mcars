@@ -270,6 +270,7 @@ return [
     'custom_permissions' => [
         'alerts.manage',
         'alerts.view_logs',
+        'audit.view',
         'bookings.manage',
         'bookings.operate',
         'bookings.view',

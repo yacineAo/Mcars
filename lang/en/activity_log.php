@@ -23,6 +23,17 @@ return [
         ],
         'filters' => [
             'date_range' => 'Date Range',
+            'causer' => 'User',
+            'subject_type' => 'Subject Type',
+            'subject_id' => 'Subject ID',
+        ],
+        'actions' => [
+            'view_history' => 'History',
+        ],
+        'diff' => [
+            'field' => 'Field',
+            'before' => 'Before',
+            'after' => 'After',
         ],
     ],
 ];

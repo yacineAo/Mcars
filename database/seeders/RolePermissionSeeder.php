@@ -91,6 +91,15 @@ class RolePermissionSeeder extends Seeder
                 UserRole::SuperAdmin,
                 UserRole::Manager,
             ],
+            // The audit trail records every change in the business — bookings,
+            // users, payments, the ledger — so its screen needs a permission of
+            // its own, not a widening of alerts.view_logs (which is about alert
+            // delivery). Same two roles as the Settings & Access row of
+            // docs/02-filament-panels.md. See docs/resource/38-activity-log.md gap 3.
+            'audit.view' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+            ],
             // Staff accounts. docs/02-filament-panels.md §Role → visibility matrix puts
             // "Settings & Access" at full for a manager, so a manager creating a
             // receptionist is intended. What is not intended is elevation: the roles a

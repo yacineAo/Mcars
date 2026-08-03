@@ -15,6 +15,7 @@ use App\Enums\MaintenanceType;
 use App\Enums\PaymentMethod;
 use App\Enums\PayrollStatus;
 use App\Enums\UserRole;
+use App\Models\Activity;
 use App\Models\AlertRule;
 use App\Models\Booking;
 use App\Models\Branch;
@@ -234,6 +235,21 @@ beforeEach(function () {
     // NotificationLog: the index and view pages carry morph links and a payload
     // entry, both of which only render when there is a row to evaluate against.
     NotificationLog::factory()->create();
+
+    // Activity: the index and view pages render a morph subject link and the
+    // per-field attribute_changes diff, both of which only fire against a row.
+    Activity::create([
+        'log_name' => 'default',
+        'description' => 'created',
+        'subject_type' => Customer::class,
+        'subject_id' => $customer->id,
+        'causer_type' => User::class,
+        'causer_id' => $this->admin->id,
+        'attribute_changes' => [
+            'attributes' => ['name' => 'Render', 'is_active' => true],
+            'old' => [],
+        ],
+    ]);
 
     // The fixture booking above is Active on $car — this block must stay clear
     // of its window or the cross-check trigger refuses the row itself.

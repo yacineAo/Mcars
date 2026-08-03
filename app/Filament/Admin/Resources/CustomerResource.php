@@ -243,6 +243,18 @@ class CustomerResource extends Resource
                 ViewAction::make(),
                 EditAction::make()
                     ->visible(fn (): bool => Auth::user()?->can('fleet.manage') ?? false),
+                // The change trail for this record, pre-filtered to it (ADV-03).
+                Action::make('view_history')
+                    ->label(__('activity_log.resource.actions.view_history'))
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('gray')
+                    ->url(fn (Customer $record): string => ActivityLogResource::getUrl('index', [
+                        'tableFilters' => [
+                            'subject_type' => ['value' => Customer::class],
+                            'subject_id' => ['subject_id' => $record->getKey()],
+                        ],
+                    ], panel: 'admin'))
+                    ->visible(fn (): bool => (bool) (Auth::user()?->can('audit.view') ?? false)),
             ])
             ->bulkActions([]);
     }
