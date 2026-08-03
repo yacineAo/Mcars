@@ -6,8 +6,8 @@ namespace App\Filament\Admin\Resources;
 
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationStatus;
-use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\NotificationLogResource\Pages;
+use App\Models\AlertRule;
 use App\Models\NotificationLog;
 use BackedEnum;
 use Filament\Actions\ViewAction;
@@ -34,8 +34,6 @@ use UnitEnum;
  */
 class NotificationLogResource extends Resource
 {
-    use TranslatesModelLabel;
-
     protected static ?string $model = NotificationLog::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-paper-airplane';
@@ -135,6 +133,22 @@ class NotificationLogResource extends Resource
                     ->toggleable(),
             ])
             ->filters([
+                SelectFilter::make('alert_rule_id')
+                    ->label(__('notifications.resources.notification_log.filters.alert_rule'))
+                    // Options keyed by id, labelled with the alert type, so the
+                    // pre-filtered "View deliveries" link (AlertRuleResource) and
+                    // manual filtering share one vocabulary. Options are mapped
+                    // to the enum's translated label because Select rejects enum
+                    // instances as labels.
+                    ->options(fn (): array => AlertRule::query()
+                        ->orderBy('type')
+                        ->get()
+                        ->mapWithKeys(fn (AlertRule $rule): array => [
+                            $rule->getKey() => $rule->type->getLabel(),
+                        ])
+                        ->all())
+                    ->searchable()
+                    ->preload(),
                 SelectFilter::make('status')->options(NotificationStatus::options()),
                 SelectFilter::make('channel')->options(NotificationChannel::options()),
                 Filter::make('failed_only')

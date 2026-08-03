@@ -1,6 +1,6 @@
 # 36 — AlertRule (Settings)
 
-**Model:** `App\Models\AlertRule` · **Slug:** `/admin/alert-rules` · **Status:** 🟡 partial
+**Model:** `App\Models\AlertRule` · **Slug:** `/admin/alert-rules` · **Status:** ✅ done
 
 Closes **REQ-17**. Read [`../06-design-decisions.md`](../06-design-decisions.md) ADR-012 and
 [`../tasks/phase-08-notifications.md`](../tasks/phase-08-notifications.md) before changing
@@ -17,14 +17,14 @@ channels, to whom. A manager owns them so that changing an insurance lead time f
 
 | Surface | Exists | Notes |
 |---|---|---|
-| index | ✅ | 7 columns, 2 filters (`type`, `is_active`), `defaultSort('type')` |
-| create | ✅ | 3 sections (what / when / who), helper text throughout, `type` seeds four fields via `live()` |
+| index | ✅ | 9 visible columns + 2 toggleable (`recipient_roles`, `template_key`, `updated_by`, `updated_at`), 2 filters (`type`, `is_active`), `defaultSort('type')`, eager-loads `branch` + `updatedBy` |
+| create | ✅ | 3 sections (what / when / who), helper text throughout, `type` seeds four fields via `live()`, uniqueness validated in the form (not just the DB) |
 | view | ❌ | not needed — see below |
-| edit | ✅ | same form; `type` `->disabledOn('edit')` |
-| row actions | ✅ | `EditAction`, via `->recordActions([...])` — the correct Filament 5 name |
-| header / toolbar actions | ✅ | `CreateAction` (index), `DeleteAction` (edit), `DeleteBulkAction` |
+| edit | ✅ | same form; `type` **and `template_key`** `->disabledOn('edit')` |
+| row actions | ✅ | `EditAction`, **set active** (deactivate/reactivate), **View deliveries** |
+| header / toolbar actions | ✅ | `CreateAction` (index), `DeleteAction` (edit, confirmation names the alert type), `DeleteBulkAction` |
 | relation managers | ❌ | none — `notificationLogs` is deliberately elsewhere |
-| `canAccess()` | ✅ | `alerts.manage` (`AlertRuleResource.php:65`), seeded to super_admin + manager |
+| `canAccess()` | ✅ | `alerts.manage` (`AlertRuleResource.php:66`), seeded to super_admin + manager |
 
 **This is the best-built resource in the Settings group and most of it should be left alone.**
 It gates on a permission rather than a role list, uses `recordActions()` / `toolbarActions()`
@@ -104,74 +104,59 @@ with `alerts.view_logs`.
 
 ## Gaps and risks
 
-1. **🔴 Phase 10's `BranchScope` will hide every global rule the moment the flag flips.**
-   CLAUDE.md is explicit: "Phase 10's branch scope must leave `alert_rules` alone." It does not.
-   `AlertRule` overrides `resolveBranchId()` but **not** `withoutBranchScope()`, so
-   `BelongsToBranch::bootBelongsToBranch()` adds the scope. Verified empirically: with
-   `config(['branches.enabled' => true])`, `(new AlertRule)->getGlobalScopes()` returns
-   `[BranchScope, SoftDeletingScope]`, while `(new User)->getGlobalScopes()` correctly returns
-   `[]`. `BranchScope::apply()` adds `where branch_id = ?`, which excludes every `branch_id IS
-   NULL` row — that is all ten rules. A manager who picks a specific branch in the switcher would
-   see an empty list and could reasonably conclude no alerts are configured. Detection itself is
-   safe *today* only by accident: `AlertRule::resolveFor()` uses `static::query()` and is called
-   from `NotificationService.php:315` on the console sweep, where `BranchContext::isResolved()` is
-   false and the scope no-ops. `config('branches.enabled')` is currently **false** in this
-   environment, so this is latent rather than live — which is exactly when it is cheap to fix.
-   Add `withoutBranchScope(): bool { return true; }` to `AlertRule` with the reason in a comment,
-   and a test that asserts a global rule is visible with the flag on and a branch selected.
-2. **🔴 `template_key` is the deduplication key and is freely editable.** The class docblock and
-   the inline comment on `type` both justify freezing `type` because changing it "would orphan
-   every notification_log pointing at the old template key, which is what deduplication reads" —
-   and then `template_key` is offered as a required free-text `TextInput` on create *and* edit.
-   The dedup query keys on `(template_key, related_type, related_id, channel)`
-   (`NotificationService.php:200`, covered by `notification_logs_dedup_idx`), so editing that one
-   field forgets every subject's alert history and re-alerts everyone at the next sweep. Freezing
-   `type` while leaving `template_key` open protects nothing. Either `->disabledOn('edit')` it
-   too, or make it non-editable and derived — `AlertType::defaultTemplateKey()` already supplies
-   it and `afterStateUpdated` already sets it. ADR-012 calls deduplication correctness, not
-   optimisation; this is the field that breaks it.
-3. **🟡 Creating a rule collides with a partial unique index and shows a raw database error.**
-   See Create.
-4. **🟡 Delete says nothing about what stops.** `AlertRule` soft-deletes and the unique indexes
-   exclude soft-deleted rows, so a delete is recoverable and does not block re-creating the rule
-   — that part is by design (see the migration comment). But deleting the global rule for, say,
-   insurance expiry silently ends that alert for every branch. The confirmation must name the
-   alert type, and deactivate should be the offered default.
-5. **🟡 `recipient_roles` is not visible on the index.** See Index.
-6. **🔵 No audit surfacing.** `alert_rules` carries `created_by_id` / `updated_by_id` via
-   `HasAuditColumns` and the model uses `LogsActivity`, but neither is shown anywhere on this
-   screen. After an incident the first question is who changed the lead time and when; today it
-   is answered from [`38-activity-log.md`](38-activity-log.md). A `updated_by.name` +
-   `updated_at` pair on the index would answer it in place.
-7. **🔵 `TranslatesModelLabel` is dead here.** The trait is imported and used, but the class also
-   declares `getModelLabel()` and `getPluralModelLabel()`, and a class method wins over a trait
-   method. Same in `NotificationLogResource` and `ActivityLogResource`. Harmless; drop the trait
-   from those three for clarity.
+All seven gaps below were closed in this round. They are kept as a record of what was wrong
+and why, not as open items.
+
+1. **🔴 Phase 10's `BranchScope` hides every global rule the moment the flag flips.**
+   `AlertRule` now overrides `withoutBranchScope(): bool { return true; }`, so
+   `BelongsToBranch::bootBelongsToBranch()` never attaches the scope — verified by
+   `tests/Feature/AlertRuleResourceTest.php` ("never applies the branch scope…") which flips
+   `branches.enabled` on, selects a branch, and still sees the global rule.
+2. **🔴 `template_key` is the deduplication key and was freely editable.** Now
+   `->disabledOn('edit')` alongside `type`; it stays a required free-text field on create,
+   where `afterStateUpdated` seeds it from the chosen type. Editing dedup history is closed.
+3. **🟡 Creating a rule collided with a partial unique index and showed a raw database error.**
+   `UniqueActiveAlertRule` (a `ValidationRule` mirroring both partial unique indexes, scoped to
+   `branch_id` and `is_active = true`) turns the collision into a field error on `type`.
+4. **🟡 Delete said nothing about what stops.** The edit-page `DeleteAction` confirmation now
+   names the alert type ("Deleting this rule permanently stops the « :type » alert…"), and
+   deactivate/reactivate is offered as the reversible alternative on the index.
+5. **🟡 `recipient_roles` was not visible on the index.** Added as a badge column, plus a
+   toggleable `template_key` column (hidden by default) and a toggleable `updated_by.name` +
+   `updated_at` pair.
+6. **🔵 No audit surfacing.** `updated_by.name` / `updated_at` columns answer "who changed the
+   lead time and when" in place.
+7. **🔵 `TranslatesModelLabel` was dead here.** Dropped from `AlertRuleResource`,
+   `NotificationLogResource` and `ActivityLogResource`.
 
 ## Checklist
 
-- [ ] Add `withoutBranchScope(): bool { return true; }` to `AlertRule`, with a test asserting a
+- [x] Add `withoutBranchScope(): bool { return true; }` to `AlertRule`, with a test asserting a
       global rule stays visible with `branches.enabled` on and a branch selected
-- [ ] Freeze `template_key` on edit (or derive it from `type` and make it read-only)
-- [ ] Validate uniqueness of `(type, branch_id)` among active rules on the create form
-- [ ] Add `->placeholder(__('notifications.resources.alert_rule.global'))` to the branch Select
-- [ ] Add `recipient_roles` badge column and a toggleable `template_key` column
-- [ ] Add a deactivate/reactivate row action; make the delete confirmation name the alert type
-- [ ] Add a "View deliveries" row action gated on `alerts.view_logs`
-- [ ] Eager-load `branch`; consider showing `updated_by.name` / `updated_at`
-- [ ] Drop the unused `TranslatesModelLabel` trait
+- [x] Freeze `template_key` on edit (or derive it from `type` and make it read-only)
+- [x] Validate uniqueness of `(type, branch_id)` among active rules on the create form
+- [x] Add `->placeholder(__('notifications.resources.alert_rule.global'))` to the branch Select
+- [x] Add `recipient_roles` badge column and a toggleable `template_key` column
+- [x] Add a deactivate/reactivate row action; make the delete confirmation name the alert type
+- [x] Add a "View deliveries" row action gated on `alerts.view_logs`
+- [x] Eager-load `branch`; consider showing `updated_by.name` / `updated_at`
+- [x] Drop the unused `TranslatesModelLabel` trait
 
 ## Verification
 
 ```bash
+docker compose exec app ./vendor/bin/pest tests/Feature/AlertRuleResourceTest.php
+docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/Phase8Test.php
-docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/AlertRuleResource.php app/Filament/Admin/Resources/AlertRuleResource
+docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/AlertRuleResource.php app/Filament/Admin/Resources/AlertRuleResource app/Rules/UniqueActiveAlertRule.php
 ```
 
-`ResourcePagesRenderTest` does **not** cover this resource — it needs adding there too, with a
-row present, since the `channels` badge closure only fires against a non-empty table.
+`ResourcePagesRenderTest` covers this resource's index with a row present, so the `channels` /
+`recipient_roles` badge closures fire against a non-empty table.
 
 By hand: as `manager@mcars.dz`, open `/admin/alert-rules` and confirm the Branch column reads
-"All branches" on all ten rows. Try to create a second global rule of an existing type and record
-what the screen does. Then set `BRANCHES_ENABLED=true`, select a specific branch in the switcher,
-and reload the list — today it is empty.
+"All branches" on all ten rows. Try to create a second global rule of an existing type — the
+form now shows a field error on Alert type instead of a raw database error. Then set
+`BRANCHES_ENABLED=true`, select a specific branch in the switcher, and reload the list — all ten
+global rules remain visible, and the "View deliveries" row action lands on the delivery log
+pre-filtered by the rule.

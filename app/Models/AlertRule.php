@@ -79,6 +79,21 @@ class AlertRule extends Model
         return null;
     }
 
+    /**
+     * Alert rules opt out of the Phase 10 BranchScope global scope.
+     *
+     * resolveBranchId() being null is only half the story: the global scope
+     * applies `where branch_id = ?`, which excludes every `branch_id IS NULL`
+     * row — that is every global rule. A manager who picks a branch in the
+     * switcher would see an empty list and could reasonably conclude no alerts
+     * are configured. The scope must never restrict alert_rules: a null
+     * branch_id here is data meaning "all branches", not a gap to be filled.
+     */
+    protected static function withoutBranchScope(): bool
+    {
+        return true;
+    }
+
     /** @return HasMany<NotificationLog, $this> */
     public function notificationLogs(): HasMany
     {

@@ -15,6 +15,7 @@ use App\Enums\MaintenanceType;
 use App\Enums\PaymentMethod;
 use App\Enums\PayrollStatus;
 use App\Enums\UserRole;
+use App\Models\AlertRule;
 use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\Car;
@@ -223,6 +224,11 @@ beforeEach(function () {
         'is_clean' => true,
         'damage_points' => [],
     ]);
+
+    // AlertRule: the list must render against a non-empty table or the badge
+    // columns (channels, recipient_roles) never fire their closures — the exact
+    // lazy-evaluation trap this file exists to catch (Round 36).
+    AlertRule::factory()->create();
 
     // The fixture booking above is Active on $car — this block must stay clear
     // of its window or the cross-check trigger refuses the row itself.

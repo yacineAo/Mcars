@@ -116,6 +116,23 @@ return [
                 'channels' => 'Channels',
                 'recipient_roles' => 'Recipients',
                 'is_active' => 'Active',
+                'updated_by' => 'Changed by',
+                'updated_at' => 'Changed at',
+            ],
+            'actions' => [
+                'deactivate' => 'Deactivate',
+                'deactivate_confirm' => 'This alert stops firing until reactivated. Its delivery history stays.',
+                'reactivate' => 'Reactivate',
+                'reactivate_confirm' => 'This alert starts firing again.',
+                'view_deliveries' => 'View deliveries',
+                'delete_confirm' => 'Deleting this rule permanently stops the ":type" alert — for every branch when it is the global rule. Prefer deactivating: it suspends the same alert with one click and keeps the rule for reference.',
+            ],
+            'notifications' => [
+                'deactivated' => 'Alert deactivated.',
+                'reactivated' => 'Alert reactivated.',
+            ],
+            'validation' => [
+                'duplicate' => 'An active rule of this type already exists for this branch. Deactivate or edit it instead.',
             ],
             'help' => [
                 'branch' => 'Leave empty to apply to all branches. A branch rule overrides the global one.',
@@ -147,6 +164,7 @@ return [
                 'error' => 'Error',
             ],
             'filters' => [
+                'alert_rule' => 'Alert rule',
                 'failed_only' => 'Failed only',
             ],
         ],

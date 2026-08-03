@@ -52,7 +52,7 @@ that each piece stays reviewable on its own.
 | [33](33-user.md) | **User** | Settings | ✅ done |
 | [34](34-role.md) | **Role** | Settings | ✅ done |
 | [35](35-branch.md) | **Branch** | Settings | ✅ done |
-| [36](36-alert-rule.md) | **AlertRule** | Settings | 🟡 audited — partial |
+| [36](36-alert-rule.md) | **AlertRule** | Settings | ✅ done |
 | [37](37-notification-log.md) | **NotificationLog** | Settings | 🟡 audited — partial |
 | [38](38-activity-log.md) | **ActivityLog** | Settings | 🔴 audited — needs work |
 

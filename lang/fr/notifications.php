@@ -116,6 +116,23 @@ return [
                 'channels' => 'Canaux',
                 'recipient_roles' => 'Destinataires',
                 'is_active' => 'Active',
+                'updated_by' => 'Modifiée par',
+                'updated_at' => 'Modifiée le',
+            ],
+            'actions' => [
+                'deactivate' => 'Désactiver',
+                'deactivate_confirm' => "Cette alerte cesse de se déclencher jusqu'à réactivation. Son historique de diffusion est conservé.",
+                'reactivate' => 'Réactiver',
+                'reactivate_confirm' => 'Cette alerte se déclenche à nouveau.',
+                'view_deliveries' => 'Voir les diffusions',
+                'delete_confirm' => 'Supprimer cette règle arrête définitivement l’alerte « :type » — pour toutes les agences s’il s’agit de la règle globale. Préférez la désactivation : elle suspend la même alerte en un clic et conserve la règle.',
+            ],
+            'notifications' => [
+                'deactivated' => 'Alerte désactivée.',
+                'reactivated' => 'Alerte réactivée.',
+            ],
+            'validation' => [
+                'duplicate' => 'Une règle active de ce type existe déjà pour cette agence. Désactivez-la ou modifiez-la à la place.',
             ],
             'help' => [
                 'branch' => "Laisser vide pour toutes les agences. Une règle d'agence remplace la règle globale.",
@@ -147,6 +164,7 @@ return [
                 'error' => 'Erreur',
             ],
             'filters' => [
+                'alert_rule' => "Règle d'alerte",
                 'failed_only' => 'Échecs uniquement',
             ],
         ],
