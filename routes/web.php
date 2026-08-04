@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Locale;
+use App\Http\Controllers\ContractPdfController;
 use App\Http\Controllers\DocumentMediaController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\LocaleController;
@@ -23,6 +24,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/media/car-documents/{carDocument}/download', [DocumentMediaController::class, 'download'])
         ->name('media.car-documents.download')
         ->whereNumber('carDocument');
+
+    Route::get('/contracts/{contract}/pdf', [ContractPdfController::class, 'download'])
+        ->name('contracts.pdf.download')
+        ->whereNumber('contract');
 
     // POST: switching language writes to the user row. The constraint comes from the
     // enum so the route and Locale cannot drift apart.

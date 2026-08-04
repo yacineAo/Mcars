@@ -75,8 +75,9 @@ it('preserves every seeded permission when a role is saved through the resource'
 it('keeps create and delete out of the role surface — the seeder is the only writer', function () {
     // A seventh role has no UserRole case, so its holders could never log in;
     // deleting super_admin locks out the only account that could restore it.
-    expect(RoleResource::getPages())->not->toHaveKey('create')
-        ->and(RoleResource::getPages())->not->toHaveKey('view');
+    // A view page exists (read-only name + permission list) but adds no write
+    // surface of its own.
+    expect(RoleResource::getPages())->not->toHaveKey('create');
 
     $this->actingAs($this->admin);
 

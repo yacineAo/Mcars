@@ -21,11 +21,11 @@ super_admin opens it once at setup and then only to add a location.
 |---|---|---|
 | index | ✅ | name, code (badge), `manager.name`, `users_count` (`->counts('users')`), `wilaya` (display label), `is_default` badge on the one default row, `is_active` badge; filters: `TernaryFilter` on `is_active` (defaults to active) + `SelectFilter` on `wilaya`; `defaultSort('name')` |
 | create | ✅ | sectioned: **Identity** (name, code) · **Location** (address, city, wilaya, timezone) · **Contact** (phone, email) · **Management** (manager, `is_active`) · **Notes**; no `is_default` field |
-| view | ❌ | deliberately — see the old "Should be" §View, unchanged |
+| view | ✅ | added — same sections as the form, plus `UsersRelationManager` moved here from edit (it was always read-only) |
 | edit | ✅ | same sectioned form; `code` **disabled** once any `sequences` row exists for the branch; guarded delete header action |
 | row actions | ✅ | `EditAction` + **Make default** + **Deactivate/Reactivate**, via `->recordActions([...])` |
 | header / toolbar actions | ✅ | `CreateAction` (index) only — **no bulk actions**; delete is the guarded header action on edit |
-| relation managers | ✅ | `UsersRelationManager` on edit: read-only `users` (`hasMany` — the staff whose home branch this is), name/email/roles/is_active, gated on `users.manage` |
+| relation managers | ✅ | `UsersRelationManager` on **view** (moved from edit once a view page existed to hold it): read-only `users` (`hasMany` — the staff whose home branch this is), name/email/roles/is_active, gated on `users.manage` |
 | `canAccess()` | ✅ | `branches.view_all` (`BranchResource.php`) — super_admin + manager, unchanged |
 
 ## Decisions taken (Round 35)

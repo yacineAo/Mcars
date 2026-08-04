@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'actions' => [
         'render_pdf' => 'Generate PDF',
+        'download_pdf' => 'Download PDF',
         'send' => 'Send to customer',
         'send_description' => 'This puts the contract into "awaiting signature" and records the channel it was sent on.',
         'sign' => 'Mark signed',

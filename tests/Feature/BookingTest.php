@@ -25,6 +25,7 @@ use Database\Seeders\ChartOfAccountSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -70,6 +71,21 @@ beforeEach(function () {
     $this->service = app(BookingService::class);
     $this->availability = app(BookingAvailabilityService::class);
     $this->pricing = app(PricingService::class);
+});
+
+// ---------------------------------------------------------------------------
+// hasStarted() — must survive a transient, unsaved record
+// ---------------------------------------------------------------------------
+
+/**
+ * BookingResource's create-page closures (disabled(), the customer_id blacklist
+ * rule) are typed `fn (?Booking $record)` and evaluated against a fresh, unsaved
+ * Booking during form interaction, before `status` has any value — a live crash
+ * on /admin/bookings/create ("Call to a member function is() on null") until
+ * hasStarted() was made null-safe.
+ */
+it('does not crash on a transient booking with no status yet', function () {
+    expect((new Booking)->hasStarted())->toBeFalse();
 });
 
 // ---------------------------------------------------------------------------
@@ -323,6 +339,12 @@ it('generates a contract from a booking', function () {
         ->and($contract->content_snapshot)->toHaveKey('pricing');
 });
 
+/**
+ * renderPdf() used to write the *HTML* it built straight to a `.pdf` path — the
+ * file existed and pdf_path/document_hash got set, so this test passed while every
+ * "PDF" the app ever produced was actually HTML wearing a .pdf extension. Asserting
+ * the %PDF- magic bytes is what catches that class of bug; existence alone does not.
+ */
 it('renders a contract PDF and stores it on the private disk', function () {
     $period = CarbonPeriod::create('2026-08-01', '2026-08-05');
     $booking = $this->service->createDraft($this->car, $this->customer, $period, $this->user);
@@ -332,9 +354,13 @@ it('renders a contract PDF and stores it on the private disk', function () {
     $contract = $contractService->generate($booking);
     $path = $contractService->renderPdf($contract);
 
+    $bytes = Storage::disk('private')->get($path);
+
     expect($path)->toContain('contracts/')
         ->and($contract->fresh()->pdf_path)->toBe($path)
-        ->and($contract->fresh()->document_hash)->not->toBeNull();
+        ->and($contract->fresh()->document_hash)->not->toBeNull()
+        ->and($contract->fresh()->document_hash)->toBe(hash('sha256', $bytes))
+        ->and($bytes)->toStartWith('%PDF-');
 });
 
 // ---------------------------------------------------------------------------

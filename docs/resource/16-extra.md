@@ -16,7 +16,7 @@ the right place.
 |---|---|---|
 | index | ✅ | sorted by name; filters: `is_active` (defaults to true), `pricing_unit` |
 | create | ✅ | name, code (unique), pricing unit, unit price, ledger account (restricted to postable revenue-type accounts), active |
-| view | ❌ | not needed |
+| view | ✅ | added — catalogue fields plus a derived "times sold" count |
 | edit | ✅ | `code` frozen once the extra has been sold; `unit_price` stays editable |
 | row actions | ✅ | Edit; Delete hidden while the extra has ever been sold |
 | header / toolbar actions | ✅ | `CreateAction` only; bulk actions removed |

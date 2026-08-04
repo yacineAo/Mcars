@@ -14,8 +14,8 @@ use App\Filament\Admin\Resources\NotificationLogResource\Pages\ListNotificationL
 use App\Models\Activity;
 use App\Models\AlertRule;
 use App\Models\Branch;
-use App\Models\CarDocument;
 use App\Models\Customer;
+use App\Models\CustomerDocument;
 use App\Models\NotificationLog;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -132,8 +132,11 @@ it('links the subject to its view page on the index and the view page', function
         ->assertSuccessful();
 });
 
-it('leaves subjects without a view page unlinked', function () {
-    $document = CarDocument::factory()->create();
+it('leaves subjects without a resource unlinked', function () {
+    // CustomerDocument has no Filament resource at all — every model that
+    // does have one now has a view page, so a subject type without a
+    // resource is the only way left to exercise the null branch.
+    $document = CustomerDocument::factory()->create();
 
     $log = NotificationLog::factory()->about($document)->create();
 

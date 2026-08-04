@@ -14,6 +14,7 @@ use App\Models\Employee;
 use BackedEnum;
 use Closure;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -222,6 +223,7 @@ class CommissionResource extends Resource
                             ->whereDate('earned_on', '<=', $date))),
             ])
             ->recordActions([
+                ViewAction::make(),
                 // The lifecycle (approved, paid, cancelled) moves with the
                 // payroll flow — see CommissionService — so the only row action
                 // here is the paperwork correction the Edit screen allows.
@@ -237,6 +239,7 @@ class CommissionResource extends Resource
         return [
             'index' => Pages\ListCommissions::route('/'),
             'create' => Pages\CreateCommission::route('/create'),
+            'view' => Pages\ViewCommission::route('/{record}'),
             'edit' => Pages\EditCommission::route('/{record}/edit'),
         ];
     }

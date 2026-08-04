@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'actions' => [
         'render_pdf' => 'Générer le PDF',
+        'download_pdf' => 'Télécharger le PDF',
         'send' => 'Envoyer au client',
         'send_description' => 'Passe le contrat en « en attente de signature » et enregistre le canal d\'envoi.',
         'sign' => 'Marquer comme signé',

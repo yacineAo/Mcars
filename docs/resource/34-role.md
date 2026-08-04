@@ -19,7 +19,7 @@ do what, so authorization is the only axis this file is about.
 |---|---|---|
 | index | ✅ | our `table()`: name, guard, permission count, `updated_at`; no filters; `recordActions([EditAction])` only |
 | create | ❌ | **removed** — the role list is the `UserRole` enum; a seventh role could never log in |
-| view | ❌ | deliberately — a role is a name plus a permission set, both on edit |
+| view | ✅ | added — read-only mirror of the same two facts (name + permission set); no write surface |
 | edit | ✅ | our form: `name` **disabled** (frozen once assigned), `guard_name` **hidden** (everything here is `web`), select-all toggle, custom-permissions tab only |
 | row actions | ✅ | edit only — **no delete** |
 | header / toolbar actions | ✅ | **none** — no create, no bulk actions |

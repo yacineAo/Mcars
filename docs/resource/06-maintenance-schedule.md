@@ -25,7 +25,7 @@ Which makes the accuracy of those two columns the entire value of the screen.
 |---|---|---|
 | index | ✅ | 7 columns, `->filters([])` **empty**, no default sort |
 | create | ✅ | 12 fields, flat |
-| view | ❌ | correct; see below |
+| view | ✅ | added; see below |
 | edit | ✅ | same form |
 | row actions | ✅ | `log_maintenance`, Edit — via deprecated `->actions([...])` (`:110`) |
 | header / toolbar actions | 🟡 | `CreateAction`; `DeleteBulkAction` in a group (`:135`) |
@@ -86,9 +86,10 @@ needs attention, so surface it rather than hide it.
 
 ### View
 
-**Not needed.** A twelve-field template with no history of its own; the index carries the two
-numbers anyone opens it for. If a schedule needs a service history, that history is the car's,
-and it belongs on [`02-car.md`](02-car.md)'s Maintenance tab.
+**Added.** A twelve-field template with no history of its own — the index already carried the
+two numbers anyone opens it for — but a view page is now standard. No relation manager: a
+schedule's service history is the car's, and it belongs on [`02-car.md`](02-car.md)'s
+Maintenance tab.
 
 ### Edit
 

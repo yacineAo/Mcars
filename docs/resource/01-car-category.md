@@ -17,7 +17,7 @@ Van. A manager opens it when the business adds a class of vehicle and never agai
 |---|---|---|
 | index | ✅ | 6 columns, `defaultSort('sort_order')`, `TernaryFilter::make('is_active')->default(true)` |
 | create | ✅ | `slug` derived from `name` via `->afterStateUpdated()` |
-| view | ❌ | correct — index covers all data |
+| view | ✅ | added — name/slug/description/sort_order/cars_count, no relation manager (the index already answers "is this in use") |
 | edit | ✅ | `slug` frozen (`->disabled()` on edit) |
 | row actions | ✅ | `EditAction` + `DeleteAction` hidden when `cars_count > 0`, via `->recordActions([...])` |
 | header / toolbar actions | ✅ | `CreateAction` only; `DeleteBulkAction` removed |
@@ -37,8 +37,9 @@ nothing else.
 Derive `slug` from `name` rather than typing it twice.
 
 ### View
-**Not needed** — five columns and a count; the index already shows everything. The cars in a
-category belong on `CarResource`'s index behind a category filter.
+**Added.** Five columns and a count; the index already showed everything, but a view page is
+now standard across resources. The cars in a category still belong on `CarResource`'s index
+behind a category filter — no relation manager was added here.
 
 ### Edit
 `slug` must **freeze**. `CarCategorySeeder` upserts on it (`CarCategorySeeder.php:24`,

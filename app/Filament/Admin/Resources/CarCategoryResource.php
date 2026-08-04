@@ -8,10 +8,12 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CarCategoryResource\Pages\CreateCarCategory;
 use App\Filament\Admin\Resources\CarCategoryResource\Pages\EditCarCategory;
 use App\Filament\Admin\Resources\CarCategoryResource\Pages\ListCarCategories;
+use App\Filament\Admin\Resources\CarCategoryResource\Pages\ViewCarCategory;
 use App\Models\CarCategory;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -104,6 +106,7 @@ class CarCategoryResource extends Resource
             ])
             ->defaultSort('sort_order')
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make()
                     ->hidden(fn (CarCategory $record): bool => $record->cars_count > 0),
@@ -115,6 +118,7 @@ class CarCategoryResource extends Resource
         return [
             'index' => ListCarCategories::route('/'),
             'create' => CreateCarCategory::route('/create'),
+            'view' => ViewCarCategory::route('/{record}'),
             'edit' => EditCarCategory::route('/{record}/edit'),
         ];
     }

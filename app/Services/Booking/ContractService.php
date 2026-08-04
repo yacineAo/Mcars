@@ -13,6 +13,8 @@ use App\Models\Contract;
 use App\Models\ContractTemplate;
 use App\Models\User;
 use App\Support\Sequences\SequenceGenerator;
+use Barryvdh\DomPDF\Facade\Pdf;
+use DOMDocument;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -117,17 +119,37 @@ class ContractService
         });
     }
 
+    /**
+     * Renders and stores the contract PDF, and stamps `document_hash` from the
+     * actual PDF bytes — ADR-009 calls those bytes "legally significant", so the
+     * hash has to fingerprint what a customer would actually receive, not the HTML
+     * that built it.
+     */
     public function renderPdf(Contract $contract): string
     {
-        $html = $this->renderHtml($contract);
+        $pdf = Pdf::setOptions([
+            'defaultFont' => 'dejavu sans',
+            // The template is self-contained — inline <style>, a bundled font, no
+            // <img>/<link> (sanitizeDocumentHtml()'s allow-list drops both anyway).
+            // Remote fetching stays off so a future allow-list change can't turn
+            // staff-authored template bodies into an SSRF vector.
+            'isRemoteEnabled' => false,
+            'isHtml5ParserEnabled' => true,
+        ])->loadView('contracts.pdf', [
+            'contract' => $contract,
+            'documentHtml' => $this->renderDocumentHtml($contract),
+            'direction' => $contract->direction(),
+        ]);
+
+        $bytes = $pdf->output();
         $disk = 'private';
         $path = 'contracts/'.$contract->contract_number.'.pdf';
 
-        Storage::disk($disk)->put($path, $html);
+        Storage::disk($disk)->put($path, $bytes);
 
         $contract->pdf_disk = $disk;
         $contract->pdf_path = $path;
-        $contract->document_hash = hash('sha256', $html);
+        $contract->document_hash = hash('sha256', $bytes);
         $contract->save();
 
         return $path;
@@ -281,33 +303,106 @@ class ContractService
         ];
     }
 
-    private function renderHtml(Contract $contract): string
+    /**
+     * The stored document: the template's body plus the snapshot's identity, car,
+     * period and pricing tables. Every snapshot value is escaped on output — it is
+     * data, not markup.
+     *
+     * Shared by `ViewContract` (on-screen) and `renderPdf()` (the PDF), so the two
+     * can never drift apart — this used to be duplicated, and the PDF's copy had
+     * broken `??` operator precedence (`.` binds tighter than `??`, so every
+     * fallback was dead code) that this version does not have.
+     */
+    public function renderDocumentHtml(Contract $contract): string
     {
-        $snapshot = $contract->content_snapshot;
+        $snapshot = $contract->content_snapshot ?? [];
         $customer = $snapshot['customer'] ?? [];
         $car = $snapshot['car'] ?? [];
         $pricing = $snapshot['pricing'] ?? [];
+        $period = $snapshot['period'] ?? [];
+        $drivers = $snapshot['additional_drivers'] ?? [];
 
-        $html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-        $html .= '<title>Contract '.$contract->contract_number.'</title>';
-        $html .= '<style>body{font-family:sans-serif;margin:40px}';
-        $html .= 'h1{color:#1a56db}table{width:100%;border-collapse:collapse}';
-        $html .= 'td,th{padding:8px;border:1px solid #ddd;text-align:left}';
-        $html .= '.total{font-weight:bold;font-size:1.2em}</style></head><body>';
-        $html .= '<h1>Contract '.$contract->contract_number.'</h1>';
-        $html .= '<h2>Customer</h2><p>'.($customer['name'] ?? '').'</p>';
-        $html .= '<p>ID: '.($customer['national_id'] ?? '').' | Phone: '.($customer['phone'] ?? '').'</p>';
-        $html .= '<h2>Vehicle</h2><p>'.$car['brand'] ?? ''.' '.$car['model'] ?? ''.' ('.$car['year'] ?? ''.')</p>';
-        $html .= '<p>Reg: '.$car['registration_number'] ?? ''.' | Chassis: '.$car['chassis_number'] ?? ''.'</p>';
-        $html .= '<h2>Terms</h2>';
-        $html .= '<p>'.$snapshot['template_body'] ?? 'Standard terms apply.'.'</p>';
-        $html .= '<h2>Pricing</h2>';
-        $html .= '<table><tr><th>Item</th><th>Amount</th></tr>';
-        $html .= '<tr><td>Daily Rate × '.($pricing['days_count'] ?? 0).' days</td>';
-        $html .= '<td>'.$pricing['subtotal'] ?? '0.00'.' DZD</td></tr>';
-        $html .= '<tr class="total"><td>Total</td><td>'.$pricing['total_amount'] ?? '0.00'.' DZD</td></tr>';
-        $html .= '</table></body></html>';
+        $html = '';
 
-        return $html;
+        if (! empty($snapshot['template_body'])) {
+            $html .= '<div class="contract-body">'.$snapshot['template_body'].'</div>';
+        }
+
+        $html .= '<h3>'.__('contracts.document.customer').'</h3>';
+        $html .= '<p>'.e($customer['name'] ?? '')
+            .' — '.e($customer['national_id'] ?? '')
+            .' — '.e($customer['phone'] ?? '').'</p>';
+
+        $html .= '<h3>'.__('contracts.document.vehicle').'</h3>';
+        $html .= '<p>'.e($car['brand'] ?? '')
+            .' '.e($car['model'] ?? '')
+            .' ('.e($car['year'] ?? '')
+            .') — '.e($car['registration_number'] ?? '').'</p>';
+
+        $html .= '<h3>'.__('contracts.document.period').'</h3>';
+        $html .= '<p>'.__('contracts.document.pickup').': '.e($period['pickup_at'] ?? '')
+            .' — '.__('contracts.document.return').': '.e($period['expected_return_at'] ?? '').'</p>';
+
+        $html .= '<h3>'.__('contracts.document.pricing').'</h3>';
+        $html .= '<table><tr><th>'.__('contracts.document.item').'</th><th>'.__('contracts.document.amount').'</th></tr>';
+        $html .= '<tr><td>'.__('contracts.document.rental').' ('.e($pricing['days_count'] ?? '0').' '.__('contracts.document.days').')</td><td>'.e($pricing['subtotal'] ?? '0.00').' DZD</td></tr>';
+        $html .= '<tr><td>'.__('contracts.document.extras').'</td><td>'.e($pricing['extras_total'] ?? '0.00').' DZD</td></tr>';
+        $html .= '<tr><td>'.__('contracts.document.discount').'</td><td>'.e($pricing['discount_amount'] ?? '0.00').' DZD</td></tr>';
+        $html .= '<tr class="total"><td>'.__('contracts.document.total').'</td><td>'.e($pricing['total_amount'] ?? '0.00').' DZD</td></tr>';
+        $html .= '</table>';
+
+        if (! empty($drivers)) {
+            $html .= '<h3>'.__('contracts.document.drivers').'</h3>';
+            $html .= '<ul>';
+            foreach ($drivers as $driver) {
+                $html .= '<li>'.e($driver['full_name'] ?? '')
+                    .' — '.__('contracts.document.license').': '.e($driver['driving_license_number'] ?? '').'</li>';
+            }
+            $html .= '</ul>';
+        }
+
+        return $this->sanitizeDocumentHtml($html);
+    }
+
+    /**
+     * Strict whitelist sanitisation of the template's own HTML before it renders as
+     * live markup — either on the panel or inside the PDF: only a fixed tag set
+     * survives, and every attribute is dropped — no scripts, no event handlers, no
+     * `style` exfiltration.
+     */
+    private function sanitizeDocumentHtml(string $html): string
+    {
+        $dom = new DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8"?><div>'.$html.'</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+
+        $allowed = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'br', 'div', 'span', 'section', 'small', 'hr'];
+
+        foreach (iterator_to_array($dom->getElementsByTagName('*')) as $node) {
+            if (! in_array($node->nodeName, $allowed, true)) {
+                $node->parentNode?->removeChild($node);
+
+                continue;
+            }
+
+            foreach (iterator_to_array($node->attributes) as $attribute) {
+                $node->removeAttribute($attribute->nodeName);
+            }
+        }
+
+        $wrapper = $dom->getElementsByTagName('div')->item(0);
+
+        if ($wrapper === null) {
+            return '';
+        }
+
+        $sanitized = '';
+
+        foreach ($wrapper->childNodes as $child) {
+            $sanitized .= $dom->saveHTML($child);
+        }
+
+        return $sanitized;
     }
 }

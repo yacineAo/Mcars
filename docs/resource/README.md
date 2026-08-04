@@ -133,20 +133,22 @@ None is a presentation issue. All four were verified against the running applica
 Verified across all 38 resources on 2026-07-29. Fixing these once is worth more than
 fixing them 38 times, so they are recorded here rather than repeated in every file.
 
-1. **Only 8 resources have a view page** — ActivityLog, Car, Customer, Expense,
-   FinancialAccount, NotificationLog, Report, Transaction. The other 30 are index/create/edit. Most do not
-   need one; the ones that do are the records with history hanging off them (Booking is
-   the glaring omission — a booking is the hub of the system and has no view page).
+1. ~~**Only 8 resources have a view page**~~ → **Resolved.** Every resource now has one — the
+   remaining 30 (including Booking, the glaring omission at the time) each gained a `ViewRecord`
+   page, an infolist and (where a related table is read-only history) a relation manager. See
+   each resource's own file for what its view page carries.
 2. **Only 11 of 38 declare `canAccess()`.** Every other resource is reachable by any
    staff role, including Settings resources that grant access. Money is gated on the
    permission `reports.view_financials`, cross-branch visibility on `branches.view_all` —
    never a role list.
 3. **31 resources still use the deprecated Filament 5 alias `->actions([...])`** instead
    of `->recordActions([...])`. Mechanical, but worth one sweep.
-4. **Relation managers exist on only 3 resources** — Car (3), Customer (1) and FinancialAccount (2). This is
-   the largest single gap in the panel: the data is all related, and almost none of it is
-   reachable from the record it belongs to. Where a related table is read-only history it
-   belongs on the **view** page; where the office edits it in place, on **edit**.
+4. ~~**Relation managers exist on only 3 resources**~~ → **Stale, then resolved further.** Later
+   rounds and the view-page sweep in finding 1 added relation managers to most of the resources
+   that have a related table worth reading in place — this count was not re-audited as a whole,
+   so check the individual resource file rather than trusting a number here. Where a related
+   table is read-only history it belongs on the **view** page; where the office edits it in
+   place, on **edit**.
 5. **`app/Actions/` does not exist.** CLAUDE.md's layering table names an Action layer
    ("one use case, `execute()`") that was never materialised. Recommendations to move
    logic out of a Filament action should target `app/Services/` until that changes.

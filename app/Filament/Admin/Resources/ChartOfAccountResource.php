@@ -10,9 +10,11 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ChartOfAccountResource\Pages\CreateChartOfAccount;
 use App\Filament\Admin\Resources\ChartOfAccountResource\Pages\EditChartOfAccount;
 use App\Filament\Admin\Resources\ChartOfAccountResource\Pages\ListChartOfAccounts;
+use App\Filament\Admin\Resources\ChartOfAccountResource\Pages\ViewChartOfAccount;
 use App\Models\ChartOfAccount;
 use BackedEnum;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -140,6 +142,7 @@ class ChartOfAccountResource extends Resource
             ])
             ->defaultSort('code')
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->bulkActions([]);
@@ -150,6 +153,7 @@ class ChartOfAccountResource extends Resource
         return [
             'index' => ListChartOfAccounts::route('/'),
             'create' => CreateChartOfAccount::route('/create'),
+            'view' => ViewChartOfAccount::route('/{record}'),
             'edit' => EditChartOfAccount::route('/{record}/edit'),
         ];
     }

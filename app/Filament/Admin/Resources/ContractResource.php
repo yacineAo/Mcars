@@ -4,26 +4,21 @@ declare(strict_types=1);
 
 namespace App\Filament\Admin\Resources;
 
-use App\Enums\ConditionReportType;
 use App\Enums\ContractStatus;
 use App\Enums\InsuranceType;
-use App\Enums\SignerRole;
 use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Models\Booking;
-use App\Models\ConditionReport;
 use App\Models\Contract;
 use App\Models\Customer;
-use App\Services\Booking\ContractService;
 use BackedEnum;
 use Carbon\CarbonImmutable;
-use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -34,7 +29,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use RuntimeException;
 use UnitEnum;
 
 /**
@@ -201,102 +195,11 @@ class ContractResource extends Resource
                     }),
             ])
             ->recordActions([
-                Action::make('render_pdf')
-                    ->label(__('contracts.actions.render_pdf'))
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->action(function (Contract $record): void {
-                        app(ContractService::class)->renderPdf($record);
-
-                        Notification::make()->success()->title(__('contracts.notifications.pdf_generated'))->send();
-                    })
-                    ->visible(fn (Contract $record): bool => static::canOperate() && ! $record->status->is(ContractStatus::Draft)),
-
-                Action::make('send')
-                    ->label(__('contracts.actions.send'))
-                    ->icon('heroicon-o-paper-airplane')
-                    ->color('info')
-                    ->requiresConfirmation()
-                    ->action(function (Contract $record): void {
-                        app(ContractService::class)->send($record);
-
-                        Notification::make()->success()->title(__('contracts.notifications.sent'))->send();
-                    })
-                    ->visible(fn (Contract $record): bool => static::canOperate()
-                        && $record->content_snapshot !== null
-                        && $record->status->is(ContractStatus::Draft, ContractStatus::AwaitingSignature)),
-
-                Action::make('sign')
-                    ->label(__('contracts.actions.sign'))
-                    ->icon('heroicon-o-pencil-square')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading(__('contracts.actions.sign_heading'))
-                    ->modalDescription(__('contracts.actions.sign_description'))
-                    ->form([
-                        Select::make('signer_role')
-                            ->label(__('contracts.fields.signer_role'))
-                            ->options(SignerRole::options())
-                            ->required(),
-                        TextInput::make('signer_name')
-                            ->label(__('contracts.fields.signer_name'))
-                            ->required(),
-                    ])
-                    ->action(function (Contract $record, array $data): void {
-                        try {
-                            app(ContractService::class)->markSigned(
-                                $record,
-                                SignerRole::from($data['signer_role']),
-                                $data['signer_name'],
-                                Auth::user(),
-                            );
-                        } catch (RuntimeException $e) {
-                            // A concurrent desk may have signed in the same moment —
-                            // show the service's refusal rather than a 500.
-                            Notification::make()->danger()->title($e->getMessage())->send();
-
-                            return;
-                        }
-
-                        Notification::make()->success()->title(__('contracts.notifications.signed'))->send();
-                    })
-                    ->visible(fn (Contract $record): bool => static::canSign()
-                        && $record->status->is(ContractStatus::Draft, ContractStatus::AwaitingSignature)),
-
-                Action::make('close')
-                    ->label(__('contracts.actions.close'))
-                    ->icon('heroicon-o-check-circle')
-                    ->color('warning')
-                    ->form([
-                        Select::make('checkin_report')
-                            ->label(__('contracts.fields.checkin_report'))
-                            ->options(fn (Contract $record): array => ConditionReport::query()
-                                ->where('booking_id', $record->booking_id)
-                                ->where('type', ConditionReportType::Checkin)
-                                ->get()
-                                ->mapWithKeys(fn (ConditionReport $report) => [
-                                    $report->id => $report->performed_at?->format('Y-m-d H:i'),
-                                ])
-                                ->toArray())
-                            ->searchable()
-                            ->required(),
-                    ])
-                    ->action(function (Contract $record, array $data): void {
-                        try {
-                            $report = ConditionReport::findOrFail($data['checkin_report']);
-
-                            app(ContractService::class)->close($record, $report, Auth::user());
-                        } catch (RuntimeException $e) {
-                            // The report/contract pairing is enforced in the service —
-                            // surface its refusal instead of a 500.
-                            Notification::make()->danger()->title($e->getMessage())->send();
-
-                            return;
-                        }
-
-                        Notification::make()->success()->title(__('contracts.notifications.closed'))->send();
-                    })
-                    ->visible(fn (Contract $record): bool => static::canOperate()
-                        && $record->status->is(ContractStatus::Active, ContractStatus::Signed)),
+                // The lifecycle actions (render_pdf, download_pdf, send, sign, close) live on
+                // the View page's header instead of here — seven icons per row made the list
+                // unusable, and the record's own status and document are visible right next to
+                // them there. See ViewContract::getHeaderActions().
+                ViewAction::make(),
 
                 EditAction::make()
                     ->visible(fn (Contract $record): bool => static::canEdit($record)),

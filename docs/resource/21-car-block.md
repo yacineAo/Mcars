@@ -17,7 +17,7 @@ block and a booking must not be able to overlap on the same car.
 |---|---|---|
 | index | ✅ | state / car / reason / window filters; `defaultSort('starts_at','desc')` |
 | create | ✅ | via `CarBlockService`; clashes surface as field errors |
-| view | ❌ | not needed |
+| view | ✅ | added — car/reason/window/state, with a link to the maintenance log that caused the block |
 | edit | ✅ | `car_id` frozen; re-checks clashes on save |
 | row actions | ✅ | `unblock`/`cancel`, Edit, Delete |
 | header / toolbar actions | ✅ | `CreateAction` only |

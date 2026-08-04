@@ -10,6 +10,7 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Admin\Resources\UserResource\Pages\EditUser;
 use App\Filament\Admin\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Admin\Resources\UserResource\Pages\ViewUser;
 use App\Filament\Admin\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use App\Services\UserService;
@@ -17,6 +18,7 @@ use BackedEnum;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -204,6 +206,7 @@ class UserResource extends Resource
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['roles', 'branch']))
             ->defaultSort('name')
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 self::assignRolesAction(),
                 self::resetPasswordAction(),
@@ -363,13 +366,15 @@ class UserResource extends Resource
         return [
             'index' => ListUsers::route('/'),
             'create' => CreateUser::route('/create'),
+            'view' => ViewUser::route('/{record}'),
             'edit' => EditUser::route('/{record}/edit'),
         ];
     }
 
     /**
-     * Branch assignments are maintained in place on the edit page — there is no
-     * view page, and the office maintains them where it maintains the person.
+     * Branch assignments are maintained in place on the edit page — ViewUser
+     * carries no relation managers, and the office maintains them where it
+     * maintains the person.
      */
     public static function getRelations(): array
     {

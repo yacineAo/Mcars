@@ -61,4 +61,15 @@ class EditBranch extends EditRecord
                 }),
         ];
     }
+
+    /**
+     * The staff list moved to ViewBranch — it is read-only history, not
+     * something maintained in place on this form.
+     *
+     * @return array<int, mixed>
+     */
+    protected function getAllRelationManagers(): array
+    {
+        return [];
+    }
 }

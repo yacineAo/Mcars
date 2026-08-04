@@ -18,7 +18,7 @@ category list *is* the expense report's row labels.
 |---|---|---|
 | index | ✅ | sorted by `sort_order` then name; filters: is_active, is_car_related, ledger account |
 | create | ✅ | slug auto-derived from name via `live(onBlur: true)`; name_ar, name_fr, parent, ledger account (restricted to postable expense-type accounts), is_car_related, is_recurring_default, sort_order, is_active |
-| view | ❌ | not needed — see below |
+| view | ✅ | added — name/slug/parent/ledger account/flags, no relation manager |
 | edit | ✅ | `ledger_account_id` frozen once expenses exist in the category; slug hidden and derived on create only |
 | row actions | ✅ | Edit — `->recordActions([...])` |
 | header / toolbar actions | ✅ | `CreateAction` only; bulk actions removed |

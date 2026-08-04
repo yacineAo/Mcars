@@ -18,6 +18,7 @@ use App\Services\Payment\PaymentScheduleService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -260,6 +261,7 @@ class PaymentScheduleResource extends Resource
                     // Waiving is the last resort for an unpaid line; a paid one
                     // stays on the ledger and a waived one cannot change again.
                     ->visible(fn (PaymentSchedule $record): bool => self::isUnpaid($record)),
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->bulkActions([])
@@ -270,6 +272,7 @@ class PaymentScheduleResource extends Resource
     {
         return [
             'index' => Pages\ListPaymentSchedules::route('/'),
+            'view' => Pages\ViewPaymentSchedule::route('/{record}'),
             'edit' => Pages\EditPaymentSchedule::route('/{record}/edit'),
         ];
     }

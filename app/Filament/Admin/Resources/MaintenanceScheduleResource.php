@@ -12,6 +12,7 @@ use App\Services\Fleet\LogMaintenanceService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -246,6 +247,8 @@ class MaintenanceScheduleResource extends Resource
                             ->send();
                     }),
 
+                ViewAction::make(),
+
                 EditAction::make()
                     ->visible(fn (): bool => Auth::user()?->can('fleet.manage_maintenance') ?? false),
 
@@ -322,6 +325,7 @@ class MaintenanceScheduleResource extends Resource
         return [
             'index' => Pages\ListMaintenanceSchedules::route('/'),
             'create' => Pages\CreateMaintenanceSchedule::route('/create'),
+            'view' => Pages\ViewMaintenanceSchedule::route('/{record}'),
             'edit' => Pages\EditMaintenanceSchedule::route('/{record}/edit'),
         ];
     }

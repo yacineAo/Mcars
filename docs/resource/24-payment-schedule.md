@@ -19,11 +19,11 @@ a set of rows sharing a `schedulable`.
 |---|---|---|
 | index | ✅ | grouped by plan ("Booking #12" → "1 of 6"), overdue / due-this-month / status / customer filters, sequence "n of N" |
 | create | ❌ | **by design** — the generator is the only creation path (`canCreate()` is false) |
-| view | ❌ | plan view = the grouped index; no per-instalment page needed |
+| view | ✅ | added — the single instalment plus an `AllocationsRelationManager` (read-only, links to `PaymentResource`) |
 | edit | ✅ | `due_date` editable only while pending; amount, customer, sequence and status are never editable by hand |
 | row actions | ✅ | `mark_paid`, `reschedule`, `waive` (all unpaid-only), Edit |
 | header / toolbar actions | ✅ | `generate_plan` (the `Money::allocate()` split) — **no bulk actions** |
-| relation managers | ❌ | none — the plan is read as a group on the index |
+| relation managers | ✅ | `AllocationsRelationManager` on the view page — which payments settled this line, read-only |
 | `canAccess()` | ✅ | gated on `reports.view_financials` |
 
 Confirmed good: `Money::allocate()` is the only way instalments are split

@@ -12,6 +12,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -213,6 +214,7 @@ class CarBlockResource extends Resource
                             ->send();
                     })
                     ->visible(fn (CarBlock $record): bool => ! $record->isEnded()),
+                ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
             ])
@@ -225,6 +227,7 @@ class CarBlockResource extends Resource
         return [
             'index' => CarBlockResource\Pages\ListCarBlocks::route('/'),
             'create' => CarBlockResource\Pages\CreateCarBlock::route('/create'),
+            'view' => CarBlockResource\Pages\ViewCarBlock::route('/{record}'),
             'edit' => CarBlockResource\Pages\EditCarBlock::route('/{record}/edit'),
         ];
     }

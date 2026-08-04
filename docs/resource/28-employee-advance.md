@@ -32,7 +32,7 @@ link is `recovered_in_payroll_item_id`: while it is null the advance is still ow
 |---|---|---|
 | index | ✅ | employee, amount, `advanced_on`, status badge, **recovered in** (derived from `recovered_in_payroll_item_id`) |
 | create | ✅ | employee (pinned, self-dealing refused), amount, `advanced_on`, reason, notes; status server-set to `requested` |
-| view | ❌ | not needed — see [`27-employee.md`](27-employee.md) |
+| view | ✅ | added — employee/amount/status, with a link to the payroll run that recovered it, once recovered |
 | edit | ✅ | reason/notes only once money moved; amount, employee, date and status re-asserted server-side |
 | row actions | ✅ | **Approve & Pay**, **Reject** (both gated `hr.manage` + only while `requested`), Edit |
 | header / toolbar actions | ✅ | `CreateAction`; **no `DeleteBulkAction`** |

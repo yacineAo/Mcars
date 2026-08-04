@@ -10,6 +10,7 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\MaintenanceLogResource\Pages\CreateMaintenanceLog;
 use App\Filament\Admin\Resources\MaintenanceLogResource\Pages\EditMaintenanceLog;
 use App\Filament\Admin\Resources\MaintenanceLogResource\Pages\ListMaintenanceLogs;
+use App\Filament\Admin\Resources\MaintenanceLogResource\Pages\ViewMaintenanceLog;
 use App\Models\FinancialAccount;
 use App\Models\MaintenanceLog;
 use App\Services\Fleet\CancelMaintenanceService;
@@ -20,6 +21,7 @@ use BackedEnum;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -367,6 +369,8 @@ class MaintenanceLogResource extends Resource
                             ->send();
                     }),
 
+                ViewAction::make(),
+
                 EditAction::make()
                     ->visible(fn (MaintenanceLog $record): bool => (Auth::user()?->can('fleet.manage_maintenance') ?? false)
                         && ! $record->status->is(MaintenanceStatus::Cancelled)),
@@ -379,6 +383,7 @@ class MaintenanceLogResource extends Resource
         return [
             'index' => ListMaintenanceLogs::route('/'),
             'create' => CreateMaintenanceLog::route('/create'),
+            'view' => ViewMaintenanceLog::route('/{record}'),
             'edit' => EditMaintenanceLog::route('/{record}/edit'),
         ];
     }

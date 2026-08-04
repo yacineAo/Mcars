@@ -15,6 +15,7 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -241,6 +242,7 @@ class AlertRuleResource extends Resource
                 TernaryFilter::make('is_active'),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 self::setActiveAction(),
                 self::viewDeliveriesAction(),
@@ -315,6 +317,7 @@ class AlertRuleResource extends Resource
         return [
             'index' => Pages\ListAlertRules::route('/'),
             'create' => Pages\CreateAlertRule::route('/create'),
+            'view' => Pages\ViewAlertRule::route('/{record}'),
             'edit' => Pages\EditAlertRule::route('/{record}/edit'),
         ];
     }

@@ -12,8 +12,8 @@ use App\Models\Activity;
 use App\Models\Booking;
 use App\Models\Branch;
 use App\Models\Car;
-use App\Models\CarDocument;
 use App\Models\Customer;
+use App\Models\CustomerDocument;
 use App\Models\User;
 use App\Support\ActivityChanges;
 use Database\Seeders\RolePermissionSeeder;
@@ -225,13 +225,16 @@ it('links the subject to its view page on the index and the view page', function
         ->assertSuccessful();
 });
 
-it('leaves subjects without a view page unlinked', function () {
-    $document = CarDocument::factory()->create();
+it('leaves subjects without a resource unlinked', function () {
+    // CustomerDocument has no Filament resource at all — every model that
+    // does have one now has a view page, so a subject type without a
+    // resource is the only way left to exercise the null branch.
+    $document = CustomerDocument::factory()->create();
 
     $activity = Activity::create([
         'log_name' => 'default',
         'description' => 'created',
-        'subject_type' => CarDocument::class,
+        'subject_type' => CustomerDocument::class,
         'subject_id' => $document->id,
     ]);
 

@@ -19,7 +19,7 @@ channels, to whom. A manager owns them so that changing an insurance lead time f
 |---|---|---|
 | index | ✅ | 9 visible columns + 2 toggleable (`recipient_roles`, `template_key`, `updated_by`, `updated_at`), 2 filters (`type`, `is_active`), `defaultSort('type')`, eager-loads `branch` + `updatedBy` |
 | create | ✅ | 3 sections (what / when / who), helper text throughout, `type` seeds four fields via `live()`, uniqueness validated in the form (not just the DB) |
-| view | ❌ | not needed — see below |
+| view | ✅ | added — the three form sections mirrored read-only, plus the **View deliveries** action as a header action |
 | edit | ✅ | same form; `type` **and `template_key`** `->disabledOn('edit')` |
 | row actions | ✅ | `EditAction`, **set active** (deactivate/reactivate), **View deliveries** |
 | header / toolbar actions | ✅ | `CreateAction` (index), `DeleteAction` (edit, confirmation names the alert type), `DeleteBulkAction` |
@@ -72,9 +72,10 @@ override".
 
 ### View
 
-Not needed. A rule is nine fields already laid out in three sections, and the one thing hanging
-off it — `notificationLogs` — is an unbounded table that already has its own screen. Per the
-Relations rule, that is a report, not a relation manager.
+**Added.** A rule is nine fields already laid out in three sections, which the view page mirrors
+read-only. The one thing hanging off it — `notificationLogs` — is still not a relation manager
+here: it is an unbounded table with its own screen, so the view page's header carries the
+**View deliveries** action instead, gated on `alerts.view_logs`.
 
 ### Edit
 

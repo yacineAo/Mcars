@@ -20,7 +20,7 @@ the whole system — nothing else grants anything.
 |---|---|---|
 | index | ✅ | name/email searchable, roles badges, `branch.name`, `is_active` icon, `last_login_at`; role + `is_active` (default active) + branch filters; `defaultSort('name')`; eager-loaded `roles` + `branch` |
 | create | ✅ | sectioned: Identity / Access / Placement / Preferences; no roles field; `phone` unique-validated, nullables unconstrained |
-| view | ❌ | deliberately — see "Decisions taken", §view |
+| view | ✅ | added — see "Decisions taken", §view |
 | edit | ✅ | sectioned; `password` and secrets absent; header actions assign-roles / reset-password / deactivate (each `->record($record)`), no delete |
 | row actions | ✅ | edit, assign roles, reset password, set active — hidden on the acting user's own record where that matters |
 | header / toolbar actions | ✅ | `CreateAction`; **no bulk actions** |
@@ -71,9 +71,13 @@ the whole system — nothing else grants anything.
    `is_primary` toggle, pivot edit, detach. The RM's `AttachAction` composes
    `$action->getRecordSelect()` with the toggle (`->schema()` alone would replace the
    record select and break attach).
-8. **View page: not built, on purpose.** A user is a handful of fields; the question
-   "what has this person done" is answered by the ActivityLog resource filtered by
-   causer. A read-only activity slice may come later without breaking anything.
+8. **View page added.** A user is a handful of fields, and "what has this person done" is
+   still answered by the ActivityLog resource filtered by causer — `ViewUser` carries a
+   **View history** header action that opens it pre-filtered, the same link the table's row
+   action already used. The form's Identity / Access / Placement / Preferences grouping
+   carries over as read-only sections; no secrets, no roles field (roles stay an
+   `assign_roles` action on Edit), and the `branchUsers` pivot stays on `EditUser` — it is
+   maintained in place there, not duplicated as read-only history on the view page.
 9. **The audit trail stays honest.** The forms and table expose none of `password`,
    `remember_token`, `two_factor_secret`, `two_factor_recovery_codes`, and the
    `LogsActivity` exclusion keeps hashes out of `activity_log` — both pinned by tests.

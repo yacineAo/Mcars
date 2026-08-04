@@ -249,13 +249,23 @@ class Booking extends Model
      *
      * Past this line the booking's car, customer, dates and pricing are referenced by
      * append-only ledger rows, so editing them desynchronises the two with no trace.
+     *
+     * `status` is nullable here even though the column itself is NOT NULL with a DB
+     * default: a transient, unsaved `Booking` instance — which Filament's create-page
+     * closures can be evaluated against mid-form, before anything is persisted — has no
+     * attribute value yet. A record with no status cannot have started.
+     *
+     * The `@property BookingStatus $status` docblock above is deliberately schema-true
+     * (every *persisted* row has one), so PHPStan reads this null check as dead — it is
+     * not; it is the one path that docblock does not model. Same false-positive class as
+     * README finding 6.
      */
     public function hasStarted(): bool
     {
-        return $this->status->is(
+        return $this->status?->is( // @phpstan-ignore nullCoalesce.expr, nullsafe.neverNull
             BookingStatus::Active,
             BookingStatus::Overdue,
             BookingStatus::Completed,
-        );
+        ) ?? false;
     }
 }

@@ -9,10 +9,12 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\VendorResource\Pages\CreateVendor;
 use App\Filament\Admin\Resources\VendorResource\Pages\EditVendor;
 use App\Filament\Admin\Resources\VendorResource\Pages\ListVendors;
+use App\Filament\Admin\Resources\VendorResource\Pages\ViewVendor;
 use App\Models\Vendor;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -169,6 +171,7 @@ class VendorResource extends Resource
                             ->send();
                     }),
 
+                ViewAction::make(),
                 EditAction::make()
                     ->visible(fn (): bool => Auth::user()?->can('fleet.manage') ?? false),
             ])
@@ -180,6 +183,7 @@ class VendorResource extends Resource
         return [
             'index' => ListVendors::route('/'),
             'create' => CreateVendor::route('/create'),
+            'view' => ViewVendor::route('/{record}'),
             'edit' => EditVendor::route('/{record}/edit'),
         ];
     }

@@ -1,7 +1,7 @@
 # 07 — MaintenanceLog (Fleet)
 
 **Model:** `App\Models\MaintenanceLog` · **Slug:** `/admin/maintenance-logs` ·
-**Status:** ✅ done — service start/complete/cancel, E41 posting, schedule recompute, car transitions all built; view page deferred until a ledger link is meaningful (deliberate, not a gap)
+**Status:** ✅ done — service start/complete/cancel, E41 posting, schedule recompute, car transitions and a view page (with the E41 postings as a relation manager) all built
 
 Closes **REQ-12** (last oil change, last tyre change, last service) with
 [`06-maintenance-schedule.md`](06-maintenance-schedule.md). This screen touches money, so read
@@ -21,11 +21,11 @@ business pays, which is why the two actions on it matter more than the form.
 |---|---|---|---|
 | index | ✅ | 8 columns, badges on type/status, eager-loaded, 6 filters including overdue, default sort |
 | create | ✅ | 5 sections, `status`/`next_due_*` off the form, `total_cost` read-only, `performed_by_id` added |
-| view | ❌ | absent; deferred until a ledger link is meaningful |
+| view | ✅ | added, now that E41 exists — job/assignment/completion/cost (gated) sections plus a `ledgerTransactions` relation manager |
 | edit | ✅ | sectioned; completed frozen (car/type/cost/odometer); cancelled read-only outright |
-| row actions | ✅ | `start_service`, `complete_service`, `cancel_service`, Edit — via `->recordActions()` |
+| row actions | ✅ | `start_service`, `complete_service`, `cancel_service`, View, Edit — via `->recordActions()` |
 | header / toolbar actions | ✅ | `CreateAction`; no bulk delete |
-| relation managers | ❌ | none needed here; see Relations |
+| relation managers | ✅ | `ledgerTransactions` (E41 postings, read-only) on the view page; see Relations |
 | `canAccess()` | ✅ | `fleet.view` / `fleet.manage_maintenance` permissions |
 
 ## Money: what was asked, and what is true
@@ -114,13 +114,13 @@ the columns or make the completion service write the schedule's copy from them �
 
 ### View
 
-**Add one, modestly**, once the ledger posting exists. A completed log with a cost becomes the
-source document behind a `transactions` row, and the pattern already established for money
-records ([`13-transaction.md`](13-transaction.md), [`15-expense.md`](15-expense.md)) is that
-the source and its posting are reachable from each other. Sections: job and assignment, the
-odometer and dates, the cost breakdown gated on `reports.view_financials`, and the resulting
-ledger postings read-only. Until E41 is built there is nothing to link to, so this is second in
-line behind gap 1.
+**Added**, now that E41 exists. A completed log with a cost is the source document behind a
+`transactions` row, matching the pattern already established for money records
+([`13-transaction.md`](13-transaction.md), [`15-expense.md`](15-expense.md)): the source and its
+posting are reachable from each other. Sections: job and assignment, the odometer and dates
+(shown only once a service has started), the cost breakdown gated on `reports.view_financials`,
+and — via `MaintenanceLog::ledgerTransactions()` (`HasLedgerPostings`) — the resulting E41
+postings, read-only, through the shared `LedgerPostingsRelationManager`.
 
 ### Edit
 
@@ -135,13 +135,14 @@ A `cancelled` log should be read-only outright.
 
 ### Relations
 
-**None on this screen.** A log points at one car, one vendor and one user; nothing points back
-at it except `car_blocks.maintenance_log_id` (`2026_07_30_000000_create_booking_tables.php:42`)
-and, once E41 exists, its `transactions` rows.
+**One, now that E41 exists**: `ledgerTransactions` (via `HasLedgerPostings`), read-only, on the
+view page. `car_blocks.maintenance_log_id`
+(`2026_07_30_000000_create_booking_tables.php:42`) still points at a log but stays off this
+screen — a block is read from `CarBlockResource`, which links back here instead.
 
 The reverse direction is already right: logs appear under their car through `CarResource`'s
 `MaintenanceLogsRelationManager`, editable in place, which is where the office works. And they
-should appear read-only under a vendor — see [`08-vendor.md`](08-vendor.md) §Relations.
+now appear read-only under a vendor too — see [`08-vendor.md`](08-vendor.md) §Relations.
 
 ### Actions
 
@@ -150,7 +151,7 @@ should appear read-only under a vendor — see [`08-vendor.md`](08-vendor.md) §
 | `start_service` | row | `status === Scheduled` | maintenance write | **a maintenance service** | should also block the car; gap 4 |
 | `complete_service` | row | status ∉ {Completed, Cancelled} | maintenance write | **a maintenance service** | gaps 1–4 |
 | **Cancel** | row | status ∈ {Scheduled, InProgress} | maintenance write | same service | missing — `MaintenanceStatus::Cancelled` exists and no action reaches it |
-| View / Edit | row | always / not completed | maintenance read / write | — | View page to be added |
+| View / Edit | row | always / not completed | maintenance read / write | — | View page added, with the E41 postings |
 | Create | header | always | maintenance write | — | keep |
 | ~~Delete (bulk)~~ | — | — | — | — | gap 8 |
 

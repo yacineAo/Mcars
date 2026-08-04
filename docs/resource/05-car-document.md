@@ -21,7 +21,7 @@ The list exists. The expiry filter does not, which is the whole feature.
 |---|---|---|
 | index | ✅ | 9 columns, 5 filters (expiry window defaulted, current-only, type, car, branch), `defaultSort('expiry_date')`, eager-load + `withPostedToLedger` |
 | create | ✅ | 10 fields including `SpatieMediaLibraryFileUpload` for the scan |
-| view | ❌ | absent by design — modal preview action on row is enough |
+| view | ✅ | added — mirrors the fields, days-remaining, the scan preview action and a link to the replacement document once superseded |
 | edit | ✅ | `car_id`/`type` frozen after creation; superseded docs gated by `canEdit()` returning false |
 | row actions | ✅ | `renew`, `preview_scan`, Edit, Delete — via `->recordActions([...])` |
 | header / toolbar actions | 🟡 | `CreateAction` only; no `DeleteBulkAction` |
@@ -83,10 +83,10 @@ The missing field is the file. See gap 1.
 
 ### View
 
-**Not needed as a page**, with one caveat: once a scan is attached, the user needs somewhere to
-see it. A modal preview action on the row is enough for a nine-field record; a full view page is
-not warranted unless the document grows a history of its own. If the scan preview turns out to
-need more room, add the page then.
+**Added**, once view pages became standard across every resource. The nine fields, the
+days-remaining state, the cost (gated on `reports.view_financials`) and the **Preview scan**
+action all live there now; a superseded document links to whatever replaced it via
+`replaced_by_id`. No relation manager — a car document is still a leaf.
 
 ### Edit
 

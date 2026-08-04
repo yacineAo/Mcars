@@ -46,7 +46,7 @@ when a price list changes later.
 |---|---|---|
 | index | ✅ | employee, booking, `earned_on`, basis, rate, amount, status badge, **paid in** (derived from `payrollItem.payrollRun.period_month`) |
 | create | ✅ | employee (pinned, self-dealing refused), booking (pinned, optional), basis, rate, `earned_on`, notes; amount computed by the service |
-| view | ❌ | not needed — a commission is one line |
+| view | ✅ | added — the one line, with a link to the payroll run that swept it in, once swept |
 | edit | ✅ | notes only once paid; terms re-asserted server-side |
 | row actions | ✅ | Edit (the lifecycle has no human step — it moves with payroll) |
 | header / toolbar actions | ✅ | `CreateAction`; **no `DeleteBulkAction`** |

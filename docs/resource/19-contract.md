@@ -20,7 +20,7 @@ real consequences.
 | create | ✅ | **generated** from booking + template via `ContractService::generate()` — never typed |
 | view | ✅ | renders the stored `content_snapshot` (sanitised, `dir` from the snapshot's locale) + identity, signatures, amendments, deposits, fines, condition reports |
 | edit | ✅ | every term field disabled once signed (ADR-005); only `closing_notes` stays writable |
-| row actions | ✅ | `render_pdf`, `send`, `sign`, `close`, Edit, Delete — `->recordActions([...])`, all gated |
+| row actions | ✅ | `render_pdf`, `download_pdf`, `send`, `sign`, `close`, Edit, Delete — `->recordActions([...])`, all gated |
 | header / toolbar actions | ✅ | `CreateAction` |
 | relation managers | ✅ | 5, money ones gated |
 | `canAccess()` | ✅ | `bookings.view` |
@@ -61,6 +61,32 @@ real consequences.
 7. **PHPStan `is()` / null-comparison warnings.** Fixed the model as the audit prescribed:
    `@property ContractStatus $status` and `@property array|null $content_snapshot` docblocks
    on `Contract`.
+8. **🔴 `render_pdf` never produced a PDF, and there was no way to download one anyway.**
+   Reported live: clicking "Generate PDF" gave a success toast and nothing else.
+   `ContractService::renderPdf()` built an HTML string and wrote it straight to
+   `contracts/{number}.pdf` — never through a renderer — so every "PDF" the app had ever
+   produced was HTML wearing a `.pdf` extension (`file` reported "HTML document" on 5 live
+   rows, first bytes `<!DOCTYPE html>`, not `%PDF-`). Both existing Pest tests passed anyway,
+   because neither checked file *content*, only that a row existed at the expected path.
+   Separately, the action's closure returns `void` and only shows a `Notification` — no
+   `->url()`, no signed route, nothing that could ever hand bytes to a browser, unlike
+   `CarDocument`'s `DocumentMediaController`. **Fixed both halves:**
+   - `renderPdf()` now renders through `Barryvdh\DomPDF\Facade\Pdf::loadView('contracts.pdf', ...)`
+     and writes the actual output bytes; `document_hash` is now computed from those bytes, not
+     the HTML, matching ADR-009's "the exact bytes are legally significant."
+   - The duplicated, buggy HTML-building code in `ContractService::renderHtml()` (broken `??`
+     operator precedence — `.` binds tighter than `??`, so every `?? ''` fallback was dead) is
+     gone. `ContractService::renderDocumentHtml()` — the correct, already-escaped version that
+     used to live only in `ViewContract` — is now the single source both the PDF and the
+     on-screen view render from, so they can no longer drift apart.
+   - New `ContractPdfController` + signed route (`contracts.pdf.download`), mirroring
+     `DocumentMediaController` exactly: signature + `bookings.view` both required. New
+     `download_pdf` row action, visible once `pdf_path` is set, opens it in a new tab.
+   - The two contracts already carrying a corrupted "PDF" in the live database were
+     regenerated through the fixed service.
+   - Both existing tests now assert the stored bytes start with `%PDF-` (and that
+     `document_hash` matches a fresh hash of those bytes) instead of only checking the path
+     exists; two new tests cover the download route (success + signature/permission refusal).
 
 ### Decisions taken while fixing
 
@@ -87,7 +113,7 @@ real consequences.
 
 | Permission | Guards |
 |---|---|
-| `bookings.view` | resource access, View page |
+| `bookings.view` | resource access, View page, `download_pdf` (also re-checked server-side by `ContractPdfController`) |
 | `bookings.operate` | create, edit, `render_pdf`, `send`, `close` |
 | `contracts.sign` | the `sign` action — `SignatureService` OTP verification is unchanged |
 | `bookings.manage` | delete (draft only) |
@@ -99,10 +125,15 @@ real consequences.
 docker compose exec app ./vendor/bin/pest tests/Feature/ContractResourceTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ResourcePagesRenderTest.php
 docker compose exec app ./vendor/bin/pest tests/Feature/ContractTemplateResourceTest.php
-docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/ContractResource.php app/Models/Contract.php app/Services/Booking/ContractService.php
+docker compose exec app ./vendor/bin/pest tests/Feature/BookingTest.php
+docker compose exec app ./vendor/bin/phpstan analyse app/Filament/Admin/Resources/ContractResource.php app/Models/Contract.php app/Services/Booking/ContractService.php app/Http/Controllers/ContractPdfController.php
 ```
 
 By hand: render a contract in Arabic and confirm the view page and the PDF are both RTL, and
 that a French-speaking user opening the same contract still sees it RTL. Sign a contract and
 confirm a signature row is written. Then attempt to edit the signed contract's text and confirm
 it is refused.
+
+Generate a PDF, then click "Download PDF": the file that opens must actually be a PDF (opens in
+a viewer, is not zero bytes, `document_hash` on the view page matches `sha256` of the downloaded
+file) — not an HTML file with a `.pdf` extension.

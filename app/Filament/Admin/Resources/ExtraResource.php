@@ -11,6 +11,7 @@ use App\Models\Extra;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -122,6 +123,7 @@ class ExtraResource extends Resource
             ->defaultSort('name')
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->withCount('bookingExtras'))
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make()
                     ->hidden(fn (Extra $record): bool => $record->booking_extras_count > 0),
@@ -134,6 +136,7 @@ class ExtraResource extends Resource
         return [
             'index' => ExtraResource\Pages\ListExtras::route('/'),
             'create' => ExtraResource\Pages\CreateExtra::route('/create'),
+            'view' => ExtraResource\Pages\ViewExtra::route('/{record}'),
             'edit' => ExtraResource\Pages\EditExtra::route('/{record}/edit'),
         ];
     }

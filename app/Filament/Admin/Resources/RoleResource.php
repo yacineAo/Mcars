@@ -6,9 +6,11 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Admin\Resources\RoleResource\Pages\ListRoles;
+use App\Filament\Admin\Resources\RoleResource\Pages\ViewRole;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource as ShieldRoleResource;
 use BezhanSalleh\FilamentShield\Support\Utils;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -121,10 +123,12 @@ class RoleResource extends ShieldRoleResource
                     ->label(__('filament-shield::filament-shield.column.updated_at'))
                     ->dateTime(),
             ])
-            // Edit only. Delete is gone: deleting a role locks its holders out
-            // of the panel (canAccessPanel() requires a UserRole case), and the
-            // seeder is the only sanctioned writer of the role list anyway.
+            // View + Edit only. Delete is gone: deleting a role locks its
+            // holders out of the panel (canAccessPanel() requires a UserRole
+            // case), and the seeder is the only sanctioned writer of the role
+            // list anyway.
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
             ]);
     }
@@ -133,6 +137,7 @@ class RoleResource extends ShieldRoleResource
     {
         return [
             'index' => ListRoles::route('/'),
+            'view' => ViewRole::route('/{record}'),
             'edit' => EditRole::route('/{record}/edit'),
         ];
     }

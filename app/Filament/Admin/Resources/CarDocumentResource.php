@@ -9,6 +9,7 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\CarDocumentResource\Pages\CreateCarDocument;
 use App\Filament\Admin\Resources\CarDocumentResource\Pages\EditCarDocument;
 use App\Filament\Admin\Resources\CarDocumentResource\Pages\ListCarDocuments;
+use App\Filament\Admin\Resources\CarDocumentResource\Pages\ViewCarDocument;
 use App\Models\CarDocument;
 use App\Models\FinancialAccount;
 use App\Services\Fleet\RecordDocumentRenewalService;
@@ -16,6 +17,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
@@ -320,6 +322,8 @@ class CarDocumentResource extends Resource
                     ))
                     ->openUrlInNewTab(),
 
+                ViewAction::make(),
+
                 EditAction::make()
                     ->visible(fn (CarDocument $record): bool => $record->replaced_by_id === null
                         && (Auth::user()?->can('fleet.manage') ?? false)),
@@ -339,6 +343,7 @@ class CarDocumentResource extends Resource
         return [
             'index' => ListCarDocuments::route('/'),
             'create' => CreateCarDocument::route('/create'),
+            'view' => ViewCarDocument::route('/{record}'),
             'edit' => EditCarDocument::route('/{record}/edit'),
         ];
     }

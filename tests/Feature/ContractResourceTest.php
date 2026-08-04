@@ -29,6 +29,7 @@ use Database\Seeders\ChartOfAccountSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -116,12 +117,12 @@ it('hides the sign action without contracts.sign', function () {
     $contract->update(['status' => ContractStatus::AwaitingSignature]);
 
     Livewire::actingAs($this->accountant)
-        ->test(ListContracts::class)
-        ->assertTableActionHidden('sign', $contract);
+        ->test(ViewContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionHidden('sign');
 
     Livewire::actingAs($this->receptionist)
-        ->test(ListContracts::class)
-        ->assertTableActionVisible('sign', $contract);
+        ->test(ViewContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionVisible('sign');
 });
 
 it('lets only a manager delete, and only a draft', function () {
@@ -178,9 +179,8 @@ it('signs through the service: writes the signature row and freezes the contract
     $contract = contractForTest(app(ContractService::class), bookingForContractTest());
 
     Livewire::actingAs($this->receptionist)
-        ->test(ListContracts::class)
-        ->filterTable('status', null)
-        ->callTableAction('sign', $contract, [
+        ->test(ViewContract::class, ['record' => $contract->getRouteKey()])
+        ->callAction('sign', [
             'signer_role' => 'customer',
             'signer_name' => 'Yacine Test',
         ]);
@@ -230,9 +230,8 @@ it('closes through the service, taking the check-in report as the source of trut
     ]);
 
     Livewire::actingAs($this->receptionist)
-        ->test(ListContracts::class)
-        ->filterTable('status', null)
-        ->callTableAction('close', $contract, [
+        ->test(ViewContract::class, ['record' => $contract->getRouteKey()])
+        ->callAction('close', [
             'checkin_report' => $report->id,
         ]);
 
@@ -266,17 +265,59 @@ it('refuses to close with a check-in report from another booking', function () {
         ->and($contract->fresh()->status)->toBe(ContractStatus::Active);
 });
 
-it('renders the PDF through the row action', function () {
+it('renders the PDF through the view page header action', function () {
     Storage::fake('private');
 
     $contract = contractForTest(app(ContractService::class), bookingForContractTest());
     $contract->update(['status' => ContractStatus::AwaitingSignature]);
 
     Livewire::actingAs($this->receptionist)
-        ->test(ListContracts::class)
-        ->callTableAction('render_pdf', $contract);
+        ->test(ViewContract::class, ['record' => $contract->getRouteKey()])
+        ->callAction('render_pdf');
 
-    Storage::disk('private')->assertExists('contracts/'.$contract->contract_number.'.pdf');
+    $path = 'contracts/'.$contract->contract_number.'.pdf';
+    Storage::disk('private')->assertExists($path);
+    expect(Storage::disk('private')->get($path))->toStartWith('%PDF-');
+});
+
+it('offers a download_pdf action only once a PDF has been generated, and it resolves to a real PDF', function () {
+    Storage::fake('private');
+
+    $contract = contractForTest(app(ContractService::class), bookingForContractTest());
+    $contract->update(['status' => ContractStatus::AwaitingSignature]);
+
+    Livewire::actingAs($this->receptionist)
+        ->test(ViewContract::class, ['record' => $contract->getRouteKey()])
+        ->assertActionHidden('download_pdf');
+
+    app(ContractService::class)->renderPdf($contract);
+
+    Livewire::actingAs($this->receptionist)
+        ->test(ViewContract::class, ['record' => $contract->fresh()->getRouteKey()])
+        ->assertActionVisible('download_pdf');
+
+    $response = $this->actingAs($this->receptionist)->get(
+        URL::temporarySignedRoute('contracts.pdf.download', now()->addMinutes(5), ['contract' => $contract->id]),
+    );
+
+    // Storage::disk()->download() returns a BinaryFileResponse, whose getContent()
+    // is `false` by design (it streams the file rather than buffering it) — assert
+    // on the response instead of trying to read the body through the test client.
+    $response->assertSuccessful()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('Content-Disposition');
+    expect($response->headers->get('Content-Disposition'))->toContain($contract->contract_number.'.pdf');
+});
+
+it('refuses an unsigned or expired link to the contract PDF', function () {
+    Storage::fake('private');
+
+    $contract = contractForTest(app(ContractService::class), bookingForContractTest());
+    app(ContractService::class)->renderPdf($contract);
+
+    $this->actingAs($this->receptionist)
+        ->get(route('contracts.pdf.download', ['contract' => $contract->id]))
+        ->assertForbidden();
 });
 
 // ---------------------------------------------------------------------------

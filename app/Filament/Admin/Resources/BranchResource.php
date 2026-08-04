@@ -9,6 +9,7 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\BranchResource\Pages\CreateBranch;
 use App\Filament\Admin\Resources\BranchResource\Pages\EditBranch;
 use App\Filament\Admin\Resources\BranchResource\Pages\ListBranches;
+use App\Filament\Admin\Resources\BranchResource\Pages\ViewBranch;
 use App\Filament\Admin\Resources\BranchResource\RelationManagers;
 use App\Models\Branch;
 use App\Rules\UniqueBranchCode;
@@ -18,6 +19,7 @@ use DateTimeZone;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -170,6 +172,7 @@ class BranchResource extends Resource
             ->defaultSort('name')
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('manager'))
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
                 self::makeDefaultAction(),
                 self::setActiveAction(),
@@ -270,6 +273,7 @@ class BranchResource extends Resource
         return [
             'index' => ListBranches::route('/'),
             'create' => CreateBranch::route('/create'),
+            'view' => ViewBranch::route('/{record}'),
             'edit' => EditBranch::route('/{record}/edit'),
         ];
     }

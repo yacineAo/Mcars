@@ -9,9 +9,11 @@ use App\Filament\Admin\Concerns\TranslatesModelLabel;
 use App\Filament\Admin\Resources\ExpenseCategoryResource\Pages\CreateExpenseCategory;
 use App\Filament\Admin\Resources\ExpenseCategoryResource\Pages\EditExpenseCategory;
 use App\Filament\Admin\Resources\ExpenseCategoryResource\Pages\ListExpenseCategories;
+use App\Filament\Admin\Resources\ExpenseCategoryResource\Pages\ViewExpenseCategory;
 use App\Models\ExpenseCategory;
 use BackedEnum;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -121,6 +123,7 @@ class ExpenseCategoryResource extends Resource
             ])
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('parent')->orderBy('sort_order')->orderBy('name'))
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->bulkActions([]);
@@ -131,6 +134,7 @@ class ExpenseCategoryResource extends Resource
         return [
             'index' => ListExpenseCategories::route('/'),
             'create' => CreateExpenseCategory::route('/create'),
+            'view' => ViewExpenseCategory::route('/{record}'),
             'edit' => EditExpenseCategory::route('/{record}/edit'),
         ];
     }

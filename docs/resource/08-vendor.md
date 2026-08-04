@@ -20,11 +20,11 @@ tables point here — `maintenance_logs.vendor_id`
 |---|---|---|---|
 | index | ✅ | 7 columns, badge on `type`, `maintenance_logs_count`, `is_active` + `type` + `branch_id` filters, `defaultSort('name')` |
 | create | ✅ | 8 fields, flat — unchanged |
-| view | ❌ | not needed — eight fields of contact detail; see Relations |
+| view | ✅ | added — contact detail, gated Payment Details, and the two read-only relation managers below |
 | edit | ✅ | same form; `canEdit` gated on `fleet.manage` |
 | row actions | ✅ | `deactivate` + `reactivate` + `EditAction` via `->recordActions()` |
 | header / toolbar actions | ✅ | `CreateAction`; no bulk delete |
-| relation managers | ❌ | vendor history belongs in `expenseBreakdown()` report |
+| relation managers | ✅ | `maintenanceLogs` + `expenses`, both read-only, on the view page |
 | `canAccess()` | ✅ | `fleet.view` / `fleet.manage` permissions |
 
 Every column is local to the row, so the index carries no N+1 — unusual in this cluster.
@@ -51,23 +51,21 @@ way (`->visible(fn (): bool => Auth::user()?->can('reports.view_financials') ?? 
 always-visible and optional rather than conditional on a select.
 
 ### View
-**Not needed as it stands** — eight fields of contact detail that a view page would only repeat.
-That changes if the history relation below is added.
+**Added.** Eight fields of contact detail plus the two relation managers below — a view page is
+now standard, and the history relations give it something a view page is for.
 
 ### Edit
 Everything stays editable; nothing keys off `type`, so it need not freeze.
 
 ### Relations
-`Vendor hasMany maintenanceLogs` (`Vendor.php:41`) is the only relation defined, though
-`expenses.vendor_id` points here too and **no `expenses()` relation exists**. If a view page is
-added, both belong on it and both are strictly read-only — a maintenance log is created from a car
-or a schedule, an expense from `ExpenseResource`. `expenses` needs `reports.view_financials`;
-`maintenanceLogs` inherits whatever [`07-maintenance-log.md`](07-maintenance-log.md) gap 5 decides
-about `total_cost`.
+Both `maintenanceLogs` and `expenses` (`Vendor.php`) are now on the view page, both strictly
+read-only — a maintenance log is created from a car or a schedule, an expense from
+`ExpenseResource`, never from here. `expenses` is gated on `reports.view_financials`;
+`maintenanceLogs`' `total_cost` column inherits the same gate.
 
-It is a fair judgement call that "what have we spent with this garage" is a report, not a screen —
-[`../02-filament-panels.md`](../02-filament-panels.md) puts vendor spend in `expenseBreakdown()`.
-If that is the answer, this resource correctly needs **no relation managers at all**.
+"What have we spent with this garage" still has its aggregate answer in `expenseBreakdown()`
+([`../02-filament-panels.md`](../02-filament-panels.md)) — the relation managers are the
+per-record detail underneath that report, not a replacement for it.
 
 ### Actions
 

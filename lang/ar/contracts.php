@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'actions' => [
         'render_pdf' => 'توليد ملف PDF',
+        'download_pdf' => 'تحميل ملف PDF',
         'send' => 'إرسال إلى العميل',
         'send_description' => 'ينقل العقد إلى حالة «بانتظار التوقيع» ويسجل قناة الإرسال.',
         'sign' => 'وضع علامة التوقيع',

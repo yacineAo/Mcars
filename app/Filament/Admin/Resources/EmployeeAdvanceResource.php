@@ -15,6 +15,7 @@ use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -261,6 +262,7 @@ class EmployeeAdvanceResource extends Resource
                         || $record->status !== AdvanceStatus::Requested
                         || ! (Auth::user()?->can('hr.manage') ?? false)),
 
+                ViewAction::make(),
                 EditAction::make(),
             ])
             // No bulk actions: money records are never bulk-deleted.
@@ -273,6 +275,7 @@ class EmployeeAdvanceResource extends Resource
         return [
             'index' => Pages\ListEmployeeAdvances::route('/'),
             'create' => Pages\CreateEmployeeAdvance::route('/create'),
+            'view' => Pages\ViewEmployeeAdvance::route('/{record}'),
             'edit' => Pages\EditEmployeeAdvance::route('/{record}/edit'),
         ];
     }

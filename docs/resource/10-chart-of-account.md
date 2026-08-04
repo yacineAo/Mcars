@@ -19,11 +19,11 @@ registration), and `ReportService` resolves several of them by code at runtime.
 |---|---|---|
 | index | ✅ | code, name, type, parent, cash-equivalent + postable icons; `->filters([])` empty |
 | create | ✅ | includes editable `is_system`, `is_postable`, `is_cash_equivalent` toggles |
-| view | ❌ | not needed as such — but see Relations |
+| view | ✅ | added — account fields, flags, and the two relations below |
 | edit | ✅ | same form; nothing frozen |
 | row actions | ✅ | Edit, Delete — via deprecated `->actions([...])` |
 | header / toolbar actions | 🟡 | `CreateAction`; **`DeleteBulkAction`** in a bulk group |
-| relation managers | ❌ | none, though it is a self-referencing tree (`children`) |
+| relation managers | ✅ | `children` and `transactions` (both legs, read-only), on the view page |
 | `canAccess()` | ✅ | present (`ChartOfAccountResource.php:40`) |
 
 ## Should be
@@ -40,9 +40,9 @@ accountant can see at a glance which accounts are load-bearing.
 Fine, with one change: `is_system` must not be a user-settable toggle (below).
 
 ### View
-Not required for its own sake — an account is six fields. Worth adding only if you want the
-`transactions` relation on it (see Relations), which is a real convenience: "show me
-everything posted to 5060 this year".
+**Added.** An account is six fields, but the `transactions` relation on it is a real
+convenience — "show me everything posted to 5060 this year" — and is exactly what the view
+page now offers, alongside the `children` sub-account list.
 
 ### Edit
 `code` must freeze once the account has postings — `ReportService` and the seeded posting
@@ -56,8 +56,8 @@ Two candidates, both read-only:
 
 | Relation | Where | Read-only | Gate | Columns |
 |---|---|---|---|---|
-| `children` | index (as a tree) or view | yes | — | code, name, type |
-| `transactions` (both legs) | **view**, if added | **yes, strictly** | `reports.view_financials` | reference, date, amount, other leg |
+| `children` | view | yes | — | code, name, type |
+| `transactions` (both legs) | **view** | **yes, strictly** | `reports.view_financials` | reference, date, amount, other leg |
 
 A postings table must match either leg (debit **or** credit), which is a query, not a plain
 `hasMany`. Strictly read-only — no create, edit, delete or bulk actions (ADR-003).
