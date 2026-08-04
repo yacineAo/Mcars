@@ -120,6 +120,7 @@ class ContractResource extends Resource
                         ->mapWithKeys(fn (Booking $booking) => [$booking->id => $booking->reference])
                         ->toArray())
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disabled(fn (?Contract $record): bool => $record !== null),
                 Select::make('contract_template_id')

@@ -156,7 +156,8 @@ class DocumentsRelationManager extends RelationManager
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
                                 ->all())
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                     ])
                     ->action(function (CarDocument $record, array $data): void {
                         $accountId = $data['financial_account_id'] ?? null;

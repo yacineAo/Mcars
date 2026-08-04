@@ -71,6 +71,7 @@ class MaintenanceLogsRelationManager extends RelationManager
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name', fn (Builder $query): Builder => $query->where('is_active', true))
                     ->searchable()
+                    ->preload()
                     ->nullable(),
                 Select::make('type')
                     ->options(MaintenanceType::options())
@@ -165,7 +166,8 @@ class MaintenanceLogsRelationManager extends RelationManager
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
                                 ->all())
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                     ])
                     ->action(function (MaintenanceLog $record, array $data): void {
                         $accountId = $data['financial_account_id'] ?? null;

@@ -131,11 +131,13 @@ class CarOwnershipAgreementResource extends Resource
                             ->relationship('car', 'registration_number')
                             ->required()
                             ->searchable()
+                            ->preload()
                             ->disabled(fn (string $operation, ?CarOwnershipAgreement $record): bool => $operation === 'edit' && $record !== null && ($record->status === AgreementStatus::Active || $record->ownerInstallments()->exists())),
                         Select::make('car_owner_id')
                             ->relationship('carOwner', 'first_name')
                             ->required()
                             ->searchable()
+                            ->preload()
                             ->disabled(fn (string $operation, ?CarOwnershipAgreement $record): bool => $operation === 'edit' && $record !== null && ($record->status === AgreementStatus::Active || $record->ownerInstallments()->exists())),
                     ]),
                 ...static::getTermFields(),

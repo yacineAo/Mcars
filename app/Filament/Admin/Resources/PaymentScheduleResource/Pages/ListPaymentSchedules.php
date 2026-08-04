@@ -44,6 +44,7 @@ class ListPaymentSchedules extends ListRecords
                             ->pluck('reference', 'id')
                             ->all())
                         ->searchable()
+                        ->preload()
                         ->visible(fn (callable $get): bool => $get('schedulable_type') === Booking::class)
                         ->required(fn (callable $get): bool => $get('schedulable_type') === Booking::class),
                     Select::make('contract_id')
@@ -53,6 +54,7 @@ class ListPaymentSchedules extends ListRecords
                             ->pluck('contract_number', 'id')
                             ->all())
                         ->searchable()
+                        ->preload()
                         ->visible(fn (callable $get): bool => $get('schedulable_type') === Contract::class)
                         ->required(fn (callable $get): bool => $get('schedulable_type') === Contract::class),
                     TextInput::make('total')

@@ -126,6 +126,7 @@ class ViewContract extends ViewRecord
                             ])
                             ->toArray())
                         ->searchable()
+                        ->preload()
                         ->required(),
                 ])
                 ->action(function (Contract $record, array $data): void {

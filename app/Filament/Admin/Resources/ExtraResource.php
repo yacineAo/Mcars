@@ -89,6 +89,7 @@ class ExtraResource extends Resource
                 Select::make('ledger_account_id')
                     ->relationship('ledgerAccount', 'name', fn (Builder $query): Builder => $query->where('is_postable', true)->where('type', AccountType::Revenue))
                     ->searchable()
+                    ->preload()
                     ->required(),
                 Toggle::make('is_active')->default(true),
             ]);

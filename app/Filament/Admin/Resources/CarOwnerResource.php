@@ -119,7 +119,8 @@ class CarOwnerResource extends Resource
                             ->maxLength(65535),
                         Select::make('wilaya')
                             ->options(Wilaya::options())
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                     ])
                     ->columns(2),
                 Section::make('Payment Details')
@@ -228,7 +229,8 @@ class CarOwnerResource extends Resource
                                 ->pluck('registration_number', 'id')
                                 ->toArray())
                             ->required()
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                         Select::make('model')
                             ->options([
                                 'fixed_monthly' => 'Fixed Monthly',

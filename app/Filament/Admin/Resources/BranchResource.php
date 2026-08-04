@@ -86,7 +86,8 @@ class BranchResource extends Resource
                             ->maxLength(255),
                         Select::make('wilaya')
                             ->options(Wilaya::options())
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                         Select::make('timezone')
                             ->options(self::timezoneOptions())
                             ->default('Africa/Algiers'),

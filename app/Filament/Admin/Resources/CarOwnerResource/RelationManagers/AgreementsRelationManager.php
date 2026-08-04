@@ -50,7 +50,8 @@ class AgreementsRelationManager extends RelationManager
                         Select::make('car_id')
                             ->relationship('car', 'registration_number')
                             ->required()
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                     ]),
                 ...CarOwnershipAgreementResource::getTermFields(),
             ]);

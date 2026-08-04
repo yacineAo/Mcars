@@ -136,6 +136,7 @@ class FineResource extends Resource
                         ->pluck('registration_number', 'id')
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->live()
                     ->afterStateUpdated($suggestMatch)
@@ -148,6 +149,7 @@ class FineResource extends Resource
                         ->mapWithKeys(fn (Customer $customer): array => [$customer->id => $customer->displayName()])
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozen),
                 Select::make('booking_id')
@@ -157,6 +159,7 @@ class FineResource extends Resource
                         ->pluck('reference', 'id')
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozen),
                 Select::make('contract_id')
@@ -166,6 +169,7 @@ class FineResource extends Resource
                         ->pluck('contract_number', 'id')
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozen),
                 Select::make('type')->options(FineType::options())->required(),

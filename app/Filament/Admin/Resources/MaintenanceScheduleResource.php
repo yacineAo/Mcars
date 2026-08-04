@@ -79,6 +79,7 @@ class MaintenanceScheduleResource extends Resource
                 Select::make('car_id')
                     ->relationship('car', 'registration_number')
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->visible(fn (?MaintenanceSchedule $record, callable $get): bool => $record !== null || $get('applies_to') === 'car')
                     ->disabledOn('edit'),
@@ -86,6 +87,7 @@ class MaintenanceScheduleResource extends Resource
                 Select::make('car_category_id')
                     ->relationship('carCategory', 'name')
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->visible(fn (?MaintenanceSchedule $record, callable $get): bool => $record !== null || $get('applies_to') === 'category')
                     ->disabledOn('edit'),

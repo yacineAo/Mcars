@@ -139,11 +139,13 @@ class PaymentResource extends Resource
                 Select::make('customer_id')
                     ->relationship('customer', 'first_name')
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozenOncePosted),
                 Select::make('financial_account_id')
                     ->relationship('financialAccount', 'name')
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozenOncePosted),
                 // Payment methods are Algerian — cash, CCP, BaridiMob, bank

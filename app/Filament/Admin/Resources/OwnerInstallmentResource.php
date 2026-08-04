@@ -94,18 +94,21 @@ class OwnerInstallmentResource extends Resource
                         ])
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disabled($frozenOnceAccrued),
                 Select::make('car_owner_id')
                     ->label(__('owner_installments.fields.owner'))
                     ->relationship('carOwner', 'first_name')
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disabled($frozenOnceAccrued),
                 Select::make('car_id')
                     ->label(__('owner_installments.fields.car'))
                     ->relationship('car', 'registration_number')
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disabled($frozenOnceAccrued),
                 DatePicker::make('period_month')

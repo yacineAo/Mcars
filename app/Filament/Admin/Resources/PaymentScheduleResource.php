@@ -106,6 +106,7 @@ class PaymentScheduleResource extends Resource
                 ->label(__('payment_schedules.fields.customer'))
                 ->relationship('customer', 'first_name')
                 ->searchable()
+                ->preload()
                 ->required()
                 ->disabled(),
             TextInput::make('sequence')->label(__('payment_schedules.fields.sequence'))->numeric()->disabled(),
@@ -219,6 +220,7 @@ class PaymentScheduleResource extends Resource
                                 FinancialAccount::query()->where('is_active', true),
                             )->orderBy('name')->pluck('name', 'id')->all())
                             ->searchable()
+                            ->preload()
                             ->nullable(),
                     ])
                     ->action(function (PaymentSchedule $record, array $data, PaymentScheduleService $schedules): void {

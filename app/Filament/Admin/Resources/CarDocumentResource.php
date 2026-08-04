@@ -77,6 +77,7 @@ class CarDocumentResource extends Resource
                     ->relationship('car', 'registration_number')
                     ->required()
                     ->searchable()
+                    ->preload()
                     ->disabled(fn (?CarDocument $record, string $operation): bool => $operation === 'edit'),
                 Select::make('type')
                     ->options(CarDocumentType::options())
@@ -277,7 +278,8 @@ class CarDocumentResource extends Resource
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
                                 ->all())
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                         TextInput::make('cost')
                             ->numeric()
                             ->prefix('DZD')

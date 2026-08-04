@@ -121,6 +121,7 @@ class BookingResource extends Resource
                                         ])
                                         ->toArray())
                                     ->searchable()
+                                    ->preload()
                                     ->required()
                                     ->rule(fn (?Booking $record): CustomerNotBlacklisted => new CustomerNotBlacklisted(
                                         alreadyStarted: $record?->hasStarted() ?? false,
@@ -129,6 +130,7 @@ class BookingResource extends Resource
                                 Select::make('car_id')
                                     ->relationship('car', 'registration_number')
                                     ->searchable()
+                                    ->preload()
                                     ->required()
                                     ->disabled(fn (?Booking $record): bool => $record?->hasStarted() ?? false),
                             ]),
@@ -458,6 +460,7 @@ class BookingResource extends Resource
                                 ->pluck('name', 'id')
                                 ->all())
                             ->searchable()
+                            ->preload()
                             ->nullable(),
                         Textarea::make('notes')->label(__('Notes')),
                     ])

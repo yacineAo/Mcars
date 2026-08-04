@@ -89,6 +89,7 @@ class CashSessionResource extends Resource
                         fn (Builder $q): Builder => $q->where('branch_id', Auth::user()?->branch_id),
                     ))
                     ->searchable()
+                    ->preload()
                     ->required(),
                 TextInput::make('opening_float')
                     ->numeric()

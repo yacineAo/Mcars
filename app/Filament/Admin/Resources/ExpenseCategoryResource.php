@@ -82,6 +82,7 @@ class ExpenseCategoryResource extends Resource
                 Select::make('ledger_account_id')
                     ->relationship('ledgerAccount', 'name', fn (Builder $query): Builder => $query->where('is_postable', true)->where('type', AccountType::Expense))
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disabled(fn (?ExpenseCategory $record): bool => $record !== null && $record->exists && $record->hasExpenses())
                     ->helperText(fn (?ExpenseCategory $record) => $record !== null && $record->exists && $record->hasExpenses() ? __('Ledger account cannot be changed once expenses exist in this category.') : null),

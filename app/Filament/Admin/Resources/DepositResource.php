@@ -80,11 +80,13 @@ class DepositResource extends Resource
                 Select::make('booking_id')
                     ->relationship('booking', 'reference')
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disabled($frozenOncePosted),
                 Select::make('customer_id')
                     ->relationship('customer', 'first_name')
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disabled($frozenOncePosted),
                 TextInput::make('amount')
@@ -102,6 +104,7 @@ class DepositResource extends Resource
                 Select::make('financial_account_id')
                     ->relationship('financialAccount', 'name')
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozenOncePosted),
                 // Status is owned by DepositService: Hold, Deduct and Refund move

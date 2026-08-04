@@ -143,7 +143,8 @@ class CustomerResource extends Resource
                             ->maxLength(255),
                         Select::make('wilaya')
                             ->options(Wilaya::options())
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                         TextInput::make('country')
                             ->maxLength(100)
                             ->default('Algeria'),

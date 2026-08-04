@@ -107,6 +107,7 @@ class CarResource extends Resource
                         Select::make('car_category_id')
                             ->relationship('category', 'name')
                             ->searchable()
+                            ->preload()
                             ->nullable(),
                         Select::make('ownership_type')
                             ->options(OwnershipType::options())
@@ -120,6 +121,7 @@ class CarResource extends Resource
                         Select::make('car_owner_id')
                             ->relationship('owner', 'first_name')
                             ->searchable()
+                            ->preload()
                             ->nullable()
                             ->hidden(fn (callable $get): bool => $get('ownership_type') !== OwnershipType::ThirdParty->value),
                     ])

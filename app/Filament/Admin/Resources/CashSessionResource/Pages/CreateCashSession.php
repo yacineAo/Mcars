@@ -68,6 +68,7 @@ class CreateCashSession extends CreateRecord
                 ->label('Cash Account')
                 ->options(FinancialAccount::query()->where('is_active', true)->pluck('name', 'id'))
                 ->searchable()
+                ->preload()
                 ->required(),
             TextInput::make('opening_float')
                 ->numeric()

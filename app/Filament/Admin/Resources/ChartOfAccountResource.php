@@ -93,6 +93,7 @@ class ChartOfAccountResource extends Resource
                 Select::make('parent_id')
                     ->relationship('parent', 'name')
                     ->searchable()
+                    ->preload()
                     ->nullable(),
                 Toggle::make('is_cash_equivalent'),
                 Toggle::make('is_postable')

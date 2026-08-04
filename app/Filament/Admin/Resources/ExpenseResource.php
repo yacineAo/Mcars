@@ -109,12 +109,14 @@ class ExpenseResource extends Resource
                 Select::make('expense_category_id')
                     ->relationship('category', 'name')
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->reactive()
                     ->disabled($frozenOncePaid),
                 Select::make('car_id')
                     ->relationship('car', 'registration_number')
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->visible(fn (callable $get): bool => self::categoryIsCarRelated($get('expense_category_id')))
                     // An expense that should attribute to a car but has no car_id
@@ -124,6 +126,7 @@ class ExpenseResource extends Resource
                 Select::make('vendor_id')
                     ->relationship('vendor', 'name', fn (Builder $query): Builder => $query->where('is_active', true))
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozenOncePaid),
                 TextInput::make('amount')
@@ -169,6 +172,7 @@ class ExpenseResource extends Resource
                         return $query;
                     })
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozenOncePaid),
                 Toggle::make('is_recurring')
@@ -319,6 +323,7 @@ class ExpenseResource extends Resource
                                 ->pluck('name', 'id')
                                 ->all())
                             ->searchable()
+                            ->preload()
                             ->required(),
                     ])
                     ->action(function (Expense $record, array $data, ExpenseService $service): void {

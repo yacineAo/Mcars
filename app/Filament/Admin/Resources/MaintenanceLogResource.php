@@ -88,6 +88,7 @@ class MaintenanceLogResource extends Resource
                             ->relationship('car', 'registration_number')
                             ->required()
                             ->searchable()
+                            ->preload()
                             ->disabled(fn (?MaintenanceLog $record): bool => $record !== null && ($record->status->isTerminal())),
                         Select::make('type')
                             ->options(MaintenanceType::options())
@@ -107,12 +108,14 @@ class MaintenanceLogResource extends Resource
                         Select::make('vendor_id')
                             ->relationship('vendor', 'name', fn (Builder $query): Builder => $query->where('is_active', true))
                             ->searchable()
+                            ->preload()
                             ->nullable()
                             ->disabled($frozen),
                         Select::make('performed_by_id')
                             ->label(__('Performed by'))
                             ->relationship('performedBy', 'name')
                             ->searchable()
+                            ->preload()
                             ->nullable()
                             ->disabled($frozen),
                     ])
@@ -310,7 +313,8 @@ class MaintenanceLogResource extends Resource
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
                                 ->all())
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                     ])
                     ->action(function (MaintenanceLog $record, array $data): void {
                         $accountId = $data['financial_account_id'] ?? null;

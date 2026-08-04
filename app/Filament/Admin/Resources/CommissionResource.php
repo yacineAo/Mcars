@@ -100,6 +100,7 @@ class CommissionResource extends Resource
                         ])
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->required()
                     // Self-dealing is refused at the form: a commission on your
                     // own employee record is never worth typing. CommissionService
@@ -122,6 +123,7 @@ class CommissionResource extends Resource
                         ])
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->nullable()
                     ->disabled($frozenOncePaid),
                 TextInput::make('basis_amount')

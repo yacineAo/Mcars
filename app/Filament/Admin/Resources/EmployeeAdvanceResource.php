@@ -100,6 +100,7 @@ class EmployeeAdvanceResource extends Resource
                         ])
                         ->all())
                     ->searchable()
+                    ->preload()
                     ->required()
                     // Self-dealing is refused at the form: an advance on your
                     // own employee record is never worth typing.

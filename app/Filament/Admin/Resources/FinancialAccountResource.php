@@ -67,6 +67,7 @@ class FinancialAccountResource extends Resource
                 Select::make('ledger_account_id')
                     ->relationship('ledgerAccount', 'name', fn (Builder $query): Builder => $query->where('is_postable', true)->where('is_cash_equivalent', true))
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->disabled(fn (?FinancialAccount $record): bool => $record !== null && $record->exists && $record->hasPostings())

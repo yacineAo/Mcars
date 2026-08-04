@@ -123,6 +123,7 @@ class ViewExpense extends ViewRecord
                             ->pluck('name', 'id')
                             ->all())
                         ->searchable()
+                        ->preload()
                         ->required(),
                 ])
                 ->action(function (Expense $record, array $data, ExpenseService $service): void {

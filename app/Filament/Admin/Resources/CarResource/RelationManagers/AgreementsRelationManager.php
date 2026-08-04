@@ -55,7 +55,8 @@ class AgreementsRelationManager extends RelationManager
                         Select::make('car_owner_id')
                             ->relationship('carOwner', 'first_name')
                             ->required()
-                            ->searchable(),
+                            ->searchable()
+                            ->preload(),
                         // car_id is implied by the parent (Car) context
                     ]),
                 ...CarOwnershipAgreementResource::getTermFields(),
