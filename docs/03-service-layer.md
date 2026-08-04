@@ -40,7 +40,7 @@ business event hits lives in **Posters**, one per document type, each producing 
 from the posting matrix in [`05-accounting-model.md`](05-accounting-model.md):
 
 `BookingPoster` · `PaymentPoster` · `ExpensePoster` · `DepositPoster` · `FinePoster` ·
-`OwnerInstallmentPoster` · `PayrollPoster` · `CashSessionPoster`
+`OwnerInstallmentPoster` · `PayrollPoster` · `CashSessionPoster` · `CapitalPoster`
 
 *(`MaintenancePoster` was never built — completed maintenance posts through `ExpensePoster`.)*
 
@@ -68,6 +68,8 @@ openSession(FinancialAccount $a, Money $float, User $by): CashSession
 closeSession(CashSession $s, Money $counted, User $by): CashSessionSummary
 entries(FinancialAccount $a, Period $p): LazyCollection  // the cash_register_entries view
 transfer(FinancialAccount $from, FinancialAccount $to, Money $amount, User $by): Transaction
+injectCapital(FinancialAccount $a, Money $amount, Date $occurredOn, User $by): Transaction  // E70
+recordDrawing(FinancialAccount $a, Money $amount, Date $occurredOn, User $by): Transaction  // E71
 ```
 
 `closeSession()` computes expected from the ledger, compares to the physical count, and — when they

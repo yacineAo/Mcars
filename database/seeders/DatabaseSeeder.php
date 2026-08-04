@@ -22,7 +22,6 @@ class DatabaseSeeder extends Seeder
             ChartOfAccountSeeder::class,
             ExpenseCategorySeeder::class,
             FinancialAccountSeeder::class,
-            // Phase 8. After RolePermissionSeeder: the rules name recipient roles.
             AlertRuleSeeder::class,
         ]);
     }

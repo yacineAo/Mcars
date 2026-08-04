@@ -9,8 +9,12 @@ use App\Filament\Admin\Resources\FinancialAccountResource\RelationManagers\CashS
 use App\Filament\Admin\Resources\FinancialAccountResource\RelationManagers\TransactionsRelationManager;
 use App\Models\FinancialAccount;
 use App\Services\CashRegisterService;
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Resources\RelationManagers\RelationGroup;
 use Filament\Schemas\Components\Section;
@@ -23,7 +27,86 @@ class ViewFinancialAccount extends ViewRecord
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            // E70/E71 — the only entry points for capital moving between the
+            // business and its owner(s). Both post equity, never a P&L account.
+            Action::make('inject_capital')
+                ->label('Record Capital Injection')
+                ->icon('heroicon-o-arrow-down-circle')
+                ->color('success')
+                ->requiresConfirmation()
+                ->form([
+                    TextInput::make('amount')
+                        ->numeric()
+                        ->prefix('DZD')
+                        ->minValue(0.01)
+                        ->required(),
+                    DatePicker::make('occurred_on')
+                        ->label('Date')
+                        ->default(now())
+                        ->required(),
+                    TextInput::make('description')
+                        ->maxLength(255),
+                ])
+                ->action(function (array $data, CashRegisterService $service): void {
+                    /** @var FinancialAccount $record */
+                    $record = $this->getRecord();
+
+                    $service->injectCapital(
+                        $record,
+                        (string) $data['amount'],
+                        (string) $data['occurred_on'],
+                        auth()->user(),
+                        isset($data['description']) && $data['description'] !== '' ? (string) $data['description'] : null,
+                    );
+
+                    Notification::make()
+                        ->success()
+                        ->title(__('Capital injection posted'))
+                        ->send();
+
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $record]));
+                })
+                ->visible(fn (): bool => Auth::user()?->can('finance.manage_capital') ?? false),
+            Action::make('record_drawing')
+                ->label('Record Owner Drawing')
+                ->icon('heroicon-o-arrow-up-circle')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->form([
+                    TextInput::make('amount')
+                        ->numeric()
+                        ->prefix('DZD')
+                        ->minValue(0.01)
+                        ->required(),
+                    DatePicker::make('occurred_on')
+                        ->label('Date')
+                        ->default(now())
+                        ->required(),
+                    TextInput::make('description')
+                        ->maxLength(255),
+                ])
+                ->action(function (array $data, CashRegisterService $service): void {
+                    /** @var FinancialAccount $record */
+                    $record = $this->getRecord();
+
+                    $service->recordDrawing(
+                        $record,
+                        (string) $data['amount'],
+                        (string) $data['occurred_on'],
+                        auth()->user(),
+                        isset($data['description']) && $data['description'] !== '' ? (string) $data['description'] : null,
+                    );
+
+                    Notification::make()
+                        ->success()
+                        ->title(__('Owner drawing posted'))
+                        ->send();
+
+                    $this->redirect($this->getResource()::getUrl('view', ['record' => $record]));
+                })
+                ->visible(fn (): bool => Auth::user()?->can('finance.manage_capital') ?? false),
+        ];
     }
 
     public function infolist(Schema $schema): Schema

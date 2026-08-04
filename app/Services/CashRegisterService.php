@@ -13,6 +13,7 @@ use App\Models\FinancialAccount;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Accounting\AccountingService;
+use App\Services\Accounting\CapitalPoster;
 use App\Services\Accounting\CashSessionPoster;
 use App\Services\Accounting\TransactionDraft;
 use App\Support\Money;
@@ -26,6 +27,7 @@ class CashRegisterService
     public function __construct(
         private readonly AccountingService $accounting,
         private readonly CashSessionPoster $cashSessionPoster,
+        private readonly CapitalPoster $capitalPoster,
         private readonly DatabaseManager $db,
     ) {}
 
@@ -322,6 +324,40 @@ class CashRegisterService
         }
 
         return $totals;
+    }
+
+    /** E70 — capital the owner puts into the business. */
+    public function injectCapital(
+        FinancialAccount $account,
+        string $amount,
+        string $occurredOn,
+        User $by,
+        ?string $description = null,
+    ): Transaction {
+        if ((float) $amount <= 0) {
+            throw new RuntimeException('The amount must be greater than zero.');
+        }
+
+        return $this->accounting->post(
+            $this->capitalPoster->postInjection($account, $amount, $occurredOn, $by->id, $description),
+        );
+    }
+
+    /** E71 — money the owner takes out of the business. */
+    public function recordDrawing(
+        FinancialAccount $account,
+        string $amount,
+        string $occurredOn,
+        User $by,
+        ?string $description = null,
+    ): Transaction {
+        if ((float) $amount <= 0) {
+            throw new RuntimeException('The amount must be greater than zero.');
+        }
+
+        return $this->accounting->post(
+            $this->capitalPoster->postDrawing($account, $amount, $occurredOn, $by->id, $description),
+        );
     }
 
     public function transfer(

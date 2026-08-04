@@ -56,4 +56,19 @@ return [
     'private_disk' => env('MCARS_PRIVATE_DISK', 'local'),
     'signed_url_ttl' => 300, // seconds
 
+    /*
+    |---------------------------------------------------------------------------
+    | First admin (AdminUserSeeder)
+    |---------------------------------------------------------------------------
+    | Required in production — the seeder refuses to create the admin account
+    | without them rather than falling back to a guessable default. Local/CI
+    | leave these unset and get admin@mcars.local / password instead.
+    */
+
+    'admin' => [
+        'name' => env('ADMIN_NAME', 'Super Admin'),
+        'email' => env('ADMIN_EMAIL'),
+        'password' => env('ADMIN_PASSWORD'),
+    ],
+
 ];

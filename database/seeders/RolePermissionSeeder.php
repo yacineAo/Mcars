@@ -33,6 +33,16 @@ class RolePermissionSeeder extends Seeder
                 }
             }
         }
+
+        // The loop above writes through the pivot table directly rather than
+        // Role::givePermissionTo(), so Spatie's own cache invalidation never fires —
+        // and hasPermissionTo() above lazily rebuilds that cache from whatever the
+        // pivot table holds the *first* time it's called, mid-loop. Every grant
+        // attached after that first call is invisible to it until this line runs
+        // (or the 24h TTL lapses), so every fresh install shipped a super_admin
+        // that failed `can()` for most of its own permissions until someone
+        // happened to flush the cache by hand.
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 
     /**
@@ -242,6 +252,14 @@ class RolePermissionSeeder extends Seeder
             // recorded them, their own: the approval gate above is the control
             // that keeps a recorder from moving money through the ledger unchecked.
             'expenses.pay' => [
+                UserRole::SuperAdmin,
+                UserRole::Manager,
+                UserRole::Accountant,
+            ],
+            // Capital injected or drawn (E70/E71) posts straight to equity, not a
+            // P&L account — the same "answers for the books" reasoning as
+            // expenses.pay, so it gets the identical three roles.
+            'finance.manage_capital' => [
                 UserRole::SuperAdmin,
                 UserRole::Manager,
                 UserRole::Accountant,

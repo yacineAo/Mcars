@@ -7,9 +7,11 @@ use App\Enums\UserRole;
 use App\Filament\Admin\Resources\FinancialAccountResource;
 use App\Filament\Admin\Resources\FinancialAccountResource\Pages\CreateFinancialAccount;
 use App\Filament\Admin\Resources\FinancialAccountResource\Pages\EditFinancialAccount;
+use App\Filament\Admin\Resources\FinancialAccountResource\Pages\ViewFinancialAccount;
 use App\Models\Branch;
 use App\Models\ChartOfAccount;
 use App\Models\FinancialAccount;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\TransactionDraft;
@@ -323,4 +325,96 @@ it('creates the account and notifies instead of crashing when it cannot also be 
 
     expect($account->is_default_for_cash)->toBeFalse()
         ->and($this->account->fresh()->is_default_for_cash)->toBeTrue();
+});
+
+// -----------------------------------------------------------------------
+// CashRegisterService::injectCapital() / recordDrawing() — E70/E71
+// -----------------------------------------------------------------------
+
+it('posts a capital injection as Dr the account, Cr Owner Capital', function () {
+    $capital = ChartOfAccount::where('code', '3000')->firstOrFail();
+
+    $transaction = app(CashRegisterService::class)->injectCapital(
+        $this->account,
+        '1850000.00',
+        '2026-01-05',
+        $this->admin,
+    );
+
+    expect($transaction->debit_account_id)->toBe($this->account->ledger_account_id)
+        ->and($transaction->credit_account_id)->toBe($capital->id)
+        ->and($transaction->amount)->toBe('1850000.00')
+        ->and($transaction->type)->toBe(TransactionType::Capital)
+        ->and($transaction->occurred_on->toDateString())->toBe('2026-01-05');
+
+    expect(app(CashRegisterService::class)->balanceOf($this->account)->toDecimal())->toBe('1850000.00');
+});
+
+it('posts an owner drawing as Dr Drawings, Cr the account', function () {
+    app(CashRegisterService::class)->injectCapital($this->account, '500000.00', '2026-01-01', $this->admin);
+
+    $drawings = ChartOfAccount::where('code', '3200')->firstOrFail();
+
+    $transaction = app(CashRegisterService::class)->recordDrawing(
+        $this->account,
+        '75000.00',
+        '2026-01-10',
+        $this->admin,
+    );
+
+    expect($transaction->debit_account_id)->toBe($drawings->id)
+        ->and($transaction->credit_account_id)->toBe($this->account->ledger_account_id)
+        ->and($transaction->type)->toBe(TransactionType::Drawings);
+
+    expect(app(CashRegisterService::class)->balanceOf($this->account)->toDecimal())->toBe('425000.00');
+});
+
+it('refuses a non-positive capital injection', function () {
+    expect(fn () => app(CashRegisterService::class)->injectCapital($this->account, '0.00', '2026-01-01', $this->admin))
+        ->toThrow(RuntimeException::class);
+});
+
+it('refuses a non-positive owner drawing', function () {
+    expect(fn () => app(CashRegisterService::class)->recordDrawing($this->account, '-100.00', '2026-01-01', $this->admin))
+        ->toThrow(RuntimeException::class);
+});
+
+// -----------------------------------------------------------------------
+// The panel actions — gated on finance.manage_capital
+// -----------------------------------------------------------------------
+
+it('lets a manager post a capital injection from the view page', function () {
+    Livewire::test(ViewFinancialAccount::class, ['record' => $this->account->getRouteKey()])
+        ->callAction('inject_capital', [
+            'amount' => '1850000',
+            'occurred_on' => '2026-01-05',
+            'description' => 'Opening capital',
+        ])
+        ->assertHasNoActionErrors()
+        ->assertRedirect();
+
+    $transaction = Transaction::where('type', TransactionType::Capital)->firstOrFail();
+
+    expect($transaction->amount)->toBe('1850000.00')
+        ->and($transaction->description)->toBe('Opening capital')
+        ->and($transaction->created_by_id)->toBe($this->admin->id);
+});
+
+it('blocks a receptionist from the view page entirely, so the capital actions are unreachable', function () {
+    $receptionist = User::factory()->create(['branch_id' => $this->account->branch_id]);
+    $receptionist->assignRole(UserRole::Receptionist->value);
+    Auth::login($receptionist);
+
+    $this->get(FinancialAccountResource::getUrl('view', ['record' => $this->account]))
+        ->assertForbidden();
+});
+
+it('shows both capital actions to an accountant', function () {
+    $accountant = User::factory()->create(['branch_id' => $this->account->branch_id]);
+    $accountant->assignRole(UserRole::Accountant->value);
+    Auth::login($accountant);
+
+    Livewire::test(ViewFinancialAccount::class, ['record' => $this->account->getRouteKey()])
+        ->assertActionVisible('inject_capital')
+        ->assertActionVisible('record_drawing');
 });

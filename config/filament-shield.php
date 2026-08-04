@@ -280,6 +280,7 @@ return [
         'expenses.approve',
         'expenses.pay',
         'expenses.record',
+        'finance.manage_capital',
         'fines.manage',
         'fines.view',
         'fleet.manage',
