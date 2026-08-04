@@ -8,6 +8,7 @@ use App\Enums\ContractStatus;
 use App\Enums\InsuranceType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\LogsActivity;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -102,6 +103,7 @@ class Contract extends Model
         });
     }
 
+    /** @return BelongsTo<Booking, $this> */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
@@ -113,43 +115,49 @@ class Contract extends Model
         return $this->morphMany(PaymentSchedule::class, 'schedulable');
     }
 
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<ContractTemplate, $this> */
     public function template(): BelongsTo
     {
         return $this->belongsTo(ContractTemplate::class, 'contract_template_id');
     }
 
+    /** @return HasMany<ContractSignature, $this> */
     public function signatures(): HasMany
     {
         return $this->hasMany(ContractSignature::class);
     }
 
+    /** @return BelongsTo<self, $this> */
     public function parentContract(): BelongsTo
     {
         return $this->belongsTo(Contract::class, 'parent_contract_id');
     }
 
+    /** @return HasMany<self, $this> */
     public function childContracts(): HasMany
     {
         return $this->hasMany(Contract::class, 'parent_contract_id');
     }
 
-    /** @return HasMany<Deposit> */
+    /** @return HasMany<Deposit, $this> */
     public function deposits(): HasMany
     {
         return $this->hasMany(Deposit::class);
     }
 
-    /** @return HasMany<Fine> */
+    /** @return HasMany<Fine, $this> */
     public function fines(): HasMany
     {
         return $this->hasMany(Fine::class);
@@ -158,7 +166,7 @@ class Contract extends Model
     /**
      * The booking's condition reports — the records that open and close the rental.
      *
-     * @return HasManyThrough<ConditionReport>
+     * @return HasManyThrough<ConditionReport, Booking, $this>
      */
     public function conditionReports(): HasManyThrough
     {
@@ -172,12 +180,14 @@ class Contract extends Model
         );
     }
 
+    /** @return BelongsTo<User, $this> */
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by_id');
     }
 
-    public function scopeActive($query): void
+    /** @param Builder<self> $query */
+    public function scopeActive(Builder $query): void
     {
         $query->whereIn('status', [ContractStatus::Active, ContractStatus::Signed]);
     }

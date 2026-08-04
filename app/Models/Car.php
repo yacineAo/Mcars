@@ -13,6 +13,7 @@ use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
 use Carbon\CarbonInterface;
+use Database\Factories\CarFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,6 +44,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 class Car extends Model implements HasMedia
 {
+    /** @use HasFactory<CarFactory> */
     use BelongsToBranch, HasAuditColumns, HasFactory, InteractsWithMedia, LogsActivity, SoftDeletes;
 
     protected $fillable = [
@@ -120,67 +122,67 @@ class Car extends Model implements HasMedia
         ];
     }
 
-    /** @return BelongsTo<CarCategory> */
+    /** @return BelongsTo<CarCategory, $this> */
     public function category(): BelongsTo
     {
         return $this->belongsTo(CarCategory::class, 'car_category_id');
     }
 
-    /** @return BelongsTo<CarOwner> */
+    /** @return BelongsTo<CarOwner, $this> */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(CarOwner::class, 'car_owner_id');
     }
 
-    /** @return HasMany<CarOwnershipAgreement> */
+    /** @return HasMany<CarOwnershipAgreement, $this> */
     public function agreements(): HasMany
     {
         return $this->hasMany(CarOwnershipAgreement::class);
     }
 
-    /** @return HasMany<CarDocument> */
+    /** @return HasMany<CarDocument, $this> */
     public function documents(): HasMany
     {
         return $this->hasMany(CarDocument::class);
     }
 
-    /** @return HasMany<MaintenanceLog> */
+    /** @return HasMany<MaintenanceLog, $this> */
     public function maintenanceLogs(): HasMany
     {
         return $this->hasMany(MaintenanceLog::class);
     }
 
-    /** @return HasMany<MaintenanceSchedule> */
+    /** @return HasMany<MaintenanceSchedule, $this> */
     public function maintenanceSchedules(): HasMany
     {
         return $this->hasMany(MaintenanceSchedule::class);
     }
 
-    /** @return HasMany<Booking> */
+    /** @return HasMany<Booking, $this> */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
-    /** @return HasMany<Contract> */
+    /** @return HasMany<Contract, $this> */
     public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class);
     }
 
-    /** @return HasMany<CarBlock> */
+    /** @return HasMany<CarBlock, $this> */
     public function blocks(): HasMany
     {
         return $this->hasMany(CarBlock::class);
     }
 
-    /** @return HasMany<Fine> */
+    /** @return HasMany<Fine, $this> */
     public function fines(): HasMany
     {
         return $this->hasMany(Fine::class);
     }
 
-    /** @return HasMany<OwnerInstallment> */
+    /** @return HasMany<OwnerInstallment, $this> */
     public function ownerInstallments(): HasMany
     {
         return $this->hasMany(OwnerInstallment::class);

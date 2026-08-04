@@ -9,6 +9,9 @@ use App\Models\ChartOfAccount;
 use App\Models\FinancialAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<FinancialAccount>
+ */
 class FinancialAccountFactory extends Factory
 {
     protected $model = FinancialAccount::class;

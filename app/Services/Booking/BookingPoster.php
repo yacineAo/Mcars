@@ -12,6 +12,7 @@ use DateTimeImmutable;
 
 class BookingPoster
 {
+    /** @return list<TransactionDraft> */
     public function postRentalRevenue(Booking $booking, int $userId): array
     {
         $drafts = [];
@@ -106,6 +107,7 @@ class BookingPoster
         )];
     }
 
+    /** @return list<TransactionDraft> */
     public function postCloseoutCharges(Booking $booking, CloseoutQuote $quote, int $userId): array
     {
         $drafts = [];

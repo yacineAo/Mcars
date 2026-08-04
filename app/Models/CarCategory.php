@@ -6,12 +6,14 @@ namespace App\Models;
 
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Database\Factories\CarCategoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CarCategory extends Model
 {
+    /** @use HasFactory<CarCategoryFactory> */
     use HasAuditColumns, HasFactory, LogsActivity;
 
     protected $fillable = [
@@ -30,7 +32,7 @@ class CarCategory extends Model
         ];
     }
 
-    /** @return HasMany<Car> */
+    /** @return HasMany<Car, $this> */
     public function cars(): HasMany
     {
         return $this->hasMany(Car::class);

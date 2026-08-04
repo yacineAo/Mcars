@@ -117,6 +117,7 @@ class CashRegisterService
         return Money::of((string) ($row->balance ?? '0'));
     }
 
+    /** @return Collection<int, array{account: FinancialAccount, balance: Money}> */
     public function balanceAll(?int $branchId = null): Collection
     {
         $query = FinancialAccount::query()->where('is_active', true);
@@ -344,6 +345,7 @@ class CashRegisterService
         return $this->accounting->post($draft);
     }
 
+    /** @return Collection<int, Transaction> */
     public function entries(FinancialAccount $account, ?Carbon $from = null, ?Carbon $to = null): Collection
     {
         $query = Transaction::query()

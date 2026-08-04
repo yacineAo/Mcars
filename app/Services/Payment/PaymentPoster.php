@@ -21,6 +21,7 @@ class PaymentPoster
         private readonly ReportService $reports,
     ) {}
 
+    /** @return list<TransactionDraft> */
     public function postPayment(Payment $payment, int $userId): array
     {
         // A `match` rather than a lookup with a `?? '1010'` default: the default meant a

@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Database\Factories\CarOwnerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CarOwner extends Model
 {
+    /** @use HasFactory<CarOwnerFactory> */
     use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
@@ -51,31 +53,31 @@ class CarOwner extends Model
         return trim($this->first_name.' '.$this->last_name);
     }
 
-    /** @return BelongsTo<User> */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /** @return HasMany<Car> */
+    /** @return HasMany<Car, $this> */
     public function cars(): HasMany
     {
         return $this->hasMany(Car::class);
     }
 
-    /** @return HasMany<CarOwnershipAgreement> */
+    /** @return HasMany<CarOwnershipAgreement, $this> */
     public function agreements(): HasMany
     {
         return $this->hasMany(CarOwnershipAgreement::class);
     }
 
-    /** @return HasMany<OwnerInstallment> */
+    /** @return HasMany<OwnerInstallment, $this> */
     public function ownerInstallments(): HasMany
     {
         return $this->hasMany(OwnerInstallment::class);
     }
 
-    /** @return HasMany<Payment> */
+    /** @return HasMany<Payment, $this> */
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

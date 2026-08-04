@@ -9,6 +9,9 @@ use App\Enums\NormalBalance;
 use App\Models\ChartOfAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<ChartOfAccount>
+ */
 class ChartOfAccountFactory extends Factory
 {
     protected $model = ChartOfAccount::class;

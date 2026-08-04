@@ -96,7 +96,9 @@ class SignatureService
     private function getSignerName(Contract $contract, SignerRole $role): string
     {
         return match ($role) {
-            SignerRole::Customer => $contract->customer?->first_name.' '.$contract->customer?->last_name ?? 'Customer',
+            SignerRole::Customer => $contract->customer !== null
+                ? trim($contract->customer->first_name.' '.$contract->customer->last_name)
+                : 'Customer',
             SignerRole::CompanyRepresentative => 'Company Representative',
             default => $role->getLabel(),
         };

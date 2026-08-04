@@ -11,6 +11,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,9 +24,13 @@ class TransactionsRelationManager extends RelationManager
         return Auth::user()?->can('reports.view_financials') ?? false;
     }
 
+    /** @return HasMany<Transaction, FinancialAccount>|Builder<Transaction> */
     public function getRelationship(): Relation|Builder
     {
-        return $this->getOwnerRecord()->hasMany(Transaction::class, 'debit_account_id', 'ledger_account_id');
+        $record = $this->getOwnerRecord();
+        assert($record instanceof FinancialAccount);
+
+        return $record->hasMany(Transaction::class, 'debit_account_id', 'ledger_account_id');
     }
 
     public function table(Table $table): Table

@@ -8,21 +8,13 @@ use App\Enums\CashSessionStatus;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasLedgerPostings;
 use App\Models\Concerns\LogsActivity;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * `status` is declared here because static analysis reads column types from the schema,
- * not from casts() — without it `$session->status` looks like a string and the strict
- * `=== CashSessionStatus::Open` guards on the close actions read as dead code.
- *
- * @property CashSessionStatus $status
- */
 class CashSession extends Model
 {
-    use BelongsToBranch, HasFactory, HasLedgerPostings, LogsActivity;
+    use BelongsToBranch, HasLedgerPostings, LogsActivity;
 
     protected $fillable = [
         'branch_id',
@@ -51,26 +43,31 @@ class CashSession extends Model
         ];
     }
 
+    /** @return BelongsTo<FinancialAccount, $this> */
     public function financialAccount(): BelongsTo
     {
         return $this->belongsTo(FinancialAccount::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function openedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'opened_by_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function reconciledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reconciled_by_id');
     }
 
+    /** @return HasMany<Transaction, $this> */
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

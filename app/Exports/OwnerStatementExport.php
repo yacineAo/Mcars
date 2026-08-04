@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 class OwnerStatementExport implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -20,12 +21,13 @@ class OwnerStatementExport implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $carOwnerId = (int) ($this->parameters['car_owner_id'] ?? 0);
         $data = $this->reportService->ownerStatement($carOwnerId, $this->from, $this->to, $this->branchId);
 
-        if (! is_array($data) || empty($data)) {
+        if (empty($data)) {
             return [['No data available']];
         }
 
@@ -57,6 +59,7 @@ class OwnerStatementExport implements FromArray, WithHeadings, WithTitle
         return $rows;
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Field', 'Value'];

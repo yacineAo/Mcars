@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 class ExpenseBreakdownExport implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -20,6 +21,7 @@ class ExpenseBreakdownExport implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $data = $this->reportService->expenseBreakdown($this->from, $this->to, $this->branchId);
@@ -32,6 +34,7 @@ class ExpenseBreakdownExport implements FromArray, WithHeadings, WithTitle
         return $rows;
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Category', 'Amount'];

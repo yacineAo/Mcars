@@ -35,6 +35,7 @@ class AccountingService
         return $rows->first();
     }
 
+    /** @return Collection<array-key, Transaction> */
     public function postMany(TransactionDraft ...$drafts): Collection
     {
         return $this->db->transaction(function () use ($drafts): Collection {

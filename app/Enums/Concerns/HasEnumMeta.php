@@ -30,6 +30,7 @@ trait HasEnumMeta
             : __($key);
     }
 
+    /** @return string|array<string>|null */
     public function getColor(): string|array|null
     {
         return null;

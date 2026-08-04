@@ -38,11 +38,13 @@ class PayrollRun extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_id');
     }
 
+    /** @return HasMany<PayrollItem, $this> */
     public function items(): HasMany
     {
         return $this->hasMany(PayrollItem::class);

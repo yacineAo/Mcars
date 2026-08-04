@@ -11,6 +11,9 @@ use App\Models\CarOwner;
 use App\Models\CarOwnershipAgreement;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<CarOwnershipAgreement>
+ */
 class CarOwnershipAgreementFactory extends Factory
 {
     protected $model = CarOwnershipAgreement::class;

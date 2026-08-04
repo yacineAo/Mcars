@@ -26,6 +26,7 @@ class BookingAvailabilityService
         return $this->conflictsFor($car, $period, $excluding)->isEmpty();
     }
 
+    /** @return Collection<int, Car> */
     public function availableCars(CarbonPeriod $period, ?CarCategory $category = null, ?Branch $branch = null): Collection
     {
         // `is_active` withdraws a car from availability. Decided in docs/resource/02-car.md:
@@ -47,6 +48,7 @@ class BookingAvailabilityService
         return $query->get()->filter(fn (Car $car): bool => $this->isAvailable($car, $period));
     }
 
+    /** @return Collection<int, Booking|CarBlock> */
     public function conflictsFor(Car $car, CarbonPeriod $period, ?Booking $excluding = null): Collection
     {
         $start = $period->getStartDate();
@@ -71,6 +73,10 @@ class BookingAvailabilityService
         return $bookingConflicts->concat($blockConflicts);
     }
 
+    /**
+     * @param array<string, mixed> $filters
+     * @return array<int, array<string, mixed>>
+     */
     public function calendarFeed(CarbonPeriod $period, array $filters = []): array
     {
         $bookings = Booking::query()

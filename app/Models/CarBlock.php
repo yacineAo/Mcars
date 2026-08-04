@@ -38,11 +38,13 @@ class CarBlock extends Model
         ];
     }
 
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /** @return BelongsTo<MaintenanceLog, $this> */
     public function maintenanceLog(): BelongsTo
     {
         return $this->belongsTo(MaintenanceLog::class);

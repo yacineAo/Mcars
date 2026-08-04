@@ -10,6 +10,9 @@ use App\Models\PendingExport;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<PendingExport>
+ */
 class PendingExportFactory extends Factory
 {
     protected $model = PendingExport::class;

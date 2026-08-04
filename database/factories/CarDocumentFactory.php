@@ -9,6 +9,9 @@ use App\Models\Car;
 use App\Models\CarDocument;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<CarDocument>
+ */
 class CarDocumentFactory extends Factory
 {
     protected $model = CarDocument::class;

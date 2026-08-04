@@ -51,6 +51,7 @@ class ContractSignature extends Model
         ];
     }
 
+    /** @return BelongsTo<Contract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
@@ -60,12 +61,15 @@ class ContractSignature extends Model
      * The staff member who witnessed the signature.
      *
      * Null for OTP signatures — the customer signs remotely, nobody at the desk vouches.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function signedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'signed_by_id');
     }
 
+    /** @return MorphTo<Model, $this> */
     public function signer(): MorphTo
     {
         return $this->morphTo();

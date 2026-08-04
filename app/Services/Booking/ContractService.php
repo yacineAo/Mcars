@@ -52,7 +52,7 @@ class ContractService
                 'contract_template_id' => $template?->id,
                 'status' => ContractStatus::Draft,
                 'content_snapshot' => $snapshot,
-                'terms_version' => $template?->terms_version ?? '1.0',
+                'terms_version' => $template->terms_version ?? '1.0',
                 'generated_at' => now(),
                 'has_damages' => false,
             ]);
@@ -155,6 +155,7 @@ class ContractService
         return $path;
     }
 
+    /** @param list<string> $channels */
     public function send(Contract $contract, array $channels = ['mail'], ?string $to = null): void
     {
         $contract->sent_at = now();
@@ -227,6 +228,7 @@ class ContractService
         });
     }
 
+    /** @param array<string, mixed> $changes */
     public function amend(Contract $contract, array $changes): Contract
     {
         $newSnapshot = array_merge($contract->content_snapshot ?? [], $changes);
@@ -250,15 +252,16 @@ class ContractService
         return $amended;
     }
 
+    /** @return array<string, mixed> */
     private function buildSnapshot(Booking $booking, ?ContractTemplate $template): array
     {
         return [
             'generated_at' => now()->toIso8601String(),
             'booking_reference' => $booking->reference,
             'contract_number' => null,
-            'locale' => $template?->locale ?? 'fr',
-            'terms_version' => $template?->terms_version ?? '1.0',
-            'template_body' => $template?->body ?? null,
+            'locale' => $template->locale ?? 'fr',
+            'terms_version' => $template->terms_version ?? '1.0',
+            'template_body' => $template->body ?? null,
             'customer' => [
                 'id' => $booking->customer->id,
                 'name' => $booking->customer->first_name.' '.$booking->customer->last_name,

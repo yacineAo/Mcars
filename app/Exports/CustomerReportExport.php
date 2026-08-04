@@ -13,6 +13,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 class CustomerReportExport implements WithMultipleSheets
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -21,6 +22,7 @@ class CustomerReportExport implements WithMultipleSheets
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, object> */
     public function sheets(): array
     {
         $sheets = [];
@@ -37,6 +39,7 @@ class CustomerReportExport implements WithMultipleSheets
 
 class CustomerDetailSheet implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -45,6 +48,7 @@ class CustomerDetailSheet implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $data = $this->reportService->customerStatement((int) $this->parameters['customer_id']);
@@ -58,6 +62,7 @@ class CustomerDetailSheet implements FromArray, WithHeadings, WithTitle
         ];
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Metric', 'Value'];
@@ -71,6 +76,7 @@ class CustomerDetailSheet implements FromArray, WithHeadings, WithTitle
 
 class CustomerTopSheet implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -79,6 +85,7 @@ class CustomerTopSheet implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $customers = $this->reportService->topCustomers($this->from, $this->to, $this->branchId, 100);
@@ -96,6 +103,7 @@ class CustomerTopSheet implements FromArray, WithHeadings, WithTitle
         return $rows;
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Code', 'Name', 'Phone', 'Revenue'];

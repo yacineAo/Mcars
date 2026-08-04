@@ -14,6 +14,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 class FleetProfitabilityExport implements FlattensToSingleSheet, WithMultipleSheets
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -22,6 +23,7 @@ class FleetProfitabilityExport implements FlattensToSingleSheet, WithMultipleShe
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, object> */
     public function sheets(): array
     {
         if (isset($this->parameters['car_id'])) {
@@ -52,6 +54,7 @@ class FleetProfitabilityExport implements FlattensToSingleSheet, WithMultipleShe
 
 class FleetSummarySheet implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -60,6 +63,7 @@ class FleetSummarySheet implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $data = $this->reportService->fleetProfitability($this->from, $this->to, $this->branchId);
@@ -72,6 +76,7 @@ class FleetSummarySheet implements FromArray, WithHeadings, WithTitle
         ];
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Metric', 'Value'];
@@ -85,6 +90,7 @@ class FleetSummarySheet implements FromArray, WithHeadings, WithTitle
 
 class FleetDetailSheet implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -93,6 +99,7 @@ class FleetDetailSheet implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $data = $this->reportService->fleetProfitability($this->from, $this->to, $this->branchId);
@@ -114,6 +121,7 @@ class FleetDetailSheet implements FromArray, WithHeadings, WithTitle
         return $rows;
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Reg No', 'Brand', 'Model', 'Revenue', 'Expenses', 'Net Profit', 'Rental Days', 'Utilisation %'];
@@ -127,6 +135,7 @@ class FleetDetailSheet implements FromArray, WithHeadings, WithTitle
 
 class SingleCarSheet implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -135,6 +144,7 @@ class SingleCarSheet implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $data = $this->reportService->singleCarProfitability((int) $this->parameters['car_id'], $this->from, $this->to);
@@ -155,6 +165,7 @@ class SingleCarSheet implements FromArray, WithHeadings, WithTitle
         ];
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Metric', 'Value'];

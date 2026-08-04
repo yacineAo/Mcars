@@ -10,6 +10,7 @@ use App\Enums\CustomerType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ use Illuminate\Support\Str;
 
 class Customer extends Model
 {
+    /** @use HasFactory<CustomerFactory> */
     use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
@@ -100,49 +102,49 @@ class Customer extends Model
         ];
     }
 
-    /** @return BelongsTo<User> */
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /** @return HasMany<CustomerDocument> */
+    /** @return HasMany<CustomerDocument, $this> */
     public function documents(): HasMany
     {
         return $this->hasMany(CustomerDocument::class);
     }
 
-    /** @return HasMany<Booking> */
+    /** @return HasMany<Booking, $this> */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
-    /** @return HasMany<Payment> */
+    /** @return HasMany<Payment, $this> */
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
     }
 
-    /** @return HasMany<Deposit> */
+    /** @return HasMany<Deposit, $this> */
     public function deposits(): HasMany
     {
         return $this->hasMany(Deposit::class);
     }
 
-    /** @return HasMany<Fine> */
+    /** @return HasMany<Fine, $this> */
     public function fines(): HasMany
     {
         return $this->hasMany(Fine::class);
     }
 
-    /** @return HasMany<PaymentSchedule> */
+    /** @return HasMany<PaymentSchedule, $this> */
     public function paymentSchedules(): HasMany
     {
         return $this->hasMany(PaymentSchedule::class);
     }
 
-    /** @return HasMany<Contract> */
+    /** @return HasMany<Contract, $this> */
     public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class);

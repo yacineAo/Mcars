@@ -10,7 +10,6 @@ use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -28,7 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ReportDefinition extends Model
 {
-    use BelongsToBranch, HasAuditColumns, HasFactory, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, SoftDeletes;
 
     protected $fillable = [
         'branch_id',
@@ -54,11 +53,13 @@ class ReportDefinition extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<PendingExport, $this> */
     public function pendingExports(): HasMany
     {
         return $this->hasMany(PendingExport::class);

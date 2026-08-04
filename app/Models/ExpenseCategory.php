@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\ExpenseCategoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,7 @@ use Illuminate\Support\Str;
 
 class ExpenseCategory extends Model
 {
+    /** @use HasFactory<ExpenseCategoryFactory> */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -38,16 +40,19 @@ class ExpenseCategory extends Model
         ];
     }
 
+    /** @return BelongsTo<ChartOfAccount, $this> */
     public function ledgerAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'ledger_account_id');
     }
 
+    /** @return BelongsTo<self, $this> */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /** @return HasMany<self, $this> */
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');

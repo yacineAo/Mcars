@@ -6,6 +6,7 @@ namespace App\Services\Booking;
 
 final readonly class BookingQuote
 {
+    /** @param list<array{extra_id: int, name: string, quantity: int, unit_price: string, total: string}> $extras */
     public function __construct(
         public int $carId,
         public int $customerId,

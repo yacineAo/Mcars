@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\CustomerDocumentType;
 use App\Models\Concerns\HasAuditColumns;
+use Database\Factories\CustomerDocumentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class CustomerDocument extends Model implements HasMedia
 {
+    /** @use HasFactory<CustomerDocumentFactory> */
     use HasAuditColumns, HasFactory, InteractsWithMedia, SoftDeletes;
 
     protected $fillable = [
@@ -38,13 +40,13 @@ class CustomerDocument extends Model implements HasMedia
         ];
     }
 
-    /** @return BelongsTo<Customer> */
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    /** @return BelongsTo<User> */
+    /** @return BelongsTo<User, $this> */
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by_id');

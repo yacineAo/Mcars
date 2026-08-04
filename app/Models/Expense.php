@@ -10,7 +10,6 @@ use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\HasLedgerPostings;
 use App\Models\Concerns\LogsActivity;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -20,7 +19,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Expense extends Model implements HasMedia
 {
-    use BelongsToBranch, HasAuditColumns, HasFactory, HasLedgerPostings, InteractsWithMedia, LogsActivity, SoftDeletes;
+    use BelongsToBranch, HasAuditColumns, HasLedgerPostings, InteractsWithMedia, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'reference',
@@ -73,36 +72,43 @@ class Expense extends Model implements HasMedia
         ];
     }
 
+    /** @return BelongsTo<ExpenseCategory, $this> */
     public function category(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
     }
 
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /** @return BelongsTo<Vendor, $this> */
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_id');
     }
 
+    /** @return BelongsTo<FinancialAccount, $this> */
     public function financialAccount(): BelongsTo
     {
         return $this->belongsTo(FinancialAccount::class);
     }
 
+    /** @return BelongsTo<Transaction, $this> */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
     }
 
+    /** @return BelongsTo<self, $this> */
     public function parentExpense(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_expense_id');

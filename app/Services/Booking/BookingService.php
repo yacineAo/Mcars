@@ -128,6 +128,7 @@ class BookingService
         return $line;
     }
 
+    /** @param array<string, mixed> $handoverData */
     public function checkOut(Booking $booking, array $handoverData, User $by): Booking
     {
         return $this->db->transaction(function () use ($booking, $handoverData, $by): Booking {
@@ -227,6 +228,7 @@ class BookingService
         });
     }
 
+    /** @param array<string, mixed> $returnData */
     public function checkIn(Booking $booking, array $returnData, User $by): Booking
     {
         return $this->db->transaction(function () use ($booking, $returnData): Booking {
@@ -243,6 +245,7 @@ class BookingService
         });
     }
 
+    /** @param array<string, mixed> $returnData */
     public function checkInWithCharges(Booking $booking, array $returnData, User $by): Booking
     {
         return $this->db->transaction(function () use ($booking, $returnData, $by): Booking {

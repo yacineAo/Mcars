@@ -17,7 +17,11 @@ class PayrollPoster
         return ChartOfAccount::where('code', $code)->valueOrFail('id');
     }
 
-    /** E57 + E59: Payroll approved — gross + commissions */
+    /**
+     * E57 + E59: Payroll approved — gross + commissions
+     *
+     * @return list<TransactionDraft>
+     */
     public function postPayrollApproved(PayrollRun $run, int $userId): array
     {
         $drafts = [];
@@ -99,7 +103,11 @@ class PayrollPoster
         return $drafts;
     }
 
-    /** E60: Net salary paid */
+    /**
+     * E60: Net salary paid
+     *
+     * @return list<TransactionDraft>
+     */
     public function postPayrollPaid(PayrollRun $run, int $userId): array
     {
         $drafts = [];

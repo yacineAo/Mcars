@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 class CashFlowExport implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -20,6 +21,7 @@ class CashFlowExport implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $data = $this->reportService->cashFlow($this->from, $this->to, $this->branchId);
@@ -31,6 +33,7 @@ class CashFlowExport implements FromArray, WithHeadings, WithTitle
         ];
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Metric', $this->from->format('Y-m-d').' to '.$this->to->format('Y-m-d')];

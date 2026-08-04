@@ -8,6 +8,7 @@ use App\Enums\ExportFormat;
 use App\Enums\ReportType;
 use App\Models\Concerns\BelongsToBranch;
 use Carbon\CarbonImmutable;
+use Database\Factories\PendingExportFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Storage;
  */
 class PendingExport extends Model
 {
+    /** @use HasFactory<PendingExportFactory> */
     use BelongsToBranch, HasFactory;
 
     protected $fillable = [
@@ -52,11 +54,13 @@ class PendingExport extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<ReportDefinition, $this> */
     public function reportDefinition(): BelongsTo
     {
         return $this->belongsTo(ReportDefinition::class);

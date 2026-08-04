@@ -10,6 +10,7 @@ use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
 use Carbon\CarbonInterface;
+use Database\Factories\CarOwnershipAgreementFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class CarOwnershipAgreement extends Model
 {
+    /** @use HasFactory<CarOwnershipAgreementFactory> */
     use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
 
     protected $attributes = [
@@ -64,19 +66,19 @@ class CarOwnershipAgreement extends Model
         ];
     }
 
-    /** @return BelongsTo<Car> */
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
-    /** @return BelongsTo<CarOwner> */
+    /** @return BelongsTo<CarOwner, $this> */
     public function carOwner(): BelongsTo
     {
         return $this->belongsTo(CarOwner::class);
     }
 
-    /** @return HasMany<OwnerInstallment> */
+    /** @return HasMany<OwnerInstallment, $this> */
     public function ownerInstallments(): HasMany
     {
         return $this->hasMany(OwnerInstallment::class, 'car_ownership_agreement_id');

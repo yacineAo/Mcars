@@ -12,6 +12,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Schemas\Components\Component;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -59,6 +60,7 @@ class CreateCashSession extends CreateRecord
         }
     }
 
+    /** @return array<int, Component> */
     protected function getFormSchema(): array
     {
         return [

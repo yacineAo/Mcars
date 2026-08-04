@@ -10,5 +10,19 @@ parameters:
         - config
         - routes
 
+    # Models declare casts() (Laravel 11+ style), not the legacy $casts property —
+    # Larastan only reads column/relation types from it with this on.
+    parseModelCastsMethod: true
+
     # Phase 1: BelongsToBranch + HasAuditColumns now used by User,
     # HasEnumMeta used by UserRole. No ignored errors needed.
+
+    ignoreErrors:
+        -
+            # ExportJob::generateSpreadsheet() instantiates every report exporter through
+            # one uniform `new $class($reportService, $from, $to, $branchId, $parameters)`
+            # call (see resolveExportClass()) — each constructor keeps the full parameter
+            # list so the dispatcher stays a single line, even though a given exporter's
+            # array()/headings() only reads the subset its report actually needs.
+            message: '#^Property App\\Exports\\.+ is never read, only written\.$#'
+            path: app/Exports/*

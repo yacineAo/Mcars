@@ -20,11 +20,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 /**
- * Properties are declared because static analysis reads column types from the schema,
- * not from casts() — without them a `decimal` column looks like a float and a
- * `timestamptz` like a string, so every `->addDay()` and every Money round-trip on a
- * booking reads as a type error.
- *
  * @property int $id
  * @property BookingStatus $status
  * @property int|null $car_id
@@ -127,31 +122,37 @@ class Booking extends Model
         });
     }
 
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function salesAgent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sales_agent_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function pickupBranch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'pickup_branch_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function returnBranch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'return_branch_id');
@@ -169,33 +170,37 @@ class Booking extends Model
         return $this->morphMany(PaymentSchedule::class, 'schedulable');
     }
 
+    /** @return HasMany<BookingExtra, $this> */
     public function extras(): HasMany
     {
         return $this->hasMany(BookingExtra::class);
     }
 
+    /** @return HasMany<ConditionReport, $this> */
     public function conditionReports(): HasMany
     {
         return $this->hasMany(ConditionReport::class);
     }
 
+    /** @return HasMany<AdditionalDriver, $this> */
     public function additionalDrivers(): HasMany
     {
         return $this->hasMany(AdditionalDriver::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function driverEmployee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'driver_employee_id');
     }
 
-    /** @return HasMany<Deposit> */
+    /** @return HasMany<Deposit, $this> */
     public function deposits(): HasMany
     {
         return $this->hasMany(Deposit::class);
     }
 
-    /** @return HasMany<Fine> */
+    /** @return HasMany<Fine, $this> */
     public function fines(): HasMany
     {
         return $this->hasMany(Fine::class);

@@ -31,7 +31,7 @@ class DigestMail extends Mailable
             subject: __('notifications.digest.subject', [
                 'count' => $this->entries->count(),
                 'date' => $this->until->translatedFormat('d/m/Y'),
-            ], $this->user->locale ?? 'fr'),
+            ], $this->user->locale->value),
         );
     }
 
@@ -42,7 +42,7 @@ class DigestMail extends Mailable
             with: [
                 'user' => $this->user,
                 'entries' => $this->entries,
-                'isRtl' => ($this->user->locale ?? 'fr') === 'ar',
+                'isRtl' => $this->user->locale->direction() === 'rtl',
             ],
         );
     }

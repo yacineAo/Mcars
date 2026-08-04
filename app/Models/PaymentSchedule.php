@@ -13,11 +13,6 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Declared because static analysis reads column types from the schema, not from
- * casts() — without it `status` reads as a `varchar` string and every comparison
- * against InstallmentStatus looks like it can never match, so PHPStan reports the
- * resource's `->visible()` and `canEdit()` guards as dead code.
- *
  * @property int $id
  * @property InstallmentStatus $status
  * @property string|null $schedulable_type

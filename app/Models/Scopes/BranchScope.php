@@ -30,6 +30,8 @@ use Illuminate\Database\Eloquent\Scope;
  * 3. No context → scope is a no-op (safe fallback for queue/console).
  *
  * @see docs/08-multi-branch-retrofit.md §3
+ *
+ * @implements Scope<Model>
  */
 class BranchScope implements Scope
 {

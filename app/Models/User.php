@@ -24,10 +24,6 @@ use SensitiveParameter;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
- * `locale` is declared here because static analysis reads column types from the schema,
- * not from casts() — without it `$user->locale` looks like a string and every
- * `instanceof Locale` check reads as dead code.
- *
  * @property Locale $locale
  */
 #[Fillable(['name', 'email', 'password', 'branch_id', 'phone', 'whatsapp', 'avatar', 'locale', 'is_active', 'must_change_password', 'two_factor_secret', 'two_factor_recovery_codes'])]

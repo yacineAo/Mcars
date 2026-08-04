@@ -17,10 +17,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * Declared because static analysis reads column types from the schema, not from
- * casts() — without it `direction` reads as a string and every comparison against
- * PaymentDirection looks like it can never match.
- *
  * @property PaymentDirection $direction
  * @property PaymentMethod $method
  * @property PaymentStatus $status
@@ -82,21 +78,25 @@ class Payment extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<CarOwner, $this> */
     public function carOwner(): BelongsTo
     {
         return $this->belongsTo(CarOwner::class);
     }
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function receivedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by_id');
     }
 
+    /** @return BelongsTo<CashSession, $this> */
     public function cashSession(): BelongsTo
     {
         return $this->belongsTo(CashSession::class);

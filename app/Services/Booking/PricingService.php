@@ -23,6 +23,7 @@ class PricingService
         private readonly string $depositRate = '0.30',
     ) {}
 
+    /** @param list<int> $extraIds */
     public function quote(
         Car $car,
         CarbonPeriod $period,
@@ -128,8 +129,8 @@ class PricingService
         $fuelLevelOut = $booking->fuel_level_out;
         if ($fuelLevelIn && $fuelLevelOut) {
             $fuelMap = ['full' => 5, 'three_quarters' => 4, 'half' => 3, 'quarter' => 2, 'empty' => 1];
-            $outVal = $fuelMap[$fuelLevelOut->value] ?? 3;
-            $inVal = $fuelMap[$fuelLevelIn->value] ?? 3;
+            $outVal = $fuelMap[$fuelLevelOut->value];
+            $inVal = $fuelMap[$fuelLevelIn->value];
             if ($inVal < $outVal) {
                 $fuelShortfall = Money::of(1000)->times($outVal - $inVal);
             }

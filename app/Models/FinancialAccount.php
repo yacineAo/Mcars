@@ -8,6 +8,7 @@ use App\Enums\FinancialAccountType;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Database\Factories\FinancialAccountFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 class FinancialAccount extends Model
 {
+    /** @use HasFactory<FinancialAccountFactory> */
     use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
@@ -49,6 +51,7 @@ class FinancialAccount extends Model
         ];
     }
 
+    /** @return BelongsTo<ChartOfAccount, $this> */
     public function ledgerAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'ledger_account_id');

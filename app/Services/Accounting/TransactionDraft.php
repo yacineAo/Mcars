@@ -10,6 +10,7 @@ use DateTimeImmutable;
 
 final readonly class TransactionDraft
 {
+    /** @param array<string, mixed>|null $meta */
     public function __construct(
         public int $debitAccountId,
         public int $creditAccountId,

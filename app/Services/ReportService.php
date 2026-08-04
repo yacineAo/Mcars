@@ -687,15 +687,11 @@ class ReportService
             $totalPaid += $paid;
 
             $installmentData[] = [
-                'period' => $i->period_month !== null && method_exists($i->period_month, 'format')
-                    ? $i->period_month->format('Y-m')
-                    : (string) $i->period_month,
-                'due_date' => $i->due_date !== null && method_exists($i->due_date, 'format')
-                    ? $i->due_date->format('Y-m-d')
-                    : (string) $i->due_date,
+                'period' => $i->period_month->format('Y-m'),
+                'due_date' => $i->due_date->format('Y-m-d'),
                 'amount_due' => (float) $i->amount_due,
                 'amount_paid' => $paid,
-                'status' => $i->status ? $i->status->value : (string) $i->status,
+                'status' => $i->status->value,
             ];
         }
 

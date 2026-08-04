@@ -27,11 +27,13 @@ class Extra extends Model
         ];
     }
 
+    /** @return BelongsTo<ChartOfAccount, $this> */
     public function ledgerAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'ledger_account_id');
     }
 
+    /** @return HasMany<BookingExtra, $this> */
     public function bookingExtras(): HasMany
     {
         return $this->hasMany(BookingExtra::class);

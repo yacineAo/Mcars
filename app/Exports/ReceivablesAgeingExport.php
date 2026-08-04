@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 class ReceivablesAgeingExport implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -20,6 +21,7 @@ class ReceivablesAgeingExport implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         // Receivables ageing is as-of-date, not period-based
@@ -33,6 +35,7 @@ class ReceivablesAgeingExport implements FromArray, WithHeadings, WithTitle
         ];
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['Bucket', 'Amount'];

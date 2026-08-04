@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 
 class CashSessionAuditExport implements FromArray, WithHeadings, WithTitle
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         private readonly ReportService $reportService,
         private readonly CarbonImmutable $from,
@@ -20,6 +21,7 @@ class CashSessionAuditExport implements FromArray, WithHeadings, WithTitle
         private readonly array $parameters,
     ) {}
 
+    /** @return array<int, array<int, mixed>> */
     public function array(): array
     {
         $data = $this->reportService->cashSessionAudit($this->from, $this->to, $this->branchId);
@@ -46,6 +48,7 @@ class CashSessionAuditExport implements FromArray, WithHeadings, WithTitle
         return $rows;
     }
 
+    /** @return array<int, string> */
     public function headings(): array
     {
         return ['#', 'Opened', 'Closed', 'By', 'Float', 'Expected', 'Counted', 'Variance', 'Status'];

@@ -8,6 +8,7 @@ use App\Enums\CarDocumentType;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\HasLedgerPostings;
 use Carbon\CarbonInterface;
+use Database\Factories\CarDocumentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,6 +33,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  */
 class CarDocument extends Model implements HasMedia
 {
+    /** @use HasFactory<CarDocumentFactory> */
     use HasAuditColumns, HasFactory, HasLedgerPostings, InteractsWithMedia, SoftDeletes;
 
     protected $fillable = [
@@ -73,7 +75,7 @@ class CarDocument extends Model implements HasMedia
         ]);
     }
 
-    /** @return BelongsTo<Car> */
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);

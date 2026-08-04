@@ -7,6 +7,9 @@ namespace Database\Factories;
 use App\Models\CarOwner;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<CarOwner>
+ */
 class CarOwnerFactory extends Factory
 {
     protected $model = CarOwner::class;

@@ -9,6 +9,7 @@ use App\Enums\NormalBalance;
 use App\Models\Concerns\BelongsToBranch;
 use App\Models\Concerns\HasAuditColumns;
 use App\Models\Concerns\LogsActivity;
+use Database\Factories\ChartOfAccountFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ChartOfAccount extends Model
 {
+    /** @use HasFactory<ChartOfAccountFactory> */
     use BelongsToBranch, HasAuditColumns, HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
@@ -47,11 +49,13 @@ class ChartOfAccount extends Model
         ];
     }
 
+    /** @return BelongsTo<self, $this> */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /** @return HasMany<self, $this> */
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');

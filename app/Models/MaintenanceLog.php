@@ -77,19 +77,19 @@ class MaintenanceLog extends Model
         ];
     }
 
-    /** @return BelongsTo<Car> */
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
-    /** @return BelongsTo<Vendor> */
+    /** @return BelongsTo<Vendor, $this> */
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
     }
 
-    /** @return BelongsTo<User> */
+    /** @return BelongsTo<User, $this> */
     public function performedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'performed_by_id');

@@ -61,13 +61,13 @@ class MaintenanceSchedule extends Model
         ];
     }
 
-    /** @return BelongsTo<Car> */
+    /** @return BelongsTo<Car, $this> */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
-    /** @return BelongsTo<CarCategory> */
+    /** @return BelongsTo<CarCategory, $this> */
     public function carCategory(): BelongsTo
     {
         return $this->belongsTo(CarCategory::class);
